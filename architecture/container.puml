@@ -1,0 +1,26 @@
+@startuml container
+
+!include https://raw.githubusercontent.com/plantuml/plantuml-stdlib/refs/heads/master/stdlib/C4/C4_Container.puml
+
+title Container Diagram
+
+Person(user, "User", "The user of vlinux")
+
+System_Boundary(elf_loader, "ELF Loader") {
+}
+
+System_Boundary(syscall_emulator, "Syscall Emulator") {
+}
+
+System_Boundary(virtual_kernel, "Virtual Kernel") {
+    Container(process_manager, "Process Manager")
+    Container(memory_manager, "Memory Manager")
+    Container(filesystem, "File System")
+}
+
+Rel(user, elf_loader, "Load ELF")
+Rel(elf_loader, syscall_emulator, "Run ELF in emulator")
+Rel(elf_loader, virtual_kernel, "Load ELF into vlinux")
+Rel(syscall_emulator, virtual_kernel, "Emulates Syscalls")
+
+@enduml
