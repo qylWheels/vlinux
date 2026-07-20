@@ -20,4 +20,18 @@ public:
     // pa must be physical address allocated by alloc().
     void free(std::uint64_t pa);
 };
+
+class PageTable {
+public:
+    PageTable();
+    ~PageTable();
+
+public:
+    // va and pa must be aligned to PAGE_SIZE.
+    void map(std::uint64_t va, std::uint64_t pa);
+    void unmap(std::uint64_t va);
+
+private:
+    std::map<std::uint64_t, std::uint64_t> map_;
+};
 }  // namespace vlinux
