@@ -14,4 +14,4 @@ set(SRC_FILES src/mm.cpp src/elf_loader.cpp)
 
 add_library(vlinux SHARED ${SRC_FILES})
 target_include_directories(vlinux PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(vlinux PRIVATE unicorn elfio)
+target_include_directories(vlinux PRIVATE ${CMAKE_SOURCE_DIR}/third_party)
