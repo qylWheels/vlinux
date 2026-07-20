@@ -19,4 +19,15 @@ TEST_CASE("Test PageTable", "[page_table]") {
         pt.unmap(0x1000);
         REQUIRE(pt.va_to_pa(0x1000) == std::nullopt);
     }
+
+    SECTION("Test map() with unaligned va and pa") {
+        REQUIRE_THROWS_AS(pt.map(0x1001, 0x2001), std::runtime_error);
+        REQUIRE_NOTHROW(pt.map(0x1000, 0x2000));
+    }
+
+    SECTION("Test unmap() with unaligned va") {
+        pt.map(0x1000, 0x2000);
+        REQUIRE_THROWS_AS(pt.unmap(0x1001), std::runtime_error);
+        REQUIRE_NOTHROW(pt.unmap(0x1000));
+    }
 }

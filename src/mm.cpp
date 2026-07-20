@@ -26,6 +26,9 @@ PageTable::PageTable() = default;
 PageTable::~PageTable() = default;
 
 void PageTable::map(std::uint64_t va, std::uint64_t pa) {
+    if (va % PAGE_SIZE != 0 || pa % PAGE_SIZE != 0) {
+        throw std::runtime_error("va and pa must be aligned to PAGE_SIZE");
+    }
     auto result = this->map_.insert({va, pa});
     if (!result.second) {
         // va already mapped.
@@ -35,7 +38,12 @@ void PageTable::map(std::uint64_t va, std::uint64_t pa) {
     }
 }
 
-void PageTable::unmap(std::uint64_t va) { this->map_.erase(va); }
+void PageTable::unmap(std::uint64_t va) {
+    if (va % PAGE_SIZE != 0) {
+        throw std::runtime_error("va must be aligned to PAGE_SIZE");
+    }
+    this->map_.erase(va);
+}
 
 std::optional<std::uint64_t> PageTable::va_to_pa(std::uint64_t va) {
     auto it = this->map_.find(va);
