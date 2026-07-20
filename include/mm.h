@@ -5,6 +5,11 @@
 #include <optional>
 
 namespace vlinux {
+struct PhysicalPageDescriptor {
+    std::uint64_t start_addr;
+    std::int32_t refcount;
+};
+
 class PhysicalPageAllocator {
 public:
     PhysicalPageAllocator();
