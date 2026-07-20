@@ -46,10 +46,11 @@ void PageTable::unmap(std::uint64_t va) {
 }
 
 std::optional<std::uint64_t> PageTable::va_to_pa(std::uint64_t va) {
-    auto it = this->map_.find(va);
+    std::uint64_t aligned_va = va & ~(PAGE_SIZE - 1);
+    auto it = this->map_.find(aligned_va);
     if (it == this->map_.end()) {
         return std::nullopt;
     }
-    return it->second;
+    return it->second + (va - aligned_va);
 }
 }  // namespace vlinux

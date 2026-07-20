@@ -16,6 +16,8 @@ TEST_CASE("Test PageTable", "[page_table]") {
     SECTION("Test map(), unmap() and va_to_pa()") {
         pt.map(0x1000, 0x2000);
         REQUIRE(pt.va_to_pa(0x1000) == 0x2000);
+        REQUIRE(pt.va_to_pa(0x1145) == 0x2145);
+        REQUIRE(pt.va_to_pa(0x1000 + 4096 - 1) == 0x2000 + 4096 - 1);
         pt.unmap(0x1000);
         REQUIRE(pt.va_to_pa(0x1000) == std::nullopt);
     }
