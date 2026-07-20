@@ -28,7 +28,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(elfio)
 
-set(SRC_FILES src/mm.cpp)
+set(SRC_FILES src/mm.cpp src/elf_loader.cpp)
 
 add_library(vlinux SHARED ${SRC_FILES})
 target_include_directories(vlinux PUBLIC ${CMAKE_SOURCE_DIR}/include)
