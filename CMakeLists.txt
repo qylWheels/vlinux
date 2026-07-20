@@ -13,3 +13,4 @@ endif()
 set(SRC_FILES src/mm.cpp)
 
 add_library(vlinux SHARED ${SRC_FILES})
+target_include_directories(vlinux PUBLIC ${CMAKE_SOURCE_DIR}/include)
