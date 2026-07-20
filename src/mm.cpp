@@ -26,8 +26,8 @@ PageTable::PageTable() = default;
 PageTable::~PageTable() = default;
 
 void PageTable::map(std::uint64_t va, std::uint64_t pa) {
-    if (va % PAGE_SIZE != 0 || pa % PAGE_SIZE != 0) {
-        throw std::runtime_error("va and pa must be aligned to PAGE_SIZE");
+    if (va % PAGE_SIZE) {
+        throw std::runtime_error("va must be aligned to PAGE_SIZE");
     }
     auto result = this->map_.insert({va, pa});
     if (!result.second) {

@@ -33,7 +33,7 @@ public:
     ~PageTable();
 
 public:
-    // va and pa must be aligned to PAGE_SIZE.
+    // va must be aligned to PAGE_SIZE, pa has no such requirement.
     void map(std::uint64_t va, std::uint64_t pa);
     void unmap(std::uint64_t va);
 
