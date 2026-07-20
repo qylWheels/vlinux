@@ -10,7 +10,7 @@ if(BUILD_TESTS)
     add_subdirectory(tests)
 endif()
 
-set(SRC_FILES src/mm.cpp src/elf_loader.cpp)
+set(SRC_FILES src/mm.cpp src/vm.cpp)
 
 add_library(vlinux SHARED ${SRC_FILES})
 target_include_directories(vlinux PUBLIC ${CMAKE_SOURCE_DIR}/include)
