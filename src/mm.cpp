@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <format>
+#include <optional>
 #include <stdexcept>
 
 namespace vlinux {
@@ -35,4 +36,12 @@ void PageTable::map(std::uint64_t va, std::uint64_t pa) {
 }
 
 void PageTable::unmap(std::uint64_t va) { this->map_.erase(va); }
+
+std::optional<std::uint64_t> PageTable::va_to_pa(std::uint64_t va) {
+    auto it = this->map_.find(va);
+    if (it == this->map_.end()) {
+        return std::nullopt;
+    }
+    return it->second;
+}
 }  // namespace vlinux
