@@ -42,6 +42,8 @@ public:
     };
 
 public:
+    std::int64_t pid() const { return this->pid_; }
+
     std::shared_ptr<Task> parent() const { return this->parent_; }
 
     std::vector<std::shared_ptr<Task>> children() const {
@@ -52,11 +54,15 @@ public:
 
     Context& context() { return this->context_; }
 
+    int exit_status() const { return this->exit_status_; }
+
 private:
+    std::int64_t pid_;
     std::shared_ptr<Task> parent_;
     std::vector<std::shared_ptr<Task>> children_;
     State state_;
     Context context_;
+    int exit_status_;
 };
 
 class Scheduler {
