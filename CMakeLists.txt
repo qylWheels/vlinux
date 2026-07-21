@@ -14,8 +14,10 @@ set(SRC_FILES src/mm.cpp src/vm.cpp)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(UNICORN REQUIRED IMPORTED_TARGET unicorn)
+find_package(elfio CONFIG REQUIRED)
 
 add_library(vlinux SHARED ${SRC_FILES})
 target_include_directories(vlinux PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(vlinux PRIVATE ${CMAKE_SOURCE_DIR}/third_party)
 target_link_libraries(vlinux PUBLIC PkgConfig::UNICORN)
+target_link_libraries(vlinux PUBLIC elfio::elfio)
