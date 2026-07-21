@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <vector>
 
@@ -22,6 +23,18 @@ public:
         Stopped,
     };
 
+    struct Context {
+        std::uint64_t rsp;
+        std::uint64_t rbp;
+        std::uint64_t rip;
+
+        std::uint64_t rax, rbx, rcx, rdx;
+        std::uint64_t rsi, rdi;
+        std::uint64_t r8, r9, r10, r11, r12, r13, r14, r15;
+
+        std::uint64_t rflags;
+    };
+
 public:
     std::shared_ptr<Task> parent() const { return this->parent_; }
 
@@ -31,9 +44,12 @@ public:
 
     State state() const { return this->state_; }
 
+    Context& context() { return this->context_; }
+
 private:
     std::shared_ptr<Task> parent_;
     std::vector<std::shared_ptr<Task>> children_;
     State state_;
+    Context context_;
 };
 }  // namespace vlinux
