@@ -30,6 +30,12 @@ void VM::reset() {}
 outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
     uc_err err;
     ELFIO::elfio reader;
+
+    // Create task.
+    this->curr_task_ = std::make_shared<Task>();
+    this->curr_task_->root_task() = true;
+    this->curr_task_->pid() = 1145;  // TODO: Generate a unique PID.
+
     if (!reader.load(path)) {
         return std::make_error_code(std::errc::io_error);
     }
@@ -89,6 +95,9 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
     // Set the entrypoint.
     this->entrypoint_ = reader.get_entry();
 
+    // Set the state to Ready.
+    this->curr_task_->state() = Task::State::Ready;
+
     return outcome::success();
 }
 
@@ -118,6 +127,9 @@ outcome::result<void> VM::run() noexcept {
     if (err != UC_ERR_OK) {
         return make_error_code(err);
     }
+
+    // Set state to Running.
+    this->curr_task_->state() = Task::State::Running;
 
     // Run!
     err = uc_emu_start(this->engine_, this->entrypoint_, 0, 0, 0);
