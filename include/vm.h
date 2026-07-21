@@ -23,7 +23,7 @@ public:
 public:
     void reset();
     outcome::result<void> load(const std::filesystem::path& path) noexcept;
-    void run();
+    outcome::result<void> run() noexcept;
 
 private:
     static void syscall_hook_callback(uc_engine* engine, void* user_data);

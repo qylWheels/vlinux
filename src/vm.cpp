@@ -92,7 +92,7 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
     return outcome::success();
 }
 
-void VM::run() {
+outcome::result<void> VM::run() noexcept {
     uc_err err;
 
     // Add syscall hook.
@@ -101,8 +101,7 @@ void VM::run() {
                       0, std::numeric_limits<std::uint64_t>::max(),
                       UC_X86_INS_SYSCALL);
     if (err != UC_ERR_OK) {
-        throw std::runtime_error(
-            std::format("uc_hook_add failed: {}", uc_strerror(err)));
+        return make_error_code(err);
     }
 
     // Setup stack.
@@ -113,13 +112,11 @@ void VM::run() {
                          UC_PROT_READ | UC_PROT_WRITE,
                          reinterpret_cast<void*>(stack_bottom_pa));
     if (err != UC_ERR_OK) {
-        throw std::runtime_error(
-            std::format("uc_mem_map_ptr failed: {}", uc_strerror(err)));
+        return make_error_code(err);
     }
     err = uc_reg_write(this->engine_, UC_X86_REG_RSP, &stack_top_va);
     if (err != UC_ERR_OK) {
-        throw std::runtime_error(
-            std::format("uc_reg_write failed: {}", uc_strerror(err)));
+        return make_error_code(err);
     }
 
     // Run!
@@ -128,9 +125,10 @@ void VM::run() {
         std::uint64_t rip;
         uc_reg_read(this->engine_, UC_X86_REG_RIP, &rip);
         std::cout << std::format("rip: {:#x}", rip) << std::endl;
-        throw std::runtime_error(
-            std::format("uc_emu_start failed: {}", uc_strerror(err)));
+        return make_error_code(err);
     }
+
+    return outcome::success();
 }
 
 void VM::syscall_hook_callback(uc_engine* engine, void* user_data) {
