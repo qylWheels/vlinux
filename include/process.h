@@ -52,4 +52,17 @@ private:
     State state_;
     Context context_;
 };
+
+class Scheduler {
+public:
+    Scheduler();
+    ~Scheduler();
+    Scheduler(const Scheduler&) = delete;
+    Scheduler& operator=(const Scheduler&) = delete;
+    Scheduler(Scheduler&&) = delete;
+    Scheduler& operator=(Scheduler&&) = delete;
+
+private:
+    std::shared_ptr<Task> task_tree_root_;
+};
 }  // namespace vlinux
