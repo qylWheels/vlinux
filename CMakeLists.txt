@@ -10,7 +10,7 @@ if(BUILD_TESTS)
     add_subdirectory(tests)
 endif()
 
-set(SRC_FILES src/mm.cpp src/vm.cpp src/process.cpp src/vfs.cpp)
+set(SRC_FILES src/mm.cpp src/vm.cpp src/process.cpp)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(UNICORN REQUIRED IMPORTED_TARGET unicorn)
