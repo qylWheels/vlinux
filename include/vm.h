@@ -4,8 +4,11 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <outcome.hpp>
 
 #include "mm.h"
+
+namespace outcome = OUTCOME_V2_NAMESPACE;
 
 namespace vlinux {
 class VM {
@@ -19,7 +22,7 @@ public:
 
 public:
     void reset();
-    void load(const std::filesystem::path& path);
+    outcome::result<void> load(const std::filesystem::path& path) noexcept;
     void run();
 
 private:

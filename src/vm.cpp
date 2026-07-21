@@ -7,7 +7,10 @@
 #include <format>
 #include <fstream>
 #include <limits>
+#include <outcome.hpp>
+#include <system_error>
 
+#include "error.h"
 #include "mm.h"
 
 namespace vlinux {
@@ -24,12 +27,11 @@ VM::~VM() { uc_close(this->engine_); }
 
 void VM::reset() {}
 
-void VM::load(const std::filesystem::path& path) {
+outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
     uc_err err;
     ELFIO::elfio reader;
     if (!reader.load(path)) {
-        throw std::runtime_error(
-            std::format("failed to load elf file {}", path.string()));
+        return std::make_error_code(std::errc::io_error);
     }
 
     for (const auto& segment : reader.segments) {
@@ -67,28 +69,27 @@ void VM::load(const std::filesystem::path& path) {
                          (virtual_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1),
                          perms);
         if (err != UC_ERR_OK) {
-            throw std::runtime_error(
-                std::format("uc_mem_map failed: {}", uc_strerror(err)));
+            return make_error_code(err);
         }
 
         // Write the segment data to the memory.
         err = uc_mem_write(this->engine_, virtual_address, data.data(),
                            file_size);
         if (err != UC_ERR_OK) {
-            throw std::runtime_error(
-                std::format("uc_mem_write failed: {}", uc_strerror(err)));
+            return make_error_code(err);
         }
         std::vector<char> zeros(virtual_size - file_size);
         err = uc_mem_write(this->engine_, virtual_address + file_size,
                            zeros.data(), virtual_size - file_size);
         if (err != UC_ERR_OK) {
-            throw std::runtime_error(
-                std::format("uc_mem_write failed: {}", uc_strerror(err)));
+            return make_error_code(err);
         }
     }
 
     // Set the entrypoint.
     this->entrypoint_ = reader.get_entry();
+
+    return outcome::success();
 }
 
 void VM::run() {
