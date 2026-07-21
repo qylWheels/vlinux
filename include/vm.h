@@ -4,9 +4,11 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <memory>
 #include <outcome.hpp>
 
 #include "mm.h"
+#include "process.h"
 
 namespace outcome = OUTCOME_V2_NAMESPACE;
 
@@ -25,6 +27,10 @@ public:
     outcome::result<void> load(const std::filesystem::path& path) noexcept;
     outcome::result<void> run() noexcept;
 
+    // Syscalls.
+public:
+    void exit(int status);
+
 private:
     static void syscall_hook_callback(uc_engine* engine, void* user_data);
 
@@ -33,5 +39,6 @@ private:
     PhysicalPageAllocator ppa_;
     uc_engine* engine_;
     uc_hook syscall_hook_;
+    std::shared_ptr<Task> curr_task_;
 };
 }  // namespace vlinux

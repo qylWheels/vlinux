@@ -131,14 +131,57 @@ outcome::result<void> VM::run() noexcept {
     return outcome::success();
 }
 
+void VM::exit(int status) {
+    this->curr_task_->exit_status() = status;
+    this->curr_task_->state() = Task::State::Stopped;
+    if (this->curr_task_->root_task()) {
+        uc_emu_stop(this->engine_);
+    }
+}
+
 void VM::syscall_hook_callback(uc_engine* engine, void* user_data) {
+    VM* self = reinterpret_cast<VM*>(user_data);
     std::uint64_t syscall_number;
+    std::uint64_t args[6];
+    std::uint64_t* argptrs[6] = {&args[0], &args[1], &args[2],
+                                 &args[3], &args[4], &args[5]};
+    int argregs[] = {UC_X86_REG_RDI, UC_X86_REG_RSI, UC_X86_REG_RDX,
+                     UC_X86_REG_R10, UC_X86_REG_R8,  UC_X86_REG_R9};
+    std::uint64_t ret;
     uc_err err;
+
+    // Read syscall number.
     err = uc_reg_read(engine, UC_X86_REG_RAX, &syscall_number);
     if (err != UC_ERR_OK) {
         throw std::runtime_error(
             std::format("uc_reg_read failed: {}", uc_strerror(err)));
     }
     std::cout << std::format("syscall: {}", syscall_number) << std::endl;
+
+    // Read syscall arguments.
+    err = uc_reg_read_batch(engine, argregs, reinterpret_cast<void**>(argptrs),
+                            6);
+    if (err != UC_ERR_OK) {
+        throw std::runtime_error(
+            std::format("uc_reg_read_batch failed: {}", uc_strerror(err)));
+    }
+    std::cout << std::format("args: {}, {}, {}, {}, {}, {}", *argptrs[0],
+                             *argptrs[1], *argptrs[2], *argptrs[3], *argptrs[4],
+                             *argptrs[5])
+              << std::endl;
+
+    // Dispatch.
+    switch (syscall_number) {
+        case 60: {
+            self->exit(args[0]);
+            break;
+        }
+        default: {
+            std::cout << std::format("syscall {} not implemented",
+                                     syscall_number)
+                      << std::endl;
+            break;
+        }
+    }
 }
 }  // namespace vlinux
