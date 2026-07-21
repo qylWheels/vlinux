@@ -42,7 +42,7 @@ public:
     };
 
 public:
-    std::int64_t pid() const { return this->pid_; }
+    std::int64_t& pid() { return this->pid_; }
 
     std::shared_ptr<Task> parent() const { return this->parent_; }
 
@@ -54,7 +54,7 @@ public:
 
     Context& context() { return this->context_; }
 
-    int exit_status() const { return this->exit_status_; }
+    int& exit_status() { return this->exit_status_; }
 
 private:
     std::int64_t pid_;
