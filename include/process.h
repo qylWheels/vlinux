@@ -42,6 +42,8 @@ public:
     };
 
 public:
+    bool& root_task() { return this->root_task_; }
+
     std::int64_t& pid() { return this->pid_; }
 
     std::shared_ptr<Task> parent() const { return this->parent_; }
@@ -57,6 +59,10 @@ public:
     int& exit_status() { return this->exit_status_; }
 
 private:
+    // Whether this task is the root task. i.e. the task
+    // we run directly in vlinux.
+    bool root_task_;
+
     std::int64_t pid_;
     std::shared_ptr<Task> parent_;
     std::vector<std::shared_ptr<Task>> children_;
