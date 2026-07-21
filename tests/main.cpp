@@ -44,11 +44,12 @@ TEST_CASE("Test VM", "[vm]") {
     vm.reset();
 
     SECTION("Test load()") {
-        REQUIRE_NOTHROW(vm.load("/home/comma/projs/vlinux/tmp/test"));
+        REQUIRE(vm.load("/home/comma/projs/vlinux/tmp/test").has_value() ==
+                true);
     }
 
     SECTION("Test run()") {
-        vm.load("/home/comma/projs/vlinux/tmp/test");
-        REQUIRE_NOTHROW(vm.run());
+        (void)vm.load("/home/comma/projs/vlinux/tmp/test");
+        REQUIRE(vm.run().has_value() == true);
     }
 }
