@@ -1,6 +1,11 @@
 #pragma once
 
+#include <unicorn/unicorn.h>
+
+#include <cstdint>
 #include <filesystem>
+
+#include "mm.h"
 
 namespace vlinux {
 class VM {
@@ -13,8 +18,13 @@ public:
     VM& operator=(VM&& other) = delete;
 
 public:
-    void init();
+    void reset();
     void load(const std::filesystem::path& path);
     void run();
+
+private:
+    std::uint64_t entrypoint_;
+    PhysicalPageAllocator ppa_;
+    uc_engine* engine_;
 };
 }  // namespace vlinux
