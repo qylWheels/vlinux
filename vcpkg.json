@@ -1,0 +1,7 @@
+{
+  "dependencies": [
+    "elfio",
+    "unicorn",
+    "outcome"
+  ]
+}

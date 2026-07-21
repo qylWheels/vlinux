@@ -7,8 +7,6 @@
 #include <stdexcept>
 
 namespace vlinux {
-const std::size_t PAGE_SIZE = 4096;
-
 PhysicalPageAllocator::PhysicalPageAllocator() = default;
 
 PhysicalPageAllocator::~PhysicalPageAllocator() = default;

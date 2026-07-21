@@ -2,6 +2,7 @@
 #include <cstdlib>
 
 #include "mm.h"
+#include "vm.h"
 
 TEST_CASE("Test PhysicalPageAllocator", "[physical_page_allocator]") {
     vlinux::PhysicalPageAllocator ppa;
@@ -35,5 +36,20 @@ TEST_CASE("Test PageTable", "[page_table]") {
         pt.map(0x1000, 0x2000);
         REQUIRE_THROWS_AS(pt.unmap(0x1001), std::runtime_error);
         REQUIRE_NOTHROW(pt.unmap(0x1000));
+    }
+}
+
+TEST_CASE("Test VM", "[vm]") {
+    vlinux::VM vm;
+    vm.reset();
+
+    SECTION("Test load()") {
+        REQUIRE(vm.load("/home/comma/projs/vlinux/tmp/test").has_value() ==
+                true);
+    }
+
+    SECTION("Test run()") {
+        (void)vm.load("/home/comma/projs/vlinux/tmp/test");
+        REQUIRE(vm.run().has_value() == true);
     }
 }

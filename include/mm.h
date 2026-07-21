@@ -5,6 +5,8 @@
 #include <optional>
 
 namespace vlinux {
+const std::size_t PAGE_SIZE = 4096;
+
 struct PhysicalPageDescriptor {
     std::uint64_t start_addr;
     std::int32_t refcount;
