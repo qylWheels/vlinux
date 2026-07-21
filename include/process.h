@@ -4,6 +4,8 @@
 #include <memory>
 #include <vector>
 
+#include "mm.h"
+
 namespace vlinux {
 class Task {
 public:
@@ -24,15 +26,19 @@ public:
     };
 
     struct Context {
-        std::uint64_t rsp;
-        std::uint64_t rbp;
-        std::uint64_t rip;
+        struct Registers {
+            std::uint64_t rsp;
+            std::uint64_t rbp;
+            std::uint64_t rip;
 
-        std::uint64_t rax, rbx, rcx, rdx;
-        std::uint64_t rsi, rdi;
-        std::uint64_t r8, r9, r10, r11, r12, r13, r14, r15;
+            std::uint64_t rax, rbx, rcx, rdx;
+            std::uint64_t rsi, rdi;
+            std::uint64_t r8, r9, r10, r11, r12, r13, r14, r15;
 
-        std::uint64_t rflags;
+            std::uint64_t rflags;
+        };
+        Registers regs;
+        PageTable page_table;
     };
 
 public:
