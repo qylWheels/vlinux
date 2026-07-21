@@ -1,10 +1,12 @@
 #include "vm.h"
 
 #include <unicorn/unicorn.h>
+#include <unicorn/x86.h>
 
 #include <elfio/elfio.hpp>
 #include <format>
 #include <fstream>
+#include <limits>
 
 #include "mm.h"
 
@@ -23,6 +25,7 @@ VM::~VM() { uc_close(this->engine_); }
 void VM::reset() {}
 
 void VM::load(const std::filesystem::path& path) {
+    uc_err err;
     ELFIO::elfio reader;
     if (!reader.load(path)) {
         throw std::runtime_error(
@@ -60,19 +63,83 @@ void VM::load(const std::filesystem::path& path) {
         if (segment_flags & ELFIO::PF_X) {
             perms |= UC_PROT_EXEC;
         }
-        uc_mem_map(this->engine_, virtual_address,
-                   (virtual_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1), perms);
+        err = uc_mem_map(this->engine_, virtual_address,
+                         (virtual_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1),
+                         perms);
+        if (err != UC_ERR_OK) {
+            throw std::runtime_error(
+                std::format("uc_mem_map failed: {}", uc_strerror(err)));
+        }
 
         // Write the segment data to the memory.
-        uc_mem_write(this->engine_, virtual_address, data.data(), file_size);
+        err = uc_mem_write(this->engine_, virtual_address, data.data(),
+                           file_size);
+        if (err != UC_ERR_OK) {
+            throw std::runtime_error(
+                std::format("uc_mem_write failed: {}", uc_strerror(err)));
+        }
         std::vector<char> zeros(virtual_size - file_size);
-        uc_mem_write(this->engine_, virtual_address + file_size, zeros.data(),
-                     virtual_size - file_size);
+        err = uc_mem_write(this->engine_, virtual_address + file_size,
+                           zeros.data(), virtual_size - file_size);
+        if (err != UC_ERR_OK) {
+            throw std::runtime_error(
+                std::format("uc_mem_write failed: {}", uc_strerror(err)));
+        }
     }
 
     // Set the entrypoint.
     this->entrypoint_ = reader.get_entry();
 }
 
-void VM::run() {}
+void VM::run() {
+    uc_err err;
+
+    // Add syscall hook.
+    err = uc_hook_add(this->engine_, &this->syscall_hook_, UC_HOOK_INSN,
+                      reinterpret_cast<void*>(VM::syscall_hook_callback), this,
+                      0, std::numeric_limits<std::uint64_t>::max(),
+                      UC_X86_INS_SYSCALL);
+    if (err != UC_ERR_OK) {
+        throw std::runtime_error(
+            std::format("uc_hook_add failed: {}", uc_strerror(err)));
+    }
+
+    // Setup stack.
+    std::uint64_t stack_bottom_pa = this->ppa_.alloc();
+    std::uint64_t stack_bottom_va = 0xf000'0000;
+    std::uint64_t stack_top_va = stack_bottom_va + PAGE_SIZE;
+    err = uc_mem_map_ptr(this->engine_, stack_bottom_va, PAGE_SIZE,
+                         UC_PROT_READ | UC_PROT_WRITE,
+                         reinterpret_cast<void*>(stack_bottom_pa));
+    if (err != UC_ERR_OK) {
+        throw std::runtime_error(
+            std::format("uc_mem_map_ptr failed: {}", uc_strerror(err)));
+    }
+    err = uc_reg_write(this->engine_, UC_X86_REG_RSP, &stack_top_va);
+    if (err != UC_ERR_OK) {
+        throw std::runtime_error(
+            std::format("uc_reg_write failed: {}", uc_strerror(err)));
+    }
+
+    // Run!
+    err = uc_emu_start(this->engine_, this->entrypoint_, 0, 0, 0);
+    if (err != UC_ERR_OK) {
+        std::uint64_t rip;
+        uc_reg_read(this->engine_, UC_X86_REG_RIP, &rip);
+        std::cout << std::format("rip: {:#x}", rip) << std::endl;
+        throw std::runtime_error(
+            std::format("uc_emu_start failed: {}", uc_strerror(err)));
+    }
+}
+
+void VM::syscall_hook_callback(uc_engine* engine, void* user_data) {
+    std::uint64_t syscall_number;
+    uc_err err;
+    err = uc_reg_read(engine, UC_X86_REG_RAX, &syscall_number);
+    if (err != UC_ERR_OK) {
+        throw std::runtime_error(
+            std::format("uc_reg_read failed: {}", uc_strerror(err)));
+    }
+    std::cout << std::format("syscall: {}", syscall_number) << std::endl;
+}
 }  // namespace vlinux

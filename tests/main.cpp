@@ -46,4 +46,9 @@ TEST_CASE("Test VM", "[vm]") {
     SECTION("Test load()") {
         REQUIRE_NOTHROW(vm.load("/home/comma/projs/vlinux/tmp/test"));
     }
+
+    SECTION("Test run()") {
+        vm.load("/home/comma/projs/vlinux/tmp/test");
+        REQUIRE_NOTHROW(vm.run());
+    }
 }

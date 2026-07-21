@@ -23,8 +23,12 @@ public:
     void run();
 
 private:
+    static void syscall_hook_callback(uc_engine* engine, void* user_data);
+
+private:
     std::uint64_t entrypoint_;
     PhysicalPageAllocator ppa_;
     uc_engine* engine_;
+    uc_hook syscall_hook_;
 };
 }  // namespace vlinux
