@@ -2,6 +2,7 @@
 #include <cstdlib>
 
 #include "mm.h"
+#include "process.h"
 #include "vm.h"
 
 TEST_CASE("Test PhysicalPageAllocator", "[physical_page_allocator]") {
@@ -37,6 +38,11 @@ TEST_CASE("Test PageTable", "[page_table]") {
         REQUIRE_THROWS_AS(pt.unmap(0x1001), std::runtime_error);
         REQUIRE_NOTHROW(pt.unmap(0x1000));
     }
+}
+
+TEST_CASE("Test Task", "[task]") {
+    vlinux::Task task;
+    REQUIRE(task.state() == vlinux::Task::State::New);
 }
 
 TEST_CASE("Test VM", "[vm]") {
