@@ -42,7 +42,7 @@ public:
         return this->children_;
     }
 
-    State state() const { return this->state_; }
+    State& state() { return this->state_; }
 
     Context& context() { return this->context_; }
 
