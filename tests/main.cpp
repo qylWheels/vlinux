@@ -50,12 +50,13 @@ TEST_CASE("Test VM", "[vm]") {
     vm.reset();
 
     SECTION("Test load()") {
-        REQUIRE(vm.load("/home/comma/projs/vlinux/tmp/test").has_value() ==
-                true);
+        REQUIRE(
+            vm.load("/home/comma/projs/vlinux/tmp/test_start").has_value() ==
+            true);
     }
 
     SECTION("Test run()") {
-        (void)vm.load("/home/comma/projs/vlinux/tmp/test");
+        (void)vm.load("/home/comma/projs/vlinux/tmp/test_start");
         REQUIRE(vm.run().has_value() == true);
     }
 }
