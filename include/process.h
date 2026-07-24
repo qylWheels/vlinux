@@ -4,7 +4,7 @@
 #include <memory>
 #include <vector>
 
-#include "mm.h"
+#include "vfs.h"
 
 namespace vlinux {
 struct Task {
@@ -35,6 +35,13 @@ public:
     std::vector<std::shared_ptr<Task>> children;
     State state;
     int exit_status;
+
+    // Memory related fields.
+    std::uint64_t stack_top;
+    std::uint64_t stack_bottom;
+
+    // File system related fields.
+    std::vector<std::shared_ptr<IFile>> files;
 };
 
 class Scheduler {
