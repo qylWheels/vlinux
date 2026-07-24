@@ -26,13 +26,13 @@ public:
 
     // Whether this task is the root task. i.e. the task
     // we run directly in vlinux.
-    bool root_task_;
+    bool root_task;
 
-    std::int64_t pid_;
-    std::shared_ptr<Task> parent_;
-    std::vector<std::shared_ptr<Task>> children_;
-    State state_;
-    int exit_status_;
+    std::int64_t pid;
+    std::shared_ptr<Task> parent;
+    std::vector<std::shared_ptr<Task>> children;
+    State state;
+    int exit_status;
 };
 
 class Scheduler {
