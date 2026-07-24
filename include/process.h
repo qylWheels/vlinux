@@ -53,7 +53,15 @@ public:
     Scheduler(Scheduler&&) = delete;
     Scheduler& operator=(Scheduler&&) = delete;
 
+public:
+    void add_task(std::shared_ptr<Task> task, std::shared_ptr<Task> parent);
+    void remove_task(std::shared_ptr<Task> task);
+    void remove_task_tree(std::shared_ptr<Task> task);
+    std::shared_ptr<Task> get_task(std::int64_t pid);
+    void start_schedule();
+    void stop_schedule();
+
 private:
-    std::shared_ptr<Task> task_tree_root_;
+    std::shared_ptr<Task> task_tree_;
 };
 }  // namespace vlinux
