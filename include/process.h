@@ -25,22 +25,6 @@ public:
         Stopped,
     };
 
-    struct Context {
-        struct Registers {
-            std::uint64_t rsp;
-            std::uint64_t rbp;
-            std::uint64_t rip;
-
-            std::uint64_t rax, rbx, rcx, rdx;
-            std::uint64_t rsi, rdi;
-            std::uint64_t r8, r9, r10, r11, r12, r13, r14, r15;
-
-            std::uint64_t rflags;
-        };
-        Registers regs;
-        PageTable page_table;
-    };
-
 public:
     bool& root_task() { return this->root_task_; }
 
@@ -54,8 +38,6 @@ public:
 
     State& state() { return this->state_; }
 
-    Context& context() { return this->context_; }
-
     int& exit_status() { return this->exit_status_; }
 
 private:
@@ -67,7 +49,6 @@ private:
     std::shared_ptr<Task> parent_;
     std::vector<std::shared_ptr<Task>> children_;
     State state_;
-    Context context_;
     int exit_status_;
 };
 
