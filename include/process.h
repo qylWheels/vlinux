@@ -9,7 +9,13 @@
 namespace vlinux {
 struct Task {
     Task();
+    ~Task();
+    Task(const Task&) = delete;
+    Task& operator=(const Task&) = delete;
+    Task(Task&&) = delete;
+    Task& operator=(Task&&) = delete;
 
+public:
     enum class State {
         New,
         Ready,
