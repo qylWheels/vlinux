@@ -8,6 +8,8 @@
 
 namespace vlinux {
 struct Task {
+    Task();
+
     enum class State {
         New,
         Ready,
