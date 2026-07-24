@@ -28,7 +28,9 @@ public:
     // we run directly in vlinux.
     bool root_task;
 
+    // Process related fields.
     std::int64_t pid;
+    std::int64_t tgid;
     std::shared_ptr<Task> parent;
     std::vector<std::shared_ptr<Task>> children;
     State state;
