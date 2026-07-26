@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <deque>
 #include <memory>
 #include <vector>
 
@@ -54,10 +55,12 @@ public:
     Scheduler& operator=(Scheduler&&) = delete;
 
 public:
+    void add_task(std::shared_ptr<Task> task);
+    void remove_task(std::shared_ptr<Task> task);
     void start_schedule();
     void stop_schedule();
 
 private:
-    std::shared_ptr<Task> task_tree_;
+    std::deque<std::shared_ptr<Task>> tasks_;
 };
 }  // namespace vlinux
