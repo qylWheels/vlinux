@@ -2,17 +2,21 @@
 
 #include <cstdint>
 #include <cstdlib>
-#include <format>
 #include <optional>
-#include <stdexcept>
+#include <system_error>
 
 namespace vlinux {
 PhysicalPageAllocator::PhysicalPageAllocator() = default;
 
 PhysicalPageAllocator::~PhysicalPageAllocator() = default;
 
-std::uint64_t PhysicalPageAllocator::alloc() {
-    return reinterpret_cast<std::uint64_t>(std::malloc(PAGE_SIZE));
+outcome::result<std::uint64_t> PhysicalPageAllocator::alloc() {
+    auto addr = std::aligned_alloc(PAGE_SIZE, PAGE_SIZE);
+    if (addr == nullptr) {
+        return std::errc::not_enough_memory;
+    } else {
+        return outcome::success(reinterpret_cast<std::uint64_t>(addr));
+    }
 }
 
 void PhysicalPageAllocator::free(std::uint64_t pa) {
@@ -23,24 +27,28 @@ PageTable::PageTable() = default;
 
 PageTable::~PageTable() = default;
 
-void PageTable::map(std::uint64_t va, std::uint64_t pa) {
-    if (va % PAGE_SIZE) {
-        throw std::runtime_error("va must be aligned to PAGE_SIZE");
+outcome::result<void> PageTable::map(std::uint64_t va, std::uint64_t pa) {
+    if ((va % PAGE_SIZE) || (pa % PAGE_SIZE)) {
+        return std::errc::invalid_argument;
     }
+
     auto result = this->map_.insert({va, pa});
     if (!result.second) {
         // va already mapped.
-        throw std::runtime_error(std::format(
-            "virtual address {} is already mapped to physical address {}", va,
-            result.first->second));
+        return std::errc::address_in_use;
     }
+
+    return outcome::success();
 }
 
-void PageTable::unmap(std::uint64_t va) {
+outcome::result<void> PageTable::unmap(std::uint64_t va) {
     if (va % PAGE_SIZE != 0) {
-        throw std::runtime_error("va must be aligned to PAGE_SIZE");
+        return std::errc::invalid_argument;
     }
+
     this->map_.erase(va);
+
+    return outcome::success();
 }
 
 std::optional<std::uint64_t> PageTable::va_to_pa(std::uint64_t va) {
