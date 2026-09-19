@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <deque>
 #include <memory>
+#include <set>
 #include <thread>
 #include <vector>
 
@@ -72,6 +73,8 @@ public:
 private:
     Status status_;
     std::jthread vcpu_;
-    std::deque<std::shared_ptr<Task>> tasks_;
+    std::deque<std::shared_ptr<Task>> ready_task_queue_;  // Ready queue.
+    std::set<std::shared_ptr<Task>>
+        ready_task_set_;  // For boosting find operation.
 };
 }  // namespace vlinux
