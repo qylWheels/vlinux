@@ -9,7 +9,9 @@ TEST_CASE("Test PhysicalPageAllocator", "[physical_page_allocator]") {
     vlinux::PhysicalPageAllocator ppa;
 
     SECTION("Test alloc() and free()") {
-        REQUIRE_NOTHROW(ppa.free(ppa.alloc()));
+        auto pa = ppa.alloc();
+        REQUIRE(pa.has_value());
+        ppa.free(pa.value());
     }
 }
 
