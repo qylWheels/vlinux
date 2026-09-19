@@ -58,10 +58,10 @@ public:
     Scheduler& operator=(Scheduler&&) = delete;
 
 public:
-    void add_task(std::shared_ptr<Task> task);
-    void remove_task(std::shared_ptr<Task> task);
-    void start_schedule(std::chrono::milliseconds interval);
-    void stop_schedule();
+    outcome::result<void> add_task(std::shared_ptr<Task> task);
+    outcome::result<void> remove_task(std::shared_ptr<Task> task);
+    outcome::result<void> start_schedule(std::chrono::milliseconds interval);
+    outcome::result<void> stop_schedule();
 
 private:
     std::deque<std::shared_ptr<Task>> tasks_;
