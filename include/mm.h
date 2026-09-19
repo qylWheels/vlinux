@@ -32,7 +32,7 @@ public:
 public:
     // Allocate a physical page (i.e. virtual page of host),
     // aligned to PAGE_SIZE.
-    std::uint64_t alloc();
+    outcome::result<std::uint64_t> alloc();
 
     // Pa must be physical address allocated by alloc().
     void free(std::uint64_t pa);

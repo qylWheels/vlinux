@@ -10,8 +10,13 @@ PhysicalPageAllocator::PhysicalPageAllocator() = default;
 
 PhysicalPageAllocator::~PhysicalPageAllocator() = default;
 
-std::uint64_t PhysicalPageAllocator::alloc() {
-    return reinterpret_cast<std::uint64_t>(std::malloc(PAGE_SIZE));
+outcome::result<std::uint64_t> PhysicalPageAllocator::alloc() {
+    auto addr = std::aligned_alloc(PAGE_SIZE, PAGE_SIZE);
+    if (addr == nullptr) {
+        return std::errc::not_enough_memory;
+    } else {
+        return outcome::success(reinterpret_cast<std::uint64_t>(addr));
+    }
 }
 
 void PhysicalPageAllocator::free(std::uint64_t pa) {
