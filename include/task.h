@@ -47,6 +47,7 @@ public:
     std::vector<std::shared_ptr<IFile>> files;
 };
 
+// Schedule tasks whose status is Ready.
 class Scheduler {
 public:
     Scheduler();
