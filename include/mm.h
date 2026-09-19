@@ -13,9 +13,11 @@ namespace outcome = OUTCOME_V2_NAMESPACE;
 namespace vlinux {
 const std::size_t PAGE_SIZE = 4096;
 
+// i.e struct page.
 struct PhysicalPageDescriptor {
     std::uint64_t start_addr;
     std::int32_t refcount;
+    std::uint64_t flags;
 };
 
 class PhysicalPageAllocator {
