@@ -1,8 +1,10 @@
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 #include <deque>
 #include <memory>
+#include <thread>
 #include <vector>
 
 #include "mm.h"
@@ -63,7 +65,13 @@ public:
     outcome::result<void> start_schedule(std::chrono::milliseconds interval);
     outcome::result<void> stop_schedule();
 
+public:
+    enum class Status { Stopped, Running };
+    Status status() const { return status_; }
+
 private:
+    Status status_;
+    std::jthread vcpu_;
     std::deque<std::shared_ptr<Task>> tasks_;
 };
 }  // namespace vlinux
