@@ -60,7 +60,7 @@ public:
 public:
     void add_task(std::shared_ptr<Task> task);
     void remove_task(std::shared_ptr<Task> task);
-    void start_schedule();
+    void start_schedule(std::chrono::milliseconds interval);
     void stop_schedule();
 
 private:
