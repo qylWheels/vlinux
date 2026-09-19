@@ -34,9 +34,10 @@ TEST_CASE("Test PageTable", "[page_table]") {
         ppa.free(pa);
     }
 
-    SECTION("Test map() with unaligned va") {
-        REQUIRE_THROWS_AS(pt.map(0x1001, 0x2000), std::runtime_error);
-        REQUIRE_NOTHROW(pt.map(0x1000, 0x2001));
+    SECTION("Test map() with unaligned va and pa") {
+        REQUIRE(pt.map(0x1001, 0x2000).has_error());
+        REQUIRE(pt.map(0x1000, 0x2001).has_error());
+        REQUIRE(pt.map(0x1001, 0x2001).has_error());
     }
 
     SECTION("Test unmap() with unaligned va") {
