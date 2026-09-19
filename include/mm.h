@@ -37,11 +37,14 @@ public:
     ~PageTable();
 
 public:
-    // va must be aligned to PAGE_SIZE, pa has no such requirement.
+    // Va refers to virtual address of guest process.
+    // Pa refers to physical address of vm, i.e. virtual address of the host.
+
+    // Va must be aligned to PAGE_SIZE, pa has no such requirement.
     void map(std::uint64_t va, std::uint64_t pa);
     void unmap(std::uint64_t va);
 
-    // va must be mapped.
+    // Va must be mapped.
     std::optional<std::uint64_t> va_to_pa(std::uint64_t va);
 
 private:
