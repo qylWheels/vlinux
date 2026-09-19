@@ -1,14 +1,14 @@
 #pragma once
 
 #include <cstdint>
+#include <deque>
 #include <memory>
 #include <vector>
 
-#include "mm.h"
+#include "vfs.h"
 
 namespace vlinux {
-class Task {
-public:
+struct Task {
     Task();
     ~Task();
     Task(const Task&) = delete;
@@ -25,50 +25,24 @@ public:
         Stopped,
     };
 
-    struct Context {
-        struct Registers {
-            std::uint64_t rsp;
-            std::uint64_t rbp;
-            std::uint64_t rip;
-
-            std::uint64_t rax, rbx, rcx, rdx;
-            std::uint64_t rsi, rdi;
-            std::uint64_t r8, r9, r10, r11, r12, r13, r14, r15;
-
-            std::uint64_t rflags;
-        };
-        Registers regs;
-        PageTable page_table;
-    };
-
-public:
-    bool& root_task() { return this->root_task_; }
-
-    std::int64_t& pid() { return this->pid_; }
-
-    std::shared_ptr<Task> parent() const { return this->parent_; }
-
-    std::vector<std::shared_ptr<Task>> children() const {
-        return this->children_;
-    }
-
-    State& state() { return this->state_; }
-
-    Context& context() { return this->context_; }
-
-    int& exit_status() { return this->exit_status_; }
-
-private:
     // Whether this task is the root task. i.e. the task
     // we run directly in vlinux.
-    bool root_task_;
+    bool root_task;
 
-    std::int64_t pid_;
-    std::shared_ptr<Task> parent_;
-    std::vector<std::shared_ptr<Task>> children_;
-    State state_;
-    Context context_;
-    int exit_status_;
+    // Process related fields.
+    std::int64_t pid;
+    std::int64_t tgid;
+    std::shared_ptr<Task> parent;
+    std::vector<std::shared_ptr<Task>> children;
+    State state;
+    int exit_status;
+
+    // Memory related fields.
+    std::uint64_t stack_top;
+    std::uint64_t stack_bottom;
+
+    // File system related fields.
+    std::vector<std::shared_ptr<IFile>> files;
 };
 
 class Scheduler {
@@ -80,7 +54,13 @@ public:
     Scheduler(Scheduler&&) = delete;
     Scheduler& operator=(Scheduler&&) = delete;
 
+public:
+    void add_task(std::shared_ptr<Task> task);
+    void remove_task(std::shared_ptr<Task> task);
+    void start_schedule();
+    void stop_schedule();
+
 private:
-    std::shared_ptr<Task> task_tree_root_;
+    std::deque<std::shared_ptr<Task>> tasks_;
 };
 }  // namespace vlinux

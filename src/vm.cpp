@@ -33,8 +33,9 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
 
     // Create task.
     this->curr_task_ = std::make_shared<Task>();
-    this->curr_task_->root_task() = true;
-    this->curr_task_->pid() = 1145;  // TODO: Generate a unique PID.
+    this->curr_task_->state = Task::State::New;
+    this->curr_task_->root_task = true;
+    this->curr_task_->pid = 1145;  // TODO: Generate a unique PID.
 
     if (!reader.load(path)) {
         return std::make_error_code(std::errc::io_error);
@@ -96,7 +97,7 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
     this->entrypoint_ = reader.get_entry();
 
     // Set the state to Ready.
-    this->curr_task_->state() = Task::State::Ready;
+    this->curr_task_->state = Task::State::Ready;
 
     return outcome::success();
 }
@@ -129,7 +130,7 @@ outcome::result<void> VM::run() noexcept {
     }
 
     // Set state to Running.
-    this->curr_task_->state() = Task::State::Running;
+    this->curr_task_->state = Task::State::Running;
 
     // Run!
     err = uc_emu_start(this->engine_, this->entrypoint_, 0, 0, 0);
@@ -144,9 +145,9 @@ outcome::result<void> VM::run() noexcept {
 }
 
 void VM::exit(int status) {
-    this->curr_task_->exit_status() = status;
-    this->curr_task_->state() = Task::State::Stopped;
-    if (this->curr_task_->root_task()) {
+    this->curr_task_->exit_status = status;
+    this->curr_task_->state = Task::State::Stopped;
+    if (this->curr_task_->root_task) {
         uc_emu_stop(this->engine_);
     }
 }

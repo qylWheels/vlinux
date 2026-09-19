@@ -1,11 +1,16 @@
 #include "process.h"
 
 namespace vlinux {
-Task::Task() : state_(State::New) {}
+Task::Task() : state(State::New) {}
 
 Task::~Task() = default;
 
 Scheduler::Scheduler() = default;
 
 Scheduler::~Scheduler() = default;
+
+void start_schedule() {}
+
+void stop_schedule() {}
+
 }  // namespace vlinux
