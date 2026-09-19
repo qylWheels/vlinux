@@ -20,13 +20,17 @@ TEST_CASE("Test PageTable", "[page_table]") {
     vlinux::PhysicalPageAllocator ppa;
 
     SECTION("Test map(), unmap() and va_to_pa()") {
-        std::uint64_t pa = ppa.alloc();
-        pt.map(0x1000, pa);
+        auto result = ppa.alloc();
+        REQUIRE(result.has_value());
+
+        auto pa = result.value();
+        REQUIRE(pt.map(0x1000, pa).has_value());
         REQUIRE(pt.va_to_pa(0x1000) == pa);
         REQUIRE(pt.va_to_pa(0x1145) == pa + 0x1145 - 0x1000);
         REQUIRE(pt.va_to_pa(0x1000 + 4096 - 1) == pa + 4096 - 1);
-        pt.unmap(0x1000);
+        REQUIRE(pt.unmap(0x1000).has_value());
         REQUIRE(pt.va_to_pa(0x1000) == std::nullopt);
+
         ppa.free(pa);
     }
 
