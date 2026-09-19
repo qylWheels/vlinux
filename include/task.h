@@ -5,6 +5,7 @@
 #include <memory>
 #include <vector>
 
+#include "mm.h"
 #include "vfs.h"
 
 namespace vlinux {
@@ -40,6 +41,7 @@ public:
     // Memory related fields.
     std::uint64_t stack_top;
     std::uint64_t stack_bottom;
+    VirtualMemoryAddressSpace address_space;
 
     // File system related fields.
     std::vector<std::shared_ptr<IFile>> files;
