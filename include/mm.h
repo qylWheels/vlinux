@@ -2,7 +2,9 @@
 
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <optional>
+#include <vector>
 
 namespace vlinux {
 const std::size_t PAGE_SIZE = 4096;
@@ -44,5 +46,26 @@ public:
 
 private:
     std::map<std::uint64_t, std::uint64_t> map_;
+};
+
+struct VirtualMemoryAddressSpace;
+
+// i.e vm_area_struct.
+struct VirtualMemoryArea {
+    enum class Perm {
+        None = 0,
+        Read = 1 << 0,
+        Write = 1 << 1,
+        Execute = 1 << 2,
+    };
+
+    std::uint64_t start, end;
+    std::uint64_t perm;
+    VirtualMemoryAddressSpace* address_space;
+};
+
+// i.e mm_struct.
+struct VirtualMemoryAddressSpace {
+    std::vector<std::shared_ptr<VirtualMemoryArea>> vm_areas;
 };
 }  // namespace vlinux
