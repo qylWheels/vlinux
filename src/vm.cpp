@@ -115,7 +115,7 @@ outcome::result<void> VM::run() noexcept {
     }
 
     // Setup stack.
-    std::uint64_t stack_bottom_pa = this->ppa_.alloc();
+    OUTCOME_TRY(std::uint64_t stack_bottom_pa, this->ppa_.alloc());
     std::uint64_t stack_bottom_va = 0xf000'0000;
     std::uint64_t stack_top_va = stack_bottom_va + PAGE_SIZE;
     err = uc_mem_map_ptr(this->engine_, stack_bottom_va, PAGE_SIZE,
