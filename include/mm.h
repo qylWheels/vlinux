@@ -4,7 +4,11 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <outcome/config.hpp>
+#include <outcome/outcome.hpp>
 #include <vector>
+
+namespace outcome = OUTCOME_V2_NAMESPACE;
 
 namespace vlinux {
 const std::size_t PAGE_SIZE = 4096;
@@ -40,11 +44,11 @@ public:
     // Va refers to virtual address of guest process.
     // Pa refers to physical address of vm, i.e. virtual address of the host.
 
-    // Va must be aligned to PAGE_SIZE, pa has no such requirement.
-    void map(std::uint64_t va, std::uint64_t pa);
-    void unmap(std::uint64_t va);
+    // Both va and pa must be aligned to PAGE_SIZE.
+    outcome::result<void> map(std::uint64_t va, std::uint64_t pa);
+    outcome::result<void> unmap(std::uint64_t va);
 
-    // Va must be mapped.
+    // Va needn't be aligned to PAGE_SIZE.
     std::optional<std::uint64_t> va_to_pa(std::uint64_t va);
 
 private:
