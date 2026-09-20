@@ -81,11 +81,13 @@ TEST_CASE("Test Scheduler", "[scheduler]") {
                                  UC_PROT_READ | UC_PROT_EXEC,
                                  code) == UC_ERR_OK);
 
-        // Allocate a context.
+        // Allocate and initialize context.
         uc_context *ctx1 = nullptr;
         REQUIRE(uc_context_alloc(uc, &ctx1) == UC_ERR_OK);
+        REQUIRE(uc_context_save(uc, ctx1) == UC_ERR_OK);
         uc_context *ctx2 = nullptr;
         REQUIRE(uc_context_alloc(uc, &ctx2) == UC_ERR_OK);
+        REQUIRE(uc_context_save(uc, ctx2) == UC_ERR_OK);
 
         // Set up the context.
         std::uint64_t rip = 0x1000;
