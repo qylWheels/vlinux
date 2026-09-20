@@ -102,6 +102,12 @@ outcome::result<void> Scheduler::start_schedule(
     return outcome::success();
 }
 
-outcome::result<void> Scheduler::stop_schedule() {}
+outcome::result<void> Scheduler::stop_schedule() {
+    std::unique_lock<std::mutex> lock(this->mutex_);
+    this->vcpu_.request_stop();
+    this->vcpu_.join();
+    this->status_ = Status::Stopped;
+    return outcome::success();
+}
 
 }  // namespace vlinux
