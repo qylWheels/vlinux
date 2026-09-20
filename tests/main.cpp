@@ -1,4 +1,5 @@
 #include <unicorn/unicorn.h>
+#include <unicorn/x86.h>
 
 #include <catch2/catch_test_macros.hpp>
 #include <cstdlib>
@@ -74,17 +75,32 @@ TEST_CASE("Test Scheduler", "[scheduler]") {
     }
 
     SECTION("Test start_schedule() and stop_schedule()") {
+        // Map code to memory.
+        std::uint8_t code[] = {0xEB, 0xFE};
+        REQUIRE(::uc_mem_map_ptr(uc, 0x1000, 0x1000,
+                                 UC_PROT_READ | UC_PROT_EXEC,
+                                 code) == UC_ERR_OK);
+
         // Allocate a context.
         uc_context *ctx1 = nullptr;
         REQUIRE(uc_context_alloc(uc, &ctx1) == UC_ERR_OK);
         uc_context *ctx2 = nullptr;
         REQUIRE(uc_context_alloc(uc, &ctx2) == UC_ERR_OK);
 
+        // Set up the context.
+        std::uint64_t rip = 0x1000;
+        REQUIRE(::uc_context_reg_write(ctx1, UC_X86_REG_RIP, &rip) ==
+                UC_ERR_OK);
+        REQUIRE(::uc_context_reg_write(ctx2, UC_X86_REG_RIP, &rip) ==
+                UC_ERR_OK);
+
         // Create tasks.
-        REQUIRE(scheduler.add_task(std::make_shared<vlinux::Task>(ctx1))
-                    .has_value());
-        REQUIRE(scheduler.add_task(std::make_shared<vlinux::Task>(ctx2))
-                    .has_value());
+        auto task1 = std::make_shared<vlinux::Task>(ctx1);
+        task1->ctx = ctx1;
+        REQUIRE(scheduler.add_task(task1).has_value());
+        auto task2 = std::make_shared<vlinux::Task>(ctx2);
+        task2->ctx = ctx2;
+        REQUIRE(scheduler.add_task(task2).has_value());
 
         // Start schedule.
         std::promise<void> err_promise;
