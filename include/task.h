@@ -18,7 +18,7 @@
 namespace vlinux {
 struct Task {
     Task(uc_context* ctx) : ctx(ctx), state(State::New) {}
-    ~Task();
+    ~Task() = default;
     Task(const Task&) = delete;
     Task& operator=(const Task&) = delete;
     Task(Task&&) = delete;
