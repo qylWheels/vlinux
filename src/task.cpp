@@ -8,6 +8,8 @@
 #include <stop_token>
 #include <thread>
 
+#include "error.h"
+
 namespace vlinux {
 Scheduler::Scheduler(uc_engine* uc) : status_(Status::Stopped), uc_(uc) {}
 
@@ -109,6 +111,11 @@ outcome::result<void> Scheduler::stop_schedule() {
     std::unique_lock<std::mutex> lock(this->mutex_);
     if (this->status_ == Status::Stopped) {
         return outcome::success();
+    }
+
+    uc_err err = uc_emu_stop(this->uc_);
+    if (err != UC_ERR_OK) {
+        return make_error_code(err);
     }
 
     this->vcpu_.request_stop();
