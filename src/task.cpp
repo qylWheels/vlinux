@@ -1,6 +1,12 @@
 #include "task.h"
 
+#include <unicorn/unicorn.h>
+
 #include <algorithm>
+#include <future>
+#include <mutex>
+#include <stop_token>
+#include <thread>
 
 namespace vlinux {
 Task::Task() : state(State::New) {}
@@ -43,7 +49,56 @@ outcome::result<void> Scheduler::remove_task(std::shared_ptr<Task> task) {
 }
 
 outcome::result<void> Scheduler::start_schedule(
-    std::chrono::milliseconds interval) {}
+    std::chrono::milliseconds interval) {
+    this->vcpu_ = std::jthread([&, this](std::stop_token st,
+                                         std::promise<void> err_promise) {
+        while (!st.stop_requested()) {
+            try {
+                std::unique_lock<std::mutex> lock(this->mutex_);
+                uc_err err;
+
+                if (this->ready_task_queue_.empty()) {
+                    continue;
+                }
+
+                // Select a task.
+                auto task = this->ready_task_queue_.front();
+                this->ready_task_queue_.pop_front();
+                this->current_task_ = task;
+
+                // Restore the context of the task.
+                err = ::uc_context_restore(this->uc_, task->ctx);
+                if (err != UC_ERR_OK) {
+                    throw std::runtime_error("uc_context_restore failed");
+                }
+
+                // Get the RIP of the task.
+                std::uint64_t rip;
+                err = ::uc_context_reg_read(task->ctx, UC_X86_REG_RIP, &rip);
+                if (err != UC_ERR_OK) {
+                    throw std::runtime_error("uc_context_reg_read failed");
+                }
+
+                // Schedule the task. i.e. run it.
+                task->state = Task::State::Running;
+                err = ::uc_emu_start(this->uc_, rip, 0, interval.count() * 1000,
+                                     0);
+                if (err != UC_ERR_OK) {
+                    throw std::runtime_error("uc_emu_start failed");
+                }
+
+                // Time slice ran out.
+                task->state = Task::State::Ready;
+                this->ready_task_queue_.push_back(task);
+            } catch (...) {
+                err_promise.set_exception(std::current_exception());
+                break;
+            }
+        }
+    });
+
+    return outcome::success();
+}
 
 outcome::result<void> Scheduler::stop_schedule() {}
 

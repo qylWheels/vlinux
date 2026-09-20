@@ -1,9 +1,12 @@
 #pragma once
 
+#include <unicorn/unicorn.h>
+
 #include <chrono>
 #include <cstdint>
 #include <deque>
 #include <memory>
+#include <mutex>
 #include <set>
 #include <thread>
 #include <vector>
@@ -48,6 +51,9 @@ public:
 
     // File system related fields.
     std::vector<std::shared_ptr<IFile>> files;
+
+    // Context saved when scheduled.
+    uc_context* ctx;
 };
 
 // Schedule tasks whose status is Ready.
@@ -71,8 +77,12 @@ public:
     Status status() const { return status_; }
 
 private:
+    // Protect the following fields.
+    std::mutex mutex_;
+
     Status status_;
     std::jthread vcpu_;
+    std::shared_ptr<Task> current_task_;
     std::deque<std::shared_ptr<Task>> ready_task_queue_;  // Ready queue.
     std::set<std::shared_ptr<Task>>
         ready_task_set_;  // For boosting find operation.
