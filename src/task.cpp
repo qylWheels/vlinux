@@ -50,7 +50,6 @@ outcome::result<void> Scheduler::start_schedule(
     }
     lock.unlock();
 
-    std::future<void> err_future = err_promise.get_future();
     this->vcpu_ = std::jthread([&, this](std::stop_token st) {
         while (!st.stop_requested()) {
             try {
