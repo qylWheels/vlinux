@@ -49,7 +49,7 @@ TEST_CASE("Test PageTable", "[page_table]") {
 
 TEST_CASE("Test Task", "[task]") {
     SECTION("Test constructor and destructor") {
-        vlinux::Task task;
+        vlinux::Task task(nullptr);
         REQUIRE(task.state == vlinux::Task::State::New);
     }
 }
