@@ -17,6 +17,8 @@ Scheduler::~Scheduler() {
 };
 
 outcome::result<void> Scheduler::add_task(std::shared_ptr<Task> task) {
+    std::unique_lock<std::mutex> lock(this->mutex_);
+
     auto it = this->ready_task_set_.find(task);
     if (it != this->ready_task_set_.end()) {
         return std::errc::file_exists;
@@ -29,6 +31,8 @@ outcome::result<void> Scheduler::add_task(std::shared_ptr<Task> task) {
 }
 
 outcome::result<void> Scheduler::remove_task(std::shared_ptr<Task> task) {
+    std::unique_lock<std::mutex> lock(this->mutex_);
+
     auto set_it = this->ready_task_set_.find(task);
     if (set_it == this->ready_task_set_.end()) {
         return std::errc::no_such_file_or_directory;
