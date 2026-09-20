@@ -1,3 +1,5 @@
+#include <unicorn/unicorn.h>
+
 #include <catch2/catch_test_macros.hpp>
 #include <cstdlib>
 
@@ -51,6 +53,50 @@ TEST_CASE("Test Task", "[task]") {
     SECTION("Test constructor and destructor") {
         vlinux::Task task(nullptr);
         REQUIRE(task.state == vlinux::Task::State::New);
+    }
+}
+
+TEST_CASE("Test Scheduler", "[scheduler]") {
+    uc_engine *uc = nullptr;
+    uc_err err = ::uc_open(UC_ARCH_X86, UC_MODE_64, &uc);
+    REQUIRE(err == UC_ERR_OK);
+
+    vlinux::Scheduler scheduler(uc);
+
+    SECTION("Test constructor and destructor") {
+        REQUIRE(scheduler.status() == vlinux::Scheduler::Status::Stopped);
+    }
+
+    SECTION("Test add_task() and remove_task()") {
+        REQUIRE(scheduler.add_task(std::make_shared<vlinux::Task>(nullptr))
+                    .has_value());
+        REQUIRE(scheduler.remove_task(std::make_shared<vlinux::Task>(nullptr))
+                    .has_value());
+    }
+
+    SECTION("Test start_schedule() and stop_schedule()") {
+        // Allocate a context.
+        uc_context *ctx1 = nullptr;
+        REQUIRE(uc_context_alloc(uc, &ctx1) == UC_ERR_OK);
+        uc_context *ctx2 = nullptr;
+        REQUIRE(uc_context_alloc(uc, &ctx2) == UC_ERR_OK);
+
+        // Create tasks.
+        REQUIRE(scheduler.add_task(std::make_shared<vlinux::Task>(ctx1))
+                    .has_value());
+        REQUIRE(scheduler.add_task(std::make_shared<vlinux::Task>(ctx2))
+                    .has_value());
+
+        // Start schedule.
+        std::promise<void> err_promise;
+        std::future<void> err_future = err_promise.get_future();
+        REQUIRE(scheduler
+                    .start_schedule(std::chrono::milliseconds(500), err_promise)
+                    .has_value());
+
+        // Stop schedule.
+        REQUIRE_NOTHROW(err_future.get());
+        REQUIRE(scheduler.stop_schedule().has_value());
     }
 }
 
