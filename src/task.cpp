@@ -97,6 +97,8 @@ outcome::result<void> Scheduler::start_schedule(
         }
     });
 
+    this->status_ = Status::Running;
+
     return outcome::success();
 }
 
