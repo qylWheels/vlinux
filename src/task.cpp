@@ -20,7 +20,10 @@ Scheduler::Scheduler() : status_(Status::Stopped) {
     }
 };
 
-Scheduler::~Scheduler() = default;
+Scheduler::~Scheduler() {
+    (void)this->stop_schedule();
+    ::uc_close(this->uc_);
+};
 
 outcome::result<void> Scheduler::add_task(std::shared_ptr<Task> task) {
     auto it = this->ready_task_set_.find(task);
