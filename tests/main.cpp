@@ -68,10 +68,9 @@ TEST_CASE("Test Scheduler", "[scheduler]") {
     }
 
     SECTION("Test add_task() and remove_task()") {
-        REQUIRE(scheduler.add_task(std::make_shared<vlinux::Task>(nullptr))
-                    .has_value());
-        REQUIRE(scheduler.remove_task(std::make_shared<vlinux::Task>(nullptr))
-                    .has_value());
+        auto task = std::make_shared<vlinux::Task>(nullptr);
+        REQUIRE(scheduler.add_task(task).has_value());
+        REQUIRE(scheduler.remove_task(task).has_value());
     }
 
     SECTION("Test start_schedule() and stop_schedule()") {
