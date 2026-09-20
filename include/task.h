@@ -59,7 +59,7 @@ public:
 // Schedule tasks whose status is Ready.
 class Scheduler {
 public:
-    Scheduler();
+    Scheduler(uc_engine* uc);
     ~Scheduler();
     Scheduler(const Scheduler&) = delete;
     Scheduler& operator=(const Scheduler&) = delete;

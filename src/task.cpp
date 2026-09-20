@@ -9,12 +9,7 @@
 #include <thread>
 
 namespace vlinux {
-Scheduler::Scheduler() : status_(Status::Stopped) {
-    uc_err err = ::uc_open(UC_ARCH_X86, UC_MODE_64, &this->uc_);
-    if (err != UC_ERR_OK) {
-        throw std::runtime_error("uc_open failed");
-    }
-};
+Scheduler::Scheduler(uc_engine* uc) : status_(Status::Stopped), uc_(uc) {}
 
 Scheduler::~Scheduler() {
     (void)this->stop_schedule();
