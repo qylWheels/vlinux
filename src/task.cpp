@@ -7,7 +7,12 @@ Task::Task() : state(State::New) {}
 
 Task::~Task() = default;
 
-Scheduler::Scheduler() = default;
+Scheduler::Scheduler() : status_(Status::Stopped) {
+    uc_err err = ::uc_open(UC_ARCH_X86, UC_MODE_64, &this->uc_);
+    if (err != UC_ERR_OK) {
+        throw std::runtime_error("uc_open failed");
+    }
+};
 
 Scheduler::~Scheduler() = default;
 

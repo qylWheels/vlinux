@@ -76,5 +76,6 @@ private:
     std::deque<std::shared_ptr<Task>> ready_task_queue_;  // Ready queue.
     std::set<std::shared_ptr<Task>>
         ready_task_set_;  // For boosting find operation.
+    uc_engine* uc_;
 };
 }  // namespace vlinux
