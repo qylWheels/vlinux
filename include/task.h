@@ -5,6 +5,7 @@
 #include <chrono>
 #include <cstdint>
 #include <deque>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <set>
@@ -69,7 +70,8 @@ public:
 public:
     outcome::result<void> add_task(std::shared_ptr<Task> task);
     outcome::result<void> remove_task(std::shared_ptr<Task> task);
-    outcome::result<void> start_schedule(std::chrono::milliseconds interval);
+    outcome::result<void> start_schedule(std::chrono::milliseconds interval,
+                                         std::promise<void>& err_promise);
     outcome::result<void> stop_schedule();
 
 public:

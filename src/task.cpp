@@ -43,15 +43,15 @@ outcome::result<void> Scheduler::remove_task(std::shared_ptr<Task> task) {
 }
 
 outcome::result<void> Scheduler::start_schedule(
-    std::chrono::milliseconds interval) {
+    std::chrono::milliseconds interval, std::promise<void>& err_promise) {
     std::unique_lock<std::mutex> lock(this->mutex_);
     if (this->status_ == Status::Running) {
         return outcome::success();
     }
     lock.unlock();
 
-    this->vcpu_ = std::jthread([&, this](std::stop_token st,
-                                         std::promise<void> err_promise) {
+    std::future<void> err_future = err_promise.get_future();
+    this->vcpu_ = std::jthread([&, this](std::stop_token st) {
         while (!st.stop_requested()) {
             try {
                 std::unique_lock<std::mutex> lock(this->mutex_);
