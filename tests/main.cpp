@@ -48,8 +48,10 @@ TEST_CASE("Test PageTable", "[page_table]") {
 }
 
 TEST_CASE("Test Task", "[task]") {
-    vlinux::Task task;
-    REQUIRE(task.state == vlinux::Task::State::New);
+    SECTION("Test constructor and destructor") {
+        vlinux::Task task;
+        REQUIRE(task.state == vlinux::Task::State::New);
+    }
 }
 
 TEST_CASE("Test VM", "[vm]") {
