@@ -168,12 +168,13 @@ outcome::result<void> VM::run() noexcept {
     idle_task->parent = nullptr;
     idle_task->children = {init_task};
     idle_task->state = Task::State::Ready;
-    idle_task->address_space.vm_areas = {
-        {.start = mm::kIdleTaskCodeRegionStart,
-         .end = mm::kIdleTaskCodeRegionStart + mm::kIdleTaskCodeRegionLen,
-         .perm =
-             static_cast<std::uint64_t>(mm::VirtualMemoryArea::Perm::Read) |
-             static_cast<std::uint64_t>(mm::VirtualMemoryArea::Perm::Execute)}};
+    idle_task->address_space = {
+        {{.start = mm::kIdleTaskCodeRegionStart,
+          .end = mm::kIdleTaskCodeRegionStart + mm::kIdleTaskCodeRegionLen,
+          .perm =
+              static_cast<std::uint64_t>(mm::VirtualMemoryArea::Perm::Read) |
+              static_cast<std::uint64_t>(
+                  mm::VirtualMemoryArea::Perm::Execute)}}};
 
     // Set properties of init task.
     init_task->name = "init";
