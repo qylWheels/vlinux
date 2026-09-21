@@ -37,9 +37,13 @@ private:
 
 private:
     std::uint64_t entrypoint_;
+
+    // Task-related fields.
     PidManager pid_manager_;
+    std::set<uc_context*> contexts_;
     std::set<std::shared_ptr<Task>> tasks_;
     std::shared_ptr<Scheduler> scheduler_;
+
     mm::PhysicalPageAllocator ppa_;
     uc_engine* engine_;
     uc_hook syscall_hook_;

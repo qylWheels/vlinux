@@ -25,7 +25,14 @@ VM::VM() {
     this->scheduler_ = std::make_shared<Scheduler>(this->engine_);
 }
 
-VM::~VM() { uc_close(this->engine_); }
+VM::~VM() {
+    // Free contexts.
+    for (auto ctx : this->contexts_) {
+        ::uc_context_free(ctx);
+    }
+
+    ::uc_close(this->engine_);
+}
 
 void VM::reset() {}
 
@@ -135,6 +142,10 @@ outcome::result<void> VM::run() noexcept {
     if (err != UC_ERR_OK) {
         return make_error_code(err);
     }
+
+    // Add contexts to context manager.
+    this->contexts_.insert(idle_task_ctx);
+    this->contexts_.insert(init_task_ctx);
 
     // Initialize the context.
     err = ::uc_context_save(this->engine_, idle_task_ctx);
