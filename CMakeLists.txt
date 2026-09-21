@@ -5,6 +5,16 @@ project(vlinux)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# TSAN.
+if(ENABLE_TSAN)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        add_compile_options(-fsanitize=thread -g -O1 -fno-omit-frame-pointer)
+        add_link_options(-fsanitize=thread)
+    else()
+        message(FATAL_ERROR "TSAN is only supported on Clang and GNU compilers")
+    endif()
+endif()
+
 option(BUILD_TESTS "Build tests" ON)
 if(BUILD_TESTS)
     add_subdirectory(tests)
