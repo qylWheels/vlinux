@@ -79,6 +79,8 @@ public:
     Status status() const { return status_; }
 
 private:
+    uc_engine* uc_;
+
     // Protect the following fields.
     std::mutex mutex_;
 
@@ -88,6 +90,5 @@ private:
     std::deque<std::shared_ptr<Task>> ready_task_queue_;  // Ready queue.
     std::set<std::shared_ptr<Task>>
         ready_task_set_;  // For boosting find operation.
-    uc_engine* uc_;
 };
 }  // namespace vlinux
