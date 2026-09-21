@@ -9,6 +9,7 @@
 #include <memory>
 #include <mutex>
 #include <set>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -32,6 +33,9 @@ public:
         Waiting,  // Waiting for I/O completion.
         Stopped,
     };
+
+public:
+    std::string name;
 
     // Whether this task is the root task. i.e. the task
     // we run directly in vlinux.
