@@ -37,7 +37,7 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
     this->curr_task_ = std::make_shared<Task>(nullptr);
     this->curr_task_->state = Task::State::New;
     this->curr_task_->root_task = true;
-    this->curr_task_->pid = 1145;  // TODO: Generate a unique PID.
+    OUTCOME_TRY(this->curr_task_->pid, this->pid_manager_.alloc_pid());
 
     if (!reader.load(path)) {
         return std::make_error_code(std::errc::io_error);

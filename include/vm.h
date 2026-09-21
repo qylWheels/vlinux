@@ -36,6 +36,7 @@ private:
 
 private:
     std::uint64_t entrypoint_;
+    PidManager pid_manager_;
     std::shared_ptr<Scheduler> scheduler_;
     mm::PhysicalPageAllocator ppa_;
     uc_engine* engine_;
