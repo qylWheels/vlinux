@@ -12,6 +12,7 @@
 namespace outcome = OUTCOME_V2_NAMESPACE;
 
 namespace vlinux {
+namespace mm {
 const std::size_t PAGE_SIZE = 4096;
 
 // i.e struct page.
@@ -82,4 +83,5 @@ struct VirtualMemoryArea {
 struct VirtualMemoryAddressSpace {
     std::vector<std::shared_ptr<VirtualMemoryArea>> vm_areas;
 };
+}  // namespace mm
 }  // namespace vlinux

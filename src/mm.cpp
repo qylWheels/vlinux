@@ -6,6 +6,7 @@
 #include <system_error>
 
 namespace vlinux {
+namespace mm {
 PhysicalPageAllocator::PhysicalPageAllocator() = default;
 
 PhysicalPageAllocator::~PhysicalPageAllocator() {
@@ -65,4 +66,5 @@ std::optional<std::uint64_t> PageTable::va_to_pa(std::uint64_t va) {
     }
     return it->second + (va - aligned_va);
 }
+}  // namespace mm
 }  // namespace vlinux
