@@ -28,7 +28,7 @@ public:
     PidManager& operator=(PidManager&&) = delete;
 
 public:
-    const std::size_t kMaxPid = 4096;
+    static const std::size_t kMaxPid = 4096;
 
 public:
     outcome::result<std::uint64_t> alloc_pid() {
