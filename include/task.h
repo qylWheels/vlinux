@@ -82,7 +82,7 @@ public:
     std::string name;
 
     // Whether this task is the root task, whose PID is 0.
-    bool root_task;
+    bool root_task = false;
 
     // Process related fields.
     std::int64_t pid;
