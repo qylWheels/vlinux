@@ -116,9 +116,10 @@ TEST_CASE("Test Scheduler", "[scheduler]") {
         std::this_thread::sleep_for(std::chrono::seconds(3));
 
         // Stop schedule.
-        REQUIRE_NOTHROW(err_future.get());
         REQUIRE(scheduler.stop_schedule().has_value());
         REQUIRE(scheduler.status() == vlinux::Scheduler::Status::Stopped);
+        REQUIRE(err_future.wait_for(std::chrono::seconds(0)) !=
+                std::future_status::ready);
         REQUIRE(::uc_context_free(ctx1) == UC_ERR_OK);
         REQUIRE(::uc_context_free(ctx2) == UC_ERR_OK);
     }
