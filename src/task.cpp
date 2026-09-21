@@ -11,10 +11,7 @@
 namespace vlinux {
 Scheduler::Scheduler(uc_engine* uc) : status_(Status::Stopped), uc_(uc) {}
 
-Scheduler::~Scheduler() {
-    (void)this->stop_schedule();
-    ::uc_close(this->uc_);
-};
+Scheduler::~Scheduler() { (void)this->stop_schedule(); };
 
 outcome::result<void> Scheduler::add_task(std::shared_ptr<Task> task) {
     std::unique_lock<std::mutex> lock(this->mutex_);
