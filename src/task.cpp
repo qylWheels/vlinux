@@ -8,8 +8,6 @@
 #include <stop_token>
 #include <thread>
 
-#include "error.h"
-
 namespace vlinux {
 Scheduler::Scheduler(uc_engine* uc) : status_(Status::Stopped), uc_(uc) {}
 
