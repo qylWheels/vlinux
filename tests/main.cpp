@@ -2,6 +2,7 @@
 #include <unicorn/x86.h>
 
 #include <catch2/catch_test_macros.hpp>
+#include <chrono>
 #include <cstdlib>
 
 #include "mm.h"
@@ -117,6 +118,9 @@ TEST_CASE("Test Scheduler", "[scheduler]") {
         // Stop schedule.
         REQUIRE_NOTHROW(err_future.get());
         REQUIRE(scheduler.stop_schedule().has_value());
+        REQUIRE(scheduler.status() == vlinux::Scheduler::Status::Stopped);
+        REQUIRE(::uc_context_free(ctx1) == UC_ERR_OK);
+        REQUIRE(::uc_context_free(ctx2) == UC_ERR_OK);
     }
 }
 
