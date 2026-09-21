@@ -116,6 +116,7 @@ outcome::result<void> Scheduler::stop_schedule() {
     }
     lock.unlock();
 
+    // Mustn't hold the lock while do these, or it will deadlock.
     this->vcpu_.request_stop();
     this->vcpu_.join();
     this->status_ = Status::Stopped;
