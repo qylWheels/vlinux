@@ -32,7 +32,7 @@ public:
 
 public:
     outcome::result<std::uint64_t> alloc_pid() {
-        if (this->pid_using_.size() > kMaxPid) {
+        if (this->pid_using_.size() >= kMaxPid) {
             return std::errc::resource_unavailable_try_again;
         }
 
