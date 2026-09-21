@@ -158,8 +158,22 @@ outcome::result<void> VM::run() noexcept {
 
     // Create idle and init task.
     auto idle_task = std::make_shared<vlinux::Task>(idle_task_ctx);
-    idle_task->root_task = true;
     auto init_task = std::make_shared<vlinux::Task>(init_task_ctx);
+
+    // Set properties of idle task.
+    idle_task->name = "idle";
+    idle_task->root_task = true;
+    idle_task->pid = 0;
+    idle_task->tgid = 0;
+    idle_task->parent = nullptr;
+    idle_task->children = {init_task};
+    idle_task->state = Task::State::Ready;
+    idle_task->address_space.vm_areas = {
+        {.start = mm::kIdleTaskCodeRegionStart,
+         .end = mm::kIdleTaskCodeRegionStart + mm::kIdleTaskCodeRegionLen,
+         .perm =
+             static_cast<std::uint64_t>(mm::VirtualMemoryArea::Perm::Read) |
+             static_cast<std::uint64_t>(mm::VirtualMemoryArea::Perm::Execute)}};
 
     // Add tasks to scheduler.
     OUTCOME_TRY(this->scheduler_->add_task(idle_task));
