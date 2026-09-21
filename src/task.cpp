@@ -101,6 +101,7 @@ outcome::result<void> Scheduler::start_schedule(
                 this->ready_task_queue_.push_back(task);
             } catch (...) {
                 err_promise.set_exception(std::current_exception());
+                this->status_ = Status::Stopped;
                 break;
             }
         }
