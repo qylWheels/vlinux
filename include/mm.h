@@ -13,8 +13,10 @@ namespace outcome = OUTCOME_V2_NAMESPACE;
 namespace vlinux {
 namespace mm {
 const std::size_t PAGE_SIZE = 4096;
-const std::uint64_t kIdleTaskCodeRegion = 0x1000;
-const std::uint64_t kInitTaskCodeRegion = 0x2000;
+const std::uint64_t kIdleTaskCodeRegionStart = 0x1000;
+const std::uint64_t kIdleTaskCodeRegionLen = PAGE_SIZE;
+const std::uint64_t kInitTaskCodeRegionStart = 0x2000;
+const std::uint64_t kInitTaskCodeRegionLen = PAGE_SIZE;
 
 // i.e struct page.
 struct PhysicalPageDescriptor {
