@@ -72,9 +72,9 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
         if (segment_flags & ELFIO::PF_X) {
             perms |= UC_PROT_EXEC;
         }
-        err = uc_mem_map(this->engine_, virtual_address,
-                         (virtual_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1),
-                         perms);
+        err = uc_mem_map(
+            this->engine_, virtual_address,
+            (virtual_size + mm::PAGE_SIZE - 1) & ~(mm::PAGE_SIZE - 1), perms);
         if (err != UC_ERR_OK) {
             return make_error_code(err);
         }
@@ -117,8 +117,8 @@ outcome::result<void> VM::run() noexcept {
     // Setup stack.
     OUTCOME_TRY(std::uint64_t stack_bottom_pa, this->ppa_.alloc());
     std::uint64_t stack_bottom_va = 0xf000'0000;
-    std::uint64_t stack_top_va = stack_bottom_va + PAGE_SIZE;
-    err = uc_mem_map_ptr(this->engine_, stack_bottom_va, PAGE_SIZE,
+    std::uint64_t stack_top_va = stack_bottom_va + mm::PAGE_SIZE;
+    err = uc_mem_map_ptr(this->engine_, stack_bottom_va, mm::PAGE_SIZE,
                          UC_PROT_READ | UC_PROT_WRITE,
                          reinterpret_cast<void*>(stack_bottom_pa));
     if (err != UC_ERR_OK) {

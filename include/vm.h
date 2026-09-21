@@ -36,7 +36,7 @@ private:
 
 private:
     std::uint64_t entrypoint_;
-    PhysicalPageAllocator ppa_;
+    mm::PhysicalPageAllocator ppa_;
     uc_engine* engine_;
     uc_hook syscall_hook_;
     std::shared_ptr<Task> curr_task_;
