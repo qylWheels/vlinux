@@ -116,11 +116,7 @@ outcome::result<void> Scheduler::stop_schedule() {
     if (this->status_ == Status::Stopped) {
         return outcome::success();
     }
-
-    uc_err err = uc_emu_stop(this->uc_);
-    if (err != UC_ERR_OK) {
-        return make_error_code(err);
-    }
+    lock.unlock();
 
     this->vcpu_.request_stop();
     this->vcpu_.join();
