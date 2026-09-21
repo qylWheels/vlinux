@@ -158,6 +158,7 @@ outcome::result<void> VM::run() noexcept {
 
     // Create idle and init task.
     auto idle_task = std::make_shared<vlinux::Task>(idle_task_ctx);
+    idle_task->root_task = true;
     auto init_task = std::make_shared<vlinux::Task>(init_task_ctx);
 
     // Add tasks to scheduler.
