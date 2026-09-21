@@ -37,8 +37,7 @@ public:
 public:
     std::string name;
 
-    // Whether this task is the root task. i.e. the task
-    // we run directly in vlinux.
+    // Whether this task is the root task, whose PID is 0.
     bool root_task;
 
     // Process related fields.
