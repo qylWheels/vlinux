@@ -3,6 +3,7 @@
 #include <unicorn/unicorn.h>
 #include <unicorn/x86.h>
 
+#include <cstdint>
 #include <elfio/elfio.hpp>
 #include <format>
 #include <fstream>
@@ -21,6 +22,7 @@ VM::VM() {
         throw std::runtime_error(
             std::format("uc_open failed: {}", uc_strerror(result)));
     }
+    this->scheduler_ = std::make_shared<Scheduler>(this->engine_);
 }
 
 VM::~VM() { uc_close(this->engine_); }
@@ -104,6 +106,63 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
 
 outcome::result<void> VM::run() noexcept {
     uc_err err;
+
+    // Setup task whose PID is 0(idle) and 1(init).
+    // Infinite loop code for idle and init.
+    std::uint8_t code[] = {0xEB, 0xFE};
+
+    // Map the code to unicorn.
+    err = ::uc_mem_map_ptr(this->engine_, mm::kIdleTaskCodeRegion, sizeof(code),
+                           UC_PROT_READ | UC_PROT_WRITE,
+                           reinterpret_cast<void*>(code));
+    if (err != UC_ERR_OK) {
+        return make_error_code(err);
+    }
+    err = ::uc_mem_map_ptr(this->engine_, mm::kInitTaskCodeRegion, sizeof(code),
+                           UC_PROT_READ | UC_PROT_WRITE,
+                           reinterpret_cast<void*>(code));
+    if (err != UC_ERR_OK) {
+        return make_error_code(err);
+    }
+
+    // Allocate contexts.
+    uc_context *idle_task_ctx, *init_task_ctx;
+    err = ::uc_context_alloc(this->engine_, &idle_task_ctx);
+    if (err != UC_ERR_OK) {
+        return make_error_code(err);
+    }
+    err = ::uc_context_alloc(this->engine_, &init_task_ctx);
+    if (err != UC_ERR_OK) {
+        return make_error_code(err);
+    }
+
+    // Initialize the context.
+    err = ::uc_context_save(this->engine_, idle_task_ctx);
+    if (err != UC_ERR_OK) {
+        return make_error_code(err);
+    }
+    err = ::uc_context_reg_write(idle_task_ctx, UC_X86_REG_RIP,
+                                 &mm::kIdleTaskCodeRegion);
+    if (err != UC_ERR_OK) {
+        return make_error_code(err);
+    }
+    err = ::uc_context_save(this->engine_, init_task_ctx);
+    if (err != UC_ERR_OK) {
+        return make_error_code(err);
+    }
+    err = ::uc_context_reg_write(init_task_ctx, UC_X86_REG_RIP,
+                                 &mm::kInitTaskCodeRegion);
+    if (err != UC_ERR_OK) {
+        return make_error_code(err);
+    }
+
+    // Create idle and init task.
+    auto idle_task = std::make_shared<vlinux::Task>(idle_task_ctx);
+    auto init_task = std::make_shared<vlinux::Task>(init_task_ctx);
+
+    // Add tasks to scheduler.
+    OUTCOME_TRY(this->scheduler_->add_task(idle_task));
+    OUTCOME_TRY(this->scheduler_->add_task(init_task));
 
     // Add syscall hook.
     err = uc_hook_add(this->engine_, &this->syscall_hook_, UC_HOOK_INSN,
