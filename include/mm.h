@@ -6,6 +6,7 @@
 #include <optional>
 #include <outcome/config.hpp>
 #include <outcome/outcome.hpp>
+#include <set>
 #include <vector>
 
 namespace outcome = OUTCOME_V2_NAMESPACE;
@@ -36,6 +37,9 @@ public:
 
     // Pa must be physical address allocated by alloc().
     void free(std::uint64_t pa);
+
+private:
+    std::set<std::uint64_t> alloced_pages_;
 };
 
 class PageTable {

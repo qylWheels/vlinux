@@ -8,18 +8,24 @@
 namespace vlinux {
 PhysicalPageAllocator::PhysicalPageAllocator() = default;
 
-PhysicalPageAllocator::~PhysicalPageAllocator() = default;
+PhysicalPageAllocator::~PhysicalPageAllocator() {
+    for (auto pa : this->alloced_pages_) {
+        this->free(pa);
+    }
+}
 
 outcome::result<std::uint64_t> PhysicalPageAllocator::alloc() {
     auto addr = std::aligned_alloc(PAGE_SIZE, PAGE_SIZE);
     if (addr == nullptr) {
         return std::errc::not_enough_memory;
     } else {
+        this->alloced_pages_.insert(reinterpret_cast<std::uint64_t>(addr));
         return outcome::success(reinterpret_cast<std::uint64_t>(addr));
     }
 }
 
 void PhysicalPageAllocator::free(std::uint64_t pa) {
+    this->alloced_pages_.erase(pa);
     std::free(reinterpret_cast<void*>(pa));
 }
 

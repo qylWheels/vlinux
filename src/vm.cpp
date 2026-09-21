@@ -32,7 +32,7 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
     ELFIO::elfio reader;
 
     // Create task.
-    this->curr_task_ = std::make_shared<Task>();
+    this->curr_task_ = std::make_shared<Task>(nullptr);
     this->curr_task_->state = Task::State::New;
     this->curr_task_->root_task = true;
     this->curr_task_->pid = 1145;  // TODO: Generate a unique PID.
