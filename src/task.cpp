@@ -54,7 +54,6 @@ outcome::result<void> Scheduler::start_schedule(
     if (this->status_ == Status::Running) {
         return outcome::success();
     }
-    lock.unlock();
 
     this->vcpu_ = std::jthread([&, interval, this](std::stop_token st) {
         while (!st.stop_requested()) {
