@@ -123,6 +123,8 @@ TEST_CASE("Test Scheduler", "[scheduler]") {
         REQUIRE(::uc_context_free(ctx1) == UC_ERR_OK);
         REQUIRE(::uc_context_free(ctx2) == UC_ERR_OK);
     }
+
+    ::uc_close(uc);
 }
 
 TEST_CASE("Test VM", "[vm]") {
