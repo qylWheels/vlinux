@@ -67,6 +67,7 @@ outcome::result<void> Scheduler::start_schedule(
                 auto task = this->ready_task_queue_.front();
                 this->ready_task_queue_.pop_front();
                 this->current_task_ = task;
+                lock.unlock();
 
                 // Restore the context of the task.
                 err = ::uc_context_restore(this->uc_, task->ctx);
@@ -89,13 +90,21 @@ outcome::result<void> Scheduler::start_schedule(
                     throw std::runtime_error("uc_emu_start failed");
                 }
 
-                // Time slice ran out.
+                // Time slice ran out, set the task to ready state.
+                lock.lock();
                 task->state = Task::State::Ready;
+                lock.unlock();
+
+                // Save context.
                 err = ::uc_context_save(this->uc_, task->ctx);
                 if (err != UC_ERR_OK) {
                     throw std::runtime_error("uc_context_save failed");
                 }
+
+                // Add the task back to the ready queue.
+                lock.lock();
                 this->ready_task_queue_.push_back(task);
+                lock.unlock();
             } catch (...) {
                 err_promise.set_exception(std::current_exception());
                 this->status_ = Status::Stopped;
