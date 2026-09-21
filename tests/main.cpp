@@ -111,6 +111,9 @@ TEST_CASE("Test Scheduler", "[scheduler]") {
                     .start_schedule(std::chrono::milliseconds(500), err_promise)
                     .has_value());
 
+        // Let the scheduler run for a while.
+        std::this_thread::sleep_for(std::chrono::seconds(3));
+
         // Stop schedule.
         REQUIRE_NOTHROW(err_future.get());
         REQUIRE(scheduler.stop_schedule().has_value());
