@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <map>
-#include <memory>
 #include <optional>
 #include <outcome/config.hpp>
 #include <outcome/outcome.hpp>
@@ -83,7 +82,7 @@ struct VirtualMemoryArea {
 
 // i.e mm_struct.
 struct VirtualMemoryAddressSpace {
-    std::vector<std::shared_ptr<VirtualMemoryArea>> vm_areas;
+    std::vector<VirtualMemoryArea> vm_areas;
 };
 }  // namespace mm
 }  // namespace vlinux
