@@ -192,6 +192,10 @@ outcome::result<void> VM::run() noexcept {
               static_cast<std::uint64_t>(
                   mm::VirtualMemoryArea::Perm::Execute)}}};
 
+    // Add tasks to task manager.
+    this->tasks_.insert(idle_task);
+    this->tasks_.insert(init_task);
+
     // Add tasks to scheduler.
     OUTCOME_TRY(this->scheduler_->add_task(idle_task));
     OUTCOME_TRY(this->scheduler_->add_task(init_task));
