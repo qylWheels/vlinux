@@ -10,6 +10,7 @@
 #include <mutex>
 #include <set>
 #include <string>
+#include <system_error>
 #include <thread>
 #include <vector>
 
@@ -17,6 +18,49 @@
 #include "vfs.h"
 
 namespace vlinux {
+class PidManager {
+public:
+    PidManager() = default;
+    ~PidManager() = default;
+    PidManager(const PidManager&) = delete;
+    PidManager& operator=(const PidManager&) = delete;
+    PidManager(PidManager&&) = delete;
+    PidManager& operator=(PidManager&&) = delete;
+
+public:
+    const std::size_t kMaxPid = 4096;
+
+public:
+    outcome::result<std::uint64_t> alloc_pid() {
+        if (this->pid_using_.size() > kMaxPid) {
+            return std::errc::resource_unavailable_try_again;
+        }
+
+        for (std::uint64_t i = 0; i < kMaxPid; ++i) {
+            auto pid = (this->next_pid_ + i) % kMaxPid;
+            if (this->pid_using_.find(pid) == this->pid_using_.end()) {
+                this->pid_using_.insert(pid);
+                this->next_pid_ = pid + 1;
+                return pid;
+            }
+        }
+
+        std::abort();  // Unreachable.
+    }
+
+    outcome::result<void> free_pid(std::uint64_t pid) {
+        if (this->pid_using_.find(pid) == this->pid_using_.end()) {
+            return outcome::success();
+        }
+        this->pid_using_.erase(pid);
+        return outcome::success();
+    }
+
+private:
+    std::set<std::uint64_t> pid_using_;
+    std::uint64_t next_pid_ = 2;
+};
+
 struct Task {
     Task(uc_context* ctx) : ctx(ctx), state(State::New) {}
     ~Task() = default;
