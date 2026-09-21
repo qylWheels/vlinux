@@ -51,6 +51,35 @@ TEST_CASE("Test PageTable", "[page_table]") {
     }
 }
 
+TEST_CASE("Test PidManager", "[pid_manager]") {
+    vlinux::PidManager pid_manager;
+    SECTION("Test alloc_pid() and free_pid()") {
+        // Allocate a PID.
+        auto pid = pid_manager.alloc_pid();
+        REQUIRE(pid.has_value());
+        REQUIRE(pid.value() == 2);
+
+        // Allocate more PIDs to reach the limit.
+        for (std::uint64_t i = 0; i < vlinux::PidManager::kMaxPid - 1; ++i) {
+            REQUIRE(pid_manager.alloc_pid().has_value());
+        }
+
+        // Allocate a PID after the limit, expect error.
+        REQUIRE(pid_manager.alloc_pid().has_error());
+
+        // Free a PID.
+        REQUIRE(pid_manager.free_pid(pid.value()).has_value());
+
+        // Allocate a PID after freeing, expect success.
+        REQUIRE(pid_manager.alloc_pid().has_value());
+
+        // Free all PIDs.
+        for (std::uint64_t i = 0; i < vlinux::PidManager::kMaxPid; ++i) {
+            REQUIRE(pid_manager.free_pid(i).has_value());
+        }
+    }
+}
+
 TEST_CASE("Test Task", "[task]") {
     SECTION("Test constructor and destructor") {
         vlinux::Task task(nullptr);
