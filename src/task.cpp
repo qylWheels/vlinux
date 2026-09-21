@@ -94,6 +94,10 @@ outcome::result<void> Scheduler::start_schedule(
 
                 // Time slice ran out.
                 task->state = Task::State::Ready;
+                err = ::uc_context_save(this->uc_, task->ctx);
+                if (err != UC_ERR_OK) {
+                    throw std::runtime_error("uc_context_save failed");
+                }
                 this->ready_task_queue_.push_back(task);
             } catch (...) {
                 err_promise.set_exception(std::current_exception());
