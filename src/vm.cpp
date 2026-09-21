@@ -175,6 +175,22 @@ outcome::result<void> VM::run() noexcept {
              static_cast<std::uint64_t>(mm::VirtualMemoryArea::Perm::Read) |
              static_cast<std::uint64_t>(mm::VirtualMemoryArea::Perm::Execute)}};
 
+    // Set properties of init task.
+    init_task->name = "init";
+    init_task->root_task = false;
+    init_task->pid = 1;
+    init_task->tgid = 1;
+    init_task->parent = idle_task;
+    init_task->children = {};
+    init_task->state = Task::State::Ready;
+    init_task->address_space = {
+        {{.start = mm::kInitTaskCodeRegionStart,
+          .end = mm::kInitTaskCodeRegionStart + mm::kInitTaskCodeRegionLen,
+          .perm =
+              static_cast<std::uint64_t>(mm::VirtualMemoryArea::Perm::Read) |
+              static_cast<std::uint64_t>(
+                  mm::VirtualMemoryArea::Perm::Execute)}}};
+
     // Add tasks to scheduler.
     OUTCOME_TRY(this->scheduler_->add_task(idle_task));
     OUTCOME_TRY(this->scheduler_->add_task(init_task));
