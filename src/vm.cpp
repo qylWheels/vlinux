@@ -112,14 +112,14 @@ outcome::result<void> VM::run() noexcept {
     std::uint8_t code[] = {0xEB, 0xFE};
 
     // Map the code to unicorn.
-    err = ::uc_mem_map_ptr(this->engine_, mm::kIdleTaskCodeRegion, sizeof(code),
-                           UC_PROT_READ | UC_PROT_WRITE,
+    err = ::uc_mem_map_ptr(this->engine_, mm::kIdleTaskCodeRegionStart,
+                           sizeof(code), UC_PROT_READ | UC_PROT_WRITE,
                            reinterpret_cast<void*>(code));
     if (err != UC_ERR_OK) {
         return make_error_code(err);
     }
-    err = ::uc_mem_map_ptr(this->engine_, mm::kInitTaskCodeRegion, sizeof(code),
-                           UC_PROT_READ | UC_PROT_WRITE,
+    err = ::uc_mem_map_ptr(this->engine_, mm::kInitTaskCodeRegionStart,
+                           sizeof(code), UC_PROT_READ | UC_PROT_WRITE,
                            reinterpret_cast<void*>(code));
     if (err != UC_ERR_OK) {
         return make_error_code(err);
@@ -142,7 +142,7 @@ outcome::result<void> VM::run() noexcept {
         return make_error_code(err);
     }
     err = ::uc_context_reg_write(idle_task_ctx, UC_X86_REG_RIP,
-                                 &mm::kIdleTaskCodeRegion);
+                                 &mm::kIdleTaskCodeRegionStart);
     if (err != UC_ERR_OK) {
         return make_error_code(err);
     }
@@ -151,7 +151,7 @@ outcome::result<void> VM::run() noexcept {
         return make_error_code(err);
     }
     err = ::uc_context_reg_write(init_task_ctx, UC_X86_REG_RIP,
-                                 &mm::kInitTaskCodeRegion);
+                                 &mm::kInitTaskCodeRegionStart);
     if (err != UC_ERR_OK) {
         return make_error_code(err);
     }
@@ -216,7 +216,7 @@ outcome::result<void> VM::run() noexcept {
     }
 
     return outcome::success();
-}
+}  // namespace vlinux
 
 void VM::exit(int status) {
     this->curr_task_->exit_status = status;
