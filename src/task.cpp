@@ -56,7 +56,7 @@ outcome::result<void> Scheduler::start_schedule(
     }
     lock.unlock();
 
-    this->vcpu_ = std::jthread([&, this](std::stop_token st) {
+    this->vcpu_ = std::jthread([&, interval, this](std::stop_token st) {
         while (!st.stop_requested()) {
             try {
                 std::unique_lock<std::mutex> lock(this->mutex_);
