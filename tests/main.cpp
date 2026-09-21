@@ -10,7 +10,7 @@
 #include "vm.h"
 
 TEST_CASE("Test PhysicalPageAllocator", "[physical_page_allocator]") {
-    vlinux::PhysicalPageAllocator ppa;
+    vlinux::mm::PhysicalPageAllocator ppa;
 
     SECTION("Test alloc() and free()") {
         auto pa = ppa.alloc();
@@ -20,8 +20,8 @@ TEST_CASE("Test PhysicalPageAllocator", "[physical_page_allocator]") {
 }
 
 TEST_CASE("Test PageTable", "[page_table]") {
-    vlinux::PageTable pt;
-    vlinux::PhysicalPageAllocator ppa;
+    vlinux::mm::PageTable pt;
+    vlinux::mm::PhysicalPageAllocator ppa;
 
     SECTION("Test map(), unmap() and va_to_pa()") {
         auto result = ppa.alloc();
