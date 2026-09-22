@@ -35,7 +35,7 @@ public:
     PhysicalPageAllocator& operator=(PhysicalPageAllocator&&) = delete;
 
 public:
-    // Allocate a physical page (i.e. virtual page of host),
+    // Allocate a physical page of unicorn (i.e. virtual page of host),
     // aligned to PAGE_SIZE.
     outcome::result<std::uint64_t> alloc();
 
