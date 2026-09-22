@@ -13,9 +13,9 @@ TEST_CASE("Test PhysicalPageAllocator", "[physical_page_allocator]") {
     vlinux::mm::PhysicalPageAllocator ppa;
 
     SECTION("Test alloc() and free()") {
-        auto pa = ppa.alloc();
-        REQUIRE(pa.has_value());
-        ppa.free(pa.value());
+        auto pa_desc = ppa.alloc();
+        REQUIRE(pa_desc.has_value());
+        ppa.free(pa_desc.value());
     }
 }
 
@@ -27,15 +27,16 @@ TEST_CASE("Test PageTable", "[page_table]") {
         auto result = ppa.alloc();
         REQUIRE(result.has_value());
 
-        auto pa = result.value();
-        REQUIRE(pt.map(0x1000, pa).has_value());
-        REQUIRE(pt.va_to_pa(0x1000) == pa);
-        REQUIRE(pt.va_to_pa(0x1145) == pa + 0x1145 - 0x1000);
-        REQUIRE(pt.va_to_pa(0x1000 + 4096 - 1) == pa + 4096 - 1);
+        auto pa_desc = result.value();
+        REQUIRE(pt.map(0x1000, pa_desc->start_addr).has_value());
+        REQUIRE(pt.va_to_pa(0x1000) == pa_desc->start_addr);
+        REQUIRE(pt.va_to_pa(0x1145) == pa_desc->start_addr + 0x1145 - 0x1000);
+        REQUIRE(pt.va_to_pa(0x1000 + 4096 - 1) ==
+                pa_desc->start_addr + 4096 - 1);
         REQUIRE(pt.unmap(0x1000).has_value());
         REQUIRE(pt.va_to_pa(0x1000) == std::nullopt);
 
-        ppa.free(pa);
+        ppa.free(pa_desc);
     }
 
     SECTION("Test map() with unaligned va and pa") {
