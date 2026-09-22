@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <list>
 #include <map>
+#include <memory>
 #include <optional>
 #include <outcome/config.hpp>
 #include <outcome/outcome.hpp>
@@ -52,15 +53,14 @@ public:
     // Allocate a physical page of unicorn (i.e. virtual page of host),
     // aligned to PAGE_SIZE.
     // Return pa of unicorn.
-    outcome::result<const PhysicalPageDescriptor*> alloc();
+    outcome::result<std::shared_ptr<PhysicalPageDescriptor>> alloc();
 
     // Desc must be page descriptor allocated by alloc().
-    void free(const PhysicalPageDescriptor* desc);
+    void free(std::shared_ptr<PhysicalPageDescriptor> desc);
 
 private:
-    std::vector<PhysicalPageDescriptor> phys_page_descs_;
-    std::list<PhysicalPageDescriptor*> free_pages_;
-    std::set<PhysicalPageDescriptor*> alloced_pages_;
+    std::list<std::shared_ptr<PhysicalPageDescriptor>> free_pages_;
+    std::set<std::shared_ptr<PhysicalPageDescriptor>> alloced_pages_;
 };
 
 class PageTable {

@@ -13,16 +13,16 @@ PhysicalPageAllocator::PhysicalPageAllocator() {
     // [0x2000, 0x3000): init task.
     for (std::uint64_t addr = 0x3000; addr < 0x3000 + kMaxPageCount * PAGE_SIZE;
          addr += PAGE_SIZE) {
-        PhysicalPageDescriptor desc{addr, PAGE_SIZE, 0, 0};
-        this->phys_page_descs_.push_back(desc);
-        auto desc_ptr = &this->phys_page_descs_.back();
-        this->free_pages_.push_back(desc_ptr);
+        auto desc =
+            std::make_shared<PhysicalPageDescriptor>(addr, PAGE_SIZE, 0, 0);
+        this->free_pages_.push_back(desc);
     }
 }
 
 PhysicalPageAllocator::~PhysicalPageAllocator() = default;
 
-outcome::result<const PhysicalPageDescriptor*> PhysicalPageAllocator::alloc() {
+outcome::result<std::shared_ptr<PhysicalPageDescriptor>>
+PhysicalPageAllocator::alloc() {
     if (this->free_pages_.empty()) {
         return std::errc::not_enough_memory;
     }
@@ -40,17 +40,15 @@ outcome::result<const PhysicalPageDescriptor*> PhysicalPageAllocator::alloc() {
     return outcome::success(page);
 }
 
-void PhysicalPageAllocator::free(const PhysicalPageDescriptor* desc) {
-    auto desc_not_const = const_cast<PhysicalPageDescriptor*>(desc);
-
+void PhysicalPageAllocator::free(std::shared_ptr<PhysicalPageDescriptor> desc) {
     // Remove from alloced_pages.
-    this->alloced_pages_.erase(desc_not_const);
+    this->alloced_pages_.erase(desc);
 
     // Decrement refcount.
-    desc_not_const->refcount--;
+    desc->refcount--;
 
     // Add to free_pages.
-    this->free_pages_.push_front(desc_not_const);
+    this->free_pages_.push_front(desc);
 }
 
 PageTable::PageTable() = default;
