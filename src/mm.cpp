@@ -24,7 +24,7 @@ PhysicalPageAllocator::~PhysicalPageAllocator() = default;
 
 outcome::result<const PhysicalPageDescriptor*> PhysicalPageAllocator::alloc() {
     if (this->free_pages_.empty()) {
-        return std::errc::resource_unavailable_try_again;
+        return std::errc::not_enough_memory;
     }
 
     // Get a page.
