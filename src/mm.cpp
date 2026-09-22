@@ -7,7 +7,15 @@
 
 namespace vlinux {
 namespace mm {
-PhysicalPageAllocator::PhysicalPageAllocator() = default;
+PhysicalPageAllocator::PhysicalPageAllocator() {
+    // [0, 0x1000): NOT used.
+    // [0x1000, 0x2000): idle task.
+    // [0x2000, 0x3000): init task.
+    for (std::uint64_t addr = 0x3000; addr < 0x3000 + kMaxPageCount * PAGE_SIZE;
+         addr += PAGE_SIZE) {
+        this->free_pages_.push_back({addr, PAGE_SIZE, 0, 0});
+    }
+}
 
 PhysicalPageAllocator::~PhysicalPageAllocator() {
     for (auto [pa, desc] : this->alloced_pages_) {

@@ -1,6 +1,8 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
+#include <list>
 #include <map>
 #include <optional>
 #include <outcome/config.hpp>
@@ -27,6 +29,9 @@ struct PhysicalPageDescriptor {
 
 class PhysicalPageAllocator {
 public:
+    const std::size_t kMaxPageCount = 128 * 1024;  // 512 MB.
+
+public:
     PhysicalPageAllocator();
     ~PhysicalPageAllocator();
     PhysicalPageAllocator& operator=(const PhysicalPageAllocator&) = delete;
@@ -43,6 +48,7 @@ public:
     void free(std::uint64_t pa);
 
 private:
+    std::list<PhysicalPageDescriptor> free_pages_;
     std::map<std::uint64_t, PhysicalPageDescriptor> alloced_pages_;
 };
 
