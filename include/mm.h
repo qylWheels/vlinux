@@ -21,6 +21,7 @@ const std::uint64_t kInitTaskCodeRegionLen = PAGE_SIZE;
 // i.e struct page.
 struct PhysicalPageDescriptor {
     std::uint64_t start_addr;
+    std::size_t len;
     std::int32_t refcount;
     std::uint64_t flags;
 };
