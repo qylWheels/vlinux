@@ -114,6 +114,49 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
 outcome::result<void> VM::run() noexcept {
     uc_err err;
 
+    // Add syscall hook.
+    err = uc_hook_add(this->engine_, &this->syscall_hook_, UC_HOOK_INSN,
+                      reinterpret_cast<void*>(VM::syscall_hook_callback), this,
+                      0, std::numeric_limits<std::uint64_t>::max(),
+                      UC_X86_INS_SYSCALL);
+    if (err != UC_ERR_OK) {
+        return make_error_code(err);
+    }
+
+    // Setup stack.
+    OUTCOME_TRY(auto stack_bottom_pa_desc, this->ppa_.alloc());
+    std::uint64_t stack_bottom_pa = stack_bottom_pa_desc->start_addr;
+    std::uint64_t stack_bottom_va = 0xf000'0000;
+    std::uint64_t stack_top_va = stack_bottom_va + mm::PAGE_SIZE;
+    err = uc_mem_map_ptr(this->engine_, stack_bottom_va, mm::PAGE_SIZE,
+                         UC_PROT_READ | UC_PROT_WRITE,
+                         reinterpret_cast<void*>(stack_bottom_pa));
+    if (err != UC_ERR_OK) {
+        return make_error_code(err);
+    }
+    err = uc_reg_write(this->engine_, UC_X86_REG_RSP, &stack_top_va);
+    if (err != UC_ERR_OK) {
+        return make_error_code(err);
+    }
+
+    // Set state to Running.
+    this->curr_task_->state = Task::State::Running;
+
+    // Run!
+    err = uc_emu_start(this->engine_, this->entrypoint_, 0, 0, 0);
+    if (err != UC_ERR_OK) {
+        std::uint64_t rip;
+        uc_reg_read(this->engine_, UC_X86_REG_RIP, &rip);
+        std::cout << std::format("rip: {:#x}", rip) << std::endl;
+        return make_error_code(err);
+    }
+
+    return outcome::success();
+}
+
+outcome::result<void> VM::setup_idle_and_init_task() {
+    uc_err err;
+
     // Setup task whose PID is 0(idle) and 1(init).
     // Infinite loop code for idle and init.
     std::uint8_t code[] = {0xEB, 0xFE};
@@ -211,45 +254,8 @@ outcome::result<void> VM::run() noexcept {
     OUTCOME_TRY(this->scheduler_->add_task(idle_task));
     OUTCOME_TRY(this->scheduler_->add_task(init_task));
 
-    // Add syscall hook.
-    err = uc_hook_add(this->engine_, &this->syscall_hook_, UC_HOOK_INSN,
-                      reinterpret_cast<void*>(VM::syscall_hook_callback), this,
-                      0, std::numeric_limits<std::uint64_t>::max(),
-                      UC_X86_INS_SYSCALL);
-    if (err != UC_ERR_OK) {
-        return make_error_code(err);
-    }
-
-    // Setup stack.
-    OUTCOME_TRY(auto stack_bottom_pa_desc, this->ppa_.alloc());
-    std::uint64_t stack_bottom_pa = stack_bottom_pa_desc->start_addr;
-    std::uint64_t stack_bottom_va = 0xf000'0000;
-    std::uint64_t stack_top_va = stack_bottom_va + mm::PAGE_SIZE;
-    err = uc_mem_map_ptr(this->engine_, stack_bottom_va, mm::PAGE_SIZE,
-                         UC_PROT_READ | UC_PROT_WRITE,
-                         reinterpret_cast<void*>(stack_bottom_pa));
-    if (err != UC_ERR_OK) {
-        return make_error_code(err);
-    }
-    err = uc_reg_write(this->engine_, UC_X86_REG_RSP, &stack_top_va);
-    if (err != UC_ERR_OK) {
-        return make_error_code(err);
-    }
-
-    // Set state to Running.
-    this->curr_task_->state = Task::State::Running;
-
-    // Run!
-    err = uc_emu_start(this->engine_, this->entrypoint_, 0, 0, 0);
-    if (err != UC_ERR_OK) {
-        std::uint64_t rip;
-        uc_reg_read(this->engine_, UC_X86_REG_RIP, &rip);
-        std::cout << std::format("rip: {:#x}", rip) << std::endl;
-        return make_error_code(err);
-    }
-
     return outcome::success();
-}  // namespace vlinux
+}
 
 void VM::exit(int status) {
     this->curr_task_->exit_status = status;

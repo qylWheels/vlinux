@@ -28,6 +28,9 @@ public:
     outcome::result<void> load(const std::filesystem::path& path) noexcept;
     outcome::result<void> run() noexcept;
 
+private:
+    outcome::result<void> setup_idle_and_init_task();
+
     // Syscalls.
 public:
     void exit(int status);
@@ -44,7 +47,9 @@ private:
     std::set<std::shared_ptr<Task>> tasks_;
     std::shared_ptr<Scheduler> scheduler_;
 
+    // Memory-related fields.
     mm::PhysicalPageAllocator ppa_;
+
     uc_engine* engine_;
     uc_hook syscall_hook_;
     std::shared_ptr<Task> curr_task_;
