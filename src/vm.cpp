@@ -229,6 +229,9 @@ outcome::result<void> VM::setup_idle_and_init_task() {
               static_cast<std::uint64_t>(mm::VirtualMemoryArea::Perm::Read) |
               static_cast<std::uint64_t>(
                   mm::VirtualMemoryArea::Perm::Execute)}}};
+    idle_task->page_table = mm::PageTable();
+    OUTCOME_TRY(idle_task->page_table.map(mm::kIdleTaskCodeRegionStart,
+                                          mm::kIdleTaskCodeRegionStart));
 
     // Set properties of init task.
     init_task->name = "init";
@@ -245,6 +248,9 @@ outcome::result<void> VM::setup_idle_and_init_task() {
               static_cast<std::uint64_t>(mm::VirtualMemoryArea::Perm::Read) |
               static_cast<std::uint64_t>(
                   mm::VirtualMemoryArea::Perm::Execute)}}};
+    init_task->page_table = mm::PageTable();
+    OUTCOME_TRY(init_task->page_table.map(mm::kInitTaskCodeRegionStart,
+                                          mm::kInitTaskCodeRegionStart));
 
     // Add tasks to task manager.
     this->tasks_.insert(idle_task);
