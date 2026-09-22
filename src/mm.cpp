@@ -10,7 +10,7 @@ namespace mm {
 PhysicalPageAllocator::PhysicalPageAllocator() = default;
 
 PhysicalPageAllocator::~PhysicalPageAllocator() {
-    for (auto pa : this->alloced_pages_) {
+    for (auto [pa, desc] : this->alloced_pages_) {
         this->free(pa);
     }
 }
