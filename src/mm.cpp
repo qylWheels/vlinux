@@ -13,29 +13,44 @@ PhysicalPageAllocator::PhysicalPageAllocator() {
     // [0x2000, 0x3000): init task.
     for (std::uint64_t addr = 0x3000; addr < 0x3000 + kMaxPageCount * PAGE_SIZE;
          addr += PAGE_SIZE) {
-        this->free_pages_.push_back({addr, PAGE_SIZE, 0, 0});
+        PhysicalPageDescriptor desc{addr, PAGE_SIZE, 0, 0};
+        this->phys_page_descs_.push_back(desc);
+        auto desc_ptr = &this->phys_page_descs_.back();
+        this->free_pages_.push_back(desc_ptr);
     }
 }
 
-PhysicalPageAllocator::~PhysicalPageAllocator() {
-    for (auto [pa, desc] : this->alloced_pages_) {
-        this->free(pa);
+PhysicalPageAllocator::~PhysicalPageAllocator() = default;
+
+outcome::result<const PhysicalPageDescriptor*> PhysicalPageAllocator::alloc() {
+    if (this->free_pages_.empty()) {
+        return std::errc::resource_unavailable_try_again;
     }
+
+    // Get a page.
+    auto page = this->free_pages_.front();
+    this->free_pages_.pop_front();
+
+    // Increment refcount.
+    page->refcount++;
+
+    // Add to alloced_pages.
+    this->alloced_pages_.insert(page);
+
+    return outcome::success(page);
 }
 
-outcome::result<std::uint64_t> PhysicalPageAllocator::alloc() {
-    auto addr = std::aligned_alloc(PAGE_SIZE, PAGE_SIZE);
-    if (addr == nullptr) {
-        return std::errc::not_enough_memory;
-    } else {
-        this->alloced_pages_.insert(reinterpret_cast<std::uint64_t>(addr));
-        return outcome::success(reinterpret_cast<std::uint64_t>(addr));
-    }
-}
+void PhysicalPageAllocator::free(const PhysicalPageDescriptor* desc) {
+    auto desc_not_const = const_cast<PhysicalPageDescriptor*>(desc);
 
-void PhysicalPageAllocator::free(std::uint64_t pa) {
-    this->alloced_pages_.erase(pa);
-    std::free(reinterpret_cast<void*>(pa));
+    // Remove from alloced_pages.
+    this->alloced_pages_.erase(desc_not_const);
+
+    // Decrement refcount.
+    desc_not_const->refcount--;
+
+    // Add to free_pages.
+    this->free_pages_.push_front(desc_not_const);
 }
 
 PageTable::PageTable() = default;

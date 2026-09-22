@@ -7,6 +7,7 @@
 #include <optional>
 #include <outcome/config.hpp>
 #include <outcome/outcome.hpp>
+#include <set>
 #include <vector>
 
 namespace outcome = OUTCOME_V2_NAMESPACE;
@@ -25,6 +26,14 @@ struct PhysicalPageDescriptor {
     std::size_t len;
     std::int32_t refcount;
     std::uint64_t flags;
+
+    bool operator<(const PhysicalPageDescriptor& other) const {
+        return start_addr < other.start_addr;
+    }
+
+    bool operator==(const PhysicalPageDescriptor& other) const {
+        return start_addr == other.start_addr;
+    }
 };
 
 class PhysicalPageAllocator {
@@ -42,14 +51,16 @@ public:
 public:
     // Allocate a physical page of unicorn (i.e. virtual page of host),
     // aligned to PAGE_SIZE.
-    outcome::result<std::uint64_t> alloc();
+    // Return pa of unicorn.
+    outcome::result<const PhysicalPageDescriptor*> alloc();
 
-    // Pa must be physical address allocated by alloc().
-    void free(std::uint64_t pa);
+    // Desc must be page descriptor allocated by alloc().
+    void free(const PhysicalPageDescriptor* desc);
 
 private:
-    std::list<PhysicalPageDescriptor> free_pages_;
-    std::map<std::uint64_t, PhysicalPageDescriptor> alloced_pages_;
+    std::vector<PhysicalPageDescriptor> phys_page_descs_;
+    std::list<PhysicalPageDescriptor*> free_pages_;
+    std::set<PhysicalPageDescriptor*> alloced_pages_;
 };
 
 class PageTable {
