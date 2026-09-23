@@ -97,6 +97,12 @@ private:
     std::map<std::uint64_t, std::uint64_t> map_;
 };
 
+struct VirtualPageDescriptor {
+    std::uint64_t start_addr;
+    std::size_t len;
+    std::uint64_t perm;  // Use UC_PROT_*.
+};
+
 struct VirtualMemoryAddressSpace;
 
 // i.e vm_area_struct.
