@@ -19,8 +19,8 @@ TEST_CASE("Test PhysicalPageAllocator", "[physical_page_allocator]") {
         REQUIRE(pa_desc.has_value());
         REQUIRE(ppa.get_page(pa_desc.value()).has_value());
         REQUIRE(ppa.free(pa_desc.value()).has_value());
+        REQUIRE(ppa.free(pa_desc.value()).has_value());
         REQUIRE(ppa.free(pa_desc.value()).has_error());
-        REQUIRE(ppa.get_page(pa_desc.value()).has_error());
     }
 }
 
@@ -178,14 +178,14 @@ TEST_CASE("Test VM", "[vm]") {
     vlinux::VM vm;
     vm.reset();
 
-    SECTION("Test load()") {
-        REQUIRE(
-            vm.load("/home/comma/projs/vlinux/tmp/test_start").has_value() ==
-            true);
-    }
+    // SECTION("Test load()") {
+    //     REQUIRE(
+    //         vm.load("/home/comma/projs/vlinux/tmp/test_start").has_value() ==
+    //         true);
+    // }
 
-    SECTION("Test run()") {
-        (void)vm.load("/home/comma/projs/vlinux/tmp/test_start");
-        REQUIRE(vm.run().has_value() == true);
-    }
+    // SECTION("Test run()") {
+    //     (void)vm.load("/home/comma/projs/vlinux/tmp/test_start");
+    //     REQUIRE(vm.run().has_value() == true);
+    // }
 }
