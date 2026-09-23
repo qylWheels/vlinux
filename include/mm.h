@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unicorn/unicorn.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <list>
@@ -48,7 +50,7 @@ public:
     const std::size_t kMaxPageCount = 128 * 1024;  // 512 MB.
 
 public:
-    PhysicalPageAllocator();
+    PhysicalPageAllocator(uc_engine* uc);
     ~PhysicalPageAllocator();
     PhysicalPageAllocator& operator=(const PhysicalPageAllocator&) = delete;
     PhysicalPageAllocator(const PhysicalPageAllocator&) = delete;
@@ -65,6 +67,7 @@ public:
     void free(std::shared_ptr<PhysicalPageDescriptor> desc);
 
 private:
+    uc_engine* uc_;
     std::list<std::shared_ptr<PhysicalPageDescriptor>> free_pages_;
     std::set<std::shared_ptr<PhysicalPageDescriptor>> alloced_pages_;
 };

@@ -7,7 +7,7 @@
 
 namespace vlinux {
 namespace mm {
-PhysicalPageAllocator::PhysicalPageAllocator() {
+PhysicalPageAllocator::PhysicalPageAllocator(uc_engine* uc) : uc_(uc) {
     for (std::uint64_t addr = 0x3000; addr < 0x3000 + kMaxPageCount * PAGE_SIZE;
          addr += PAGE_SIZE) {
         auto desc =
