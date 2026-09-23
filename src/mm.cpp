@@ -85,12 +85,14 @@ PageTable::PageTable() = default;
 
 PageTable::~PageTable() = default;
 
-outcome::result<void> PageTable::map(std::uint64_t va, std::uint64_t pa) {
-    if ((va % PAGE_SIZE) || (pa % PAGE_SIZE)) {
+outcome::result<void> PageTable::map(
+    std::shared_ptr<VirtualPageDescriptor> va_desc,
+    std::shared_ptr<PhysicalPageDescriptor> pa_desc) {
+    if (va_desc == nullptr || pa_desc == nullptr) {
         return std::errc::invalid_argument;
     }
 
-    auto result = this->map_.insert({va, pa});
+    auto result = this->map_.insert({va_desc, pa_desc});
     if (!result.second) {
         // va already mapped.
         return std::errc::address_in_use;
@@ -99,23 +101,25 @@ outcome::result<void> PageTable::map(std::uint64_t va, std::uint64_t pa) {
     return outcome::success();
 }
 
-outcome::result<void> PageTable::unmap(std::uint64_t va) {
-    if (va % PAGE_SIZE != 0) {
+outcome::result<void> PageTable::unmap(
+    std::shared_ptr<VirtualPageDescriptor> va_desc) {
+    if (va_desc == nullptr) {
         return std::errc::invalid_argument;
     }
 
-    this->map_.erase(va);
+    this->map_.erase(va_desc);
 
     return outcome::success();
 }
 
 std::optional<std::uint64_t> PageTable::va_to_pa(std::uint64_t va) {
-    std::uint64_t aligned_va = va & ~(PAGE_SIZE - 1);
-    auto it = this->map_.find(aligned_va);
-    if (it == this->map_.end()) {
-        return std::nullopt;
+    for (auto& [va_desc, pa_desc] : this->map_) {
+        if (va_desc->start_addr <= va &&
+            va < va_desc->start_addr + va_desc->len) {
+            return pa_desc->start_addr + (va - va_desc->start_addr);
+        }
     }
-    return it->second + (va - aligned_va);
+    return std::nullopt;
 }
 }  // namespace mm
 }  // namespace vlinux

@@ -77,6 +77,12 @@ private:
     std::set<std::shared_ptr<PhysicalPageDescriptor>> alloced_pages_;
 };
 
+struct VirtualPageDescriptor {
+    std::uint64_t start_addr;
+    std::size_t len;
+    std::uint64_t perm;  // Use UC_PROT_*.
+};
+
 class PageTable {
 public:
     PageTable();
@@ -85,22 +91,17 @@ public:
 public:
     // Va refers to virtual address of guest process.
     // Pa refers to physical address of vm, i.e. virtual address of the host.
-
-    // Both va and pa must be aligned to PAGE_SIZE.
-    outcome::result<void> map(std::uint64_t va, std::uint64_t pa);
-    outcome::result<void> unmap(std::uint64_t va);
+    outcome::result<void> map(std::shared_ptr<VirtualPageDescriptor> va_desc,
+                              std::shared_ptr<PhysicalPageDescriptor> pa_desc);
+    outcome::result<void> unmap(std::shared_ptr<VirtualPageDescriptor> va_desc);
 
     // Va needn't be aligned to PAGE_SIZE.
     std::optional<std::uint64_t> va_to_pa(std::uint64_t va);
 
 private:
-    std::map<std::uint64_t, std::uint64_t> map_;
-};
-
-struct VirtualPageDescriptor {
-    std::uint64_t start_addr;
-    std::size_t len;
-    std::uint64_t perm;  // Use UC_PROT_*.
+    std::map<std::shared_ptr<VirtualPageDescriptor>,
+             std::shared_ptr<PhysicalPageDescriptor>>
+        map_;
 };
 
 struct VirtualMemoryAddressSpace;
