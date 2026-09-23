@@ -25,35 +25,43 @@ TEST_CASE("Test PhysicalPageAllocator", "[physical_page_allocator]") {
 }
 
 TEST_CASE("Test PageTable", "[page_table]") {
+    uc_engine *uc;
+    REQUIRE(::uc_open(UC_ARCH_X86, UC_MODE_64, &uc) == UC_ERR_OK);
     vlinux::mm::PageTable pt;
-    vlinux::mm::PhysicalPageAllocator ppa;
+    vlinux::mm::PhysicalPageAllocator ppa(uc);
 
-    SECTION("Test map(), unmap() and va_to_pa()") {
+    SECTION("Test map(), unmap(), va_to_pa() and va_to_desc()") {
         auto result = ppa.alloc();
         REQUIRE(result.has_value());
-
         auto pa_desc = result.value();
-        REQUIRE(pt.map(0x1000, pa_desc->start_addr).has_value());
-        REQUIRE(pt.va_to_pa(0x1000) == pa_desc->start_addr);
-        REQUIRE(pt.va_to_pa(0x1145) == pa_desc->start_addr + 0x1145 - 0x1000);
-        REQUIRE(pt.va_to_pa(0x1000 + 4096 - 1) ==
+
+        auto va_desc = std::make_shared<vlinux::mm::VirtualPageDescriptor>();
+        va_desc->start_addr = 0xbeef'0000;
+        va_desc->len = vlinux::mm::PAGE_SIZE;
+        va_desc->perm = UC_PROT_READ | UC_PROT_WRITE;
+
+        // Test map().
+        REQUIRE(pt.map(va_desc, pa_desc).has_value());
+
+        // Test va_to_pa().
+        REQUIRE(pt.va_to_pa(0xbeef'0000) == pa_desc->start_addr);
+        REQUIRE(pt.va_to_pa(0xbeef'1145) == pa_desc->start_addr + 0x1145);
+        REQUIRE(pt.va_to_pa(0xbeef'0000 + 4096 - 1) ==
                 pa_desc->start_addr + 4096 - 1);
-        REQUIRE(pt.unmap(0x1000).has_value());
-        REQUIRE(pt.va_to_pa(0x1000) == std::nullopt);
 
-        ppa.free(pa_desc);
-    }
+        // Test va_to_desc().
+        auto va_desc2 = pt.va_to_desc(0xbeef'0000);
+        REQUIRE(va_desc2.has_value());
+        REQUIRE(va_desc2.value().get() == va_desc.get());
 
-    SECTION("Test map() with unaligned va and pa") {
-        REQUIRE(pt.map(0x1001, 0x2000).has_error());
-        REQUIRE(pt.map(0x1000, 0x2001).has_error());
-        REQUIRE(pt.map(0x1001, 0x2001).has_error());
-    }
+        // Test unmap().
+        REQUIRE(pt.unmap(va_desc).has_value());
 
-    SECTION("Test unmap() with unaligned va") {
-        REQUIRE(pt.map(0x1000, 0x2000).has_value());
-        REQUIRE(pt.unmap(0x1001).has_error());
-        REQUIRE(pt.unmap(0x1000).has_value());
+        // Test va_to_pa() after unmap().
+        REQUIRE(pt.va_to_pa(0xbeef'0000) == std::nullopt);
+
+        // Free physical page.
+        REQUIRE(ppa.free(pa_desc).has_value());
     }
 }
 
