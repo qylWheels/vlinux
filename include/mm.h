@@ -110,6 +110,7 @@ struct VirtualMemoryAddressSpace;
 struct VirtualMemoryArea {
     std::uint64_t start, end;
     std::uint64_t perm;  // Use UC_PROT_*.
+    std::vector<std::shared_ptr<VirtualPageDescriptor>> va_descs;
     VirtualMemoryAddressSpace* address_space;
 };
 
