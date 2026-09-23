@@ -107,15 +107,8 @@ struct VirtualMemoryAddressSpace;
 
 // i.e vm_area_struct.
 struct VirtualMemoryArea {
-    enum class Perm {
-        None = 0,
-        Read = 1 << 0,
-        Write = 1 << 1,
-        Execute = 1 << 2,
-    };
-
     std::uint64_t start, end;
-    std::uint64_t perm;
+    std::uint64_t perm;  // Use UC_PROT_*.
     VirtualMemoryAddressSpace* address_space;
 };
 
