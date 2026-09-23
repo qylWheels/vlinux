@@ -61,7 +61,8 @@ public:
     // Allocate a physical page of unicorn (i.e. virtual page of host),
     // aligned to PAGE_SIZE.
     // Return pa of unicorn.
-    outcome::result<std::shared_ptr<PhysicalPageDescriptor>> alloc();
+    outcome::result<std::shared_ptr<PhysicalPageDescriptor>> alloc(
+        std::uint32_t prot);
 
     // Desc must be page descriptor allocated by alloc().
     void free(std::shared_ptr<PhysicalPageDescriptor> desc);

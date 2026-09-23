@@ -1,5 +1,7 @@
 #include "mm.h"
 
+#include <unicorn/unicorn.h>
+
 #include <cstdint>
 #include <cstdlib>
 #include <optional>
@@ -19,14 +21,22 @@ PhysicalPageAllocator::PhysicalPageAllocator(uc_engine* uc) : uc_(uc) {
 PhysicalPageAllocator::~PhysicalPageAllocator() = default;
 
 outcome::result<std::shared_ptr<PhysicalPageDescriptor>>
-PhysicalPageAllocator::alloc() {
+PhysicalPageAllocator::alloc(std::uint32_t prot) {
     if (this->free_pages_.empty()) {
         return std::errc::not_enough_memory;
     }
 
-    // Get a page.
+    uc_err err;
+
+    // Get a page descriptor.
     auto page = this->free_pages_.front();
     this->free_pages_.pop_front();
+
+    // Alloc physical page in unicorn.
+    err = ::uc_mem_map(this->uc_, page->start_addr, PAGE_SIZE, prot);
+    if (err != UC_ERR_OK) {
+        return std::errc::invalid_argument;
+    }
 
     // Increment refcount.
     page->refcount++;
@@ -43,6 +53,9 @@ void PhysicalPageAllocator::free(std::shared_ptr<PhysicalPageDescriptor> desc) {
 
     // Decrement refcount.
     desc->refcount--;
+
+    // Free physical page in unicorn.
+    (void)::uc_mem_unmap(this->uc_, desc->start_addr, PAGE_SIZE);
 
     // Add to free_pages.
     this->free_pages_.push_front(desc);
