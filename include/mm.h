@@ -10,6 +10,7 @@
 #include <optional>
 #include <outcome/config.hpp>
 #include <outcome/outcome.hpp>
+#include <outcome/result.hpp>
 #include <set>
 #include <vector>
 
@@ -63,6 +64,10 @@ public:
     // Return pa of unicorn.
     outcome::result<std::shared_ptr<PhysicalPageDescriptor>> alloc(
         std::uint32_t prot);
+
+    // Increment refcount.
+    outcome::result<std::shared_ptr<PhysicalPageDescriptor>> get_page(
+        std::shared_ptr<PhysicalPageDescriptor> desc);
 
     // Desc must be page descriptor allocated by alloc().
     void free(std::shared_ptr<PhysicalPageDescriptor> desc);

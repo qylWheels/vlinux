@@ -47,6 +47,23 @@ PhysicalPageAllocator::alloc(std::uint32_t prot) {
     return outcome::success(page);
 }
 
+outcome::result<std::shared_ptr<PhysicalPageDescriptor>>
+PhysicalPageAllocator::get_page(std::shared_ptr<PhysicalPageDescriptor> desc) {
+    if (desc == nullptr) {
+        return std::errc::invalid_argument;
+    }
+
+    auto it = this->alloced_pages_.find(desc);
+    if (it == this->alloced_pages_.end()) {
+        return std::errc::invalid_argument;
+    }
+
+    // Increment refcount.
+    desc->refcount++;
+
+    return outcome::success(desc);
+}
+
 void PhysicalPageAllocator::free(std::shared_ptr<PhysicalPageDescriptor> desc) {
     // Remove from alloced_pages.
     this->alloced_pages_.erase(desc);
