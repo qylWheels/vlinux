@@ -21,7 +21,7 @@ PhysicalPageAllocator::PhysicalPageAllocator(uc_engine* uc) : uc_(uc) {
 PhysicalPageAllocator::~PhysicalPageAllocator() = default;
 
 outcome::result<std::shared_ptr<PhysicalPageDescriptor>>
-PhysicalPageAllocator::alloc(std::uint32_t prot) {
+PhysicalPageAllocator::alloc() {
     if (this->free_pages_.empty()) {
         return std::errc::not_enough_memory;
     }
@@ -32,15 +32,15 @@ PhysicalPageAllocator::alloc(std::uint32_t prot) {
     auto page = this->free_pages_.front();
     this->free_pages_.pop_front();
 
-    // Alloc physical page in unicorn.
-    err = ::uc_mem_map(this->uc_, page->start_addr, PAGE_SIZE, prot);
+    // Alloc physical page in unicorn. Set permission to UC_PROT_ALL
+    // because this is a physical page of guest.
+    err = ::uc_mem_map(this->uc_, page->start_addr, PAGE_SIZE, UC_PROT_ALL);
     if (err != UC_ERR_OK) {
         return std::errc::invalid_argument;
     }
 
     // Set page status.
     page->refcount = 1;
-    page->perm = prot;
 
     // Add to alloced_pages.
     this->alloced_pages_.insert(page);

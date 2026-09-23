@@ -30,7 +30,6 @@ struct PhysicalPageDescriptor {
     std::size_t len;
     std::int32_t refcount;
     std::uint64_t flags;
-    std::uint64_t perm;  // Page permission, use UC_PROT_*.
 
     bool operator<(const PhysicalPageDescriptor& other) const {
         return start_addr < other.start_addr;
@@ -61,10 +60,9 @@ public:
 
 public:
     // Allocate a physical page of unicorn (i.e. virtual page of host),
-    // aligned to PAGE_SIZE. Prot must be UC_PROT_*.
-    // Return pa of unicorn.
-    outcome::result<std::shared_ptr<PhysicalPageDescriptor>> alloc(
-        std::uint32_t prot);
+    // aligned to PAGE_SIZE.
+    // Return descriptor of physical page.
+    outcome::result<std::shared_ptr<PhysicalPageDescriptor>> alloc();
 
     // Increment refcount.
     outcome::result<std::shared_ptr<PhysicalPageDescriptor>> get_page(
