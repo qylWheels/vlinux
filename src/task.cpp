@@ -174,7 +174,7 @@ bool Scheduler::tlb_fill_callback(uc_engine *uc, uint64_t vaddr,
 
     switch (type) {
         case UC_MEM_READ: {
-            if (va_desc.value().perm & UC_PROT_READ) {
+            if (va_desc.value()->perm & UC_PROT_READ) {
                 result->perms = UC_PROT_READ;
             } else {
                 return false;
@@ -182,7 +182,7 @@ bool Scheduler::tlb_fill_callback(uc_engine *uc, uint64_t vaddr,
             break;
         }
         case UC_MEM_WRITE: {
-            if (va_desc.value().perm & UC_PROT_WRITE) {
+            if (va_desc.value()->perm & UC_PROT_WRITE) {
                 result->perms = UC_PROT_WRITE;
             } else {
                 return false;
@@ -190,7 +190,7 @@ bool Scheduler::tlb_fill_callback(uc_engine *uc, uint64_t vaddr,
             break;
         }
         case UC_MEM_FETCH: {
-            if (va_desc.value().perm & UC_PROT_EXEC) {
+            if (va_desc.value()->perm & UC_PROT_EXEC) {
                 result->perms = UC_PROT_EXEC;
             } else {
                 return false;
