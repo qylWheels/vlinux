@@ -127,16 +127,27 @@ public:
     Status status() const { return status_; }
 
 private:
+    static bool tlb_fill_callback(uc_engine* uc, uint64_t vaddr,
+                                  uc_mem_type type, uc_tlb_entry* result,
+                                  void* user_data);
+
+private:
     uc_engine* uc_;
 
     // Protect the following fields.
     std::mutex mutex_;
 
     Status status_;
+
+    // Task-related fields.
     std::jthread vcpu_;
     std::shared_ptr<Task> current_task_;
     std::deque<std::shared_ptr<Task>> ready_task_queue_;  // Ready queue.
     std::set<std::shared_ptr<Task>>
         ready_task_set_;  // For boosting find operation.
+
+    // Memory-related fields.
+    // It is our duty to fill tlb in UC_TLB_VIRTUAL mode.
+    uc_hook tlb_fill_hook_;
 };
 }  // namespace vlinux
