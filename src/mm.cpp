@@ -133,11 +133,12 @@ std::optional<std::uint64_t> PageTable::va_to_pa(std::uint64_t va) {
     return std::nullopt;
 }
 
-std::optional<VirtualPageDescriptor> PageTable::va_to_desc(std::uint64_t va) {
+std::optional<std::shared_ptr<VirtualPageDescriptor>> PageTable::va_to_desc(
+    std::uint64_t va) {
     for (const auto& [va_desc, pa_desc] : this->map_) {
         if (va_desc->start_addr <= va &&
             va < va_desc->start_addr + va_desc->len) {
-            return *va_desc;
+            return va_desc;
         }
     }
     return std::nullopt;

@@ -101,7 +101,8 @@ public:
 
     // Va needn't be aligned to PAGE_SIZE.
     // Return std::nullopt if va is not mapped.
-    std::optional<VirtualPageDescriptor> va_to_desc(std::uint64_t va);
+    std::optional<std::shared_ptr<VirtualPageDescriptor>> va_to_desc(
+        std::uint64_t va);
 
 private:
     std::map<std::shared_ptr<VirtualPageDescriptor>,
