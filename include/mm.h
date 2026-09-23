@@ -96,9 +96,11 @@ public:
     outcome::result<void> unmap(std::shared_ptr<VirtualPageDescriptor> va_desc);
 
     // Va needn't be aligned to PAGE_SIZE.
+    // Return std::nullopt if va is not mapped.
     std::optional<std::uint64_t> va_to_pa(std::uint64_t va);
 
     // Va needn't be aligned to PAGE_SIZE.
+    // Return std::nullopt if va is not mapped.
     std::optional<VirtualPageDescriptor> va_to_desc(std::uint64_t va);
 
 private:
