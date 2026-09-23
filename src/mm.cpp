@@ -21,7 +21,7 @@ PhysicalPageAllocator::PhysicalPageAllocator(uc_engine* uc) : uc_(uc) {
 PhysicalPageAllocator::~PhysicalPageAllocator() = default;
 
 outcome::result<std::shared_ptr<PhysicalPageDescriptor>>
-PhysicalPageAllocator::get_page(std::uint32_t prot) {
+PhysicalPageAllocator::alloc(std::uint32_t prot) {
     if (this->free_pages_.empty()) {
         return std::errc::not_enough_memory;
     }
@@ -47,8 +47,7 @@ PhysicalPageAllocator::get_page(std::uint32_t prot) {
     return outcome::success(page);
 }
 
-void PhysicalPageAllocator::put_page(
-    std::shared_ptr<PhysicalPageDescriptor> desc) {
+void PhysicalPageAllocator::free(std::shared_ptr<PhysicalPageDescriptor> desc) {
     // Remove from alloced_pages.
     this->alloced_pages_.erase(desc);
 
