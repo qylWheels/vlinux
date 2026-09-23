@@ -76,6 +76,27 @@ VM::VM() {
         [this](uc_context* ctx) -> outcome::result<std::shared_ptr<Task>> {
         return std::make_shared<vlinux::Task>(ctx);
     };
+    this->task_initializer_.setup_task_properties =
+        [this](std::shared_ptr<Task> task, std::string name, bool root_task,
+               std::int64_t pid, std::int64_t tgid,
+               std::shared_ptr<Task> parent,
+               std::vector<std::shared_ptr<Task>>& children, Task::State state,
+               std::uint64_t stack_top, std::uint64_t stack_bottom,
+               mm::VirtualMemoryAddressSpace address_space,
+               mm::PageTable page_table) -> outcome::result<void> {
+        task->name = name;
+        task->root_task = root_task;
+        task->pid = pid;
+        task->tgid = tgid;
+        task->parent = parent;
+        task->children = children;
+        task->state = state;
+        task->stack_top = stack_top;
+        task->stack_bottom = stack_bottom;
+        task->address_space = address_space;
+        task->page_table = page_table;
+        return outcome::success();
+    };
 }
 
 VM::~VM() {
