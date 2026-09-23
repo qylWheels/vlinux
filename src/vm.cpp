@@ -35,6 +35,19 @@ VM::VM() {
 
     this->scheduler_ = std::make_shared<Scheduler>(this->uc_);
     this->ppa_ = std::make_shared<mm::PhysicalPageAllocator>(this->uc_);
+
+    // Setup task initializer.
+    this->task_initializer_ = TaskInitializer();
+    this->task_initializer_.create_task_ctx =
+        [this]() -> outcome::result<uc_context*> {
+        uc_err err;
+        uc_context* ctx;
+        err = ::uc_context_alloc(this->uc_, &ctx);
+        if (err != UC_ERR_OK) {
+            return make_error_code(err);
+        }
+        return outcome::success();
+    };
 }
 
 VM::~VM() {
