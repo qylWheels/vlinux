@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <outcome.hpp>
 #include <outcome/result.hpp>
@@ -15,6 +16,24 @@
 namespace outcome = OUTCOME_V2_NAMESPACE;
 
 namespace vlinux {
+struct TaskInitializer {
+public:
+    outcome::result<void> init();
+
+public:
+    std::function<outcome::result<uc_context*>()> create_task_ctx;
+    std::function<outcome::result<void>(uc_context*)> setup_task_ctx;
+    std::function<outcome::result<void>(uc_context*)>
+        add_task_ctx_to_context_manager;
+    std::function<outcome::result<std::shared_ptr<Task>>()> create_task;
+    std::function<outcome::result<void>(std::shared_ptr<Task>)>
+        setup_task_properties;
+    std::function<outcome::result<void>(std::shared_ptr<Task>)>
+        add_task_to_task_manager;
+    std::function<outcome::result<void>(std::shared_ptr<Task>)>
+        add_task_to_scheduler;
+};
+
 class VM {
 public:
     VM();
@@ -43,6 +62,7 @@ private:
     std::uint64_t entrypoint_;
 
     // Task-related fields.
+    TaskInitializer task_initializer_;
     PidManager pid_manager_;
     std::set<uc_context*> contexts_;
     std::set<std::shared_ptr<Task>> tasks_;
