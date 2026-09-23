@@ -22,6 +22,8 @@ TEST_CASE("Test PhysicalPageAllocator", "[physical_page_allocator]") {
         REQUIRE(ppa.free(pa_desc.value()).has_value());
         REQUIRE(ppa.free(pa_desc.value()).has_error());
     }
+
+    REQUIRE(::uc_close(uc) == UC_ERR_OK);
 }
 
 TEST_CASE("Test PageTable", "[page_table]") {
@@ -67,6 +69,8 @@ TEST_CASE("Test PageTable", "[page_table]") {
         // Free physical page.
         REQUIRE(ppa.free(pa_desc).has_value());
     }
+
+    REQUIRE(::uc_close(uc) == UC_ERR_OK);
 }
 
 TEST_CASE("Test PidManager", "[pid_manager]") {
@@ -171,7 +175,7 @@ TEST_CASE("Test Scheduler", "[scheduler]") {
         REQUIRE(::uc_context_free(ctx2) == UC_ERR_OK);
     }
 
-    ::uc_close(uc);
+    REQUIRE(::uc_close(uc) == UC_ERR_OK);
 }
 
 TEST_CASE("Test VM", "[vm]") {
