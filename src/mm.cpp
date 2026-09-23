@@ -55,8 +55,10 @@ void PhysicalPageAllocator::put_page(
     // Decrement refcount.
     desc->refcount--;
 
-    // Free physical page in unicorn.
-    (void)::uc_mem_unmap(this->uc_, desc->start_addr, PAGE_SIZE);
+    // Free physical page in unicorn if refcount is 0.
+    if (desc->refcount == 0) {
+        (void)::uc_mem_unmap(this->uc_, desc->start_addr, PAGE_SIZE);
+    }
 
     // Add to free_pages.
     this->free_pages_.push_front(desc);
