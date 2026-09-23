@@ -48,6 +48,22 @@ VM::VM() {
         }
         return outcome::success();
     };
+    this->task_initializer_.setup_task_ctx =
+        [this](uc_context* ctx, std::uint64_t rip) -> outcome::result<void> {
+        uc_err err;
+
+        // TODO: Don't save the context?
+        err = ::uc_context_save(this->uc_, ctx);
+        if (err != UC_ERR_OK) {
+            return make_error_code(err);
+        }
+        err = ::uc_context_reg_write(ctx, UC_X86_REG_RIP, &rip);
+        if (err != UC_ERR_OK) {
+            return make_error_code(err);
+        }
+
+        return outcome::success();
+    };
 }
 
 VM::~VM() {
