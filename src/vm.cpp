@@ -105,6 +105,10 @@ VM::VM() {
         }
         return outcome::success();
     };
+    this->task_initializer_.add_task_to_scheduler =
+        [this](std::shared_ptr<Task> task) -> outcome::result<void> {
+        return this->scheduler_->add_task(task);
+    };
 }
 
 VM::~VM() {
