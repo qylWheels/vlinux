@@ -182,11 +182,11 @@ TEST_CASE("Test VM", "[vm]") {
     vlinux::VM vm;
     vm.reset();
 
-    // SECTION("Test load()") {
-    //     REQUIRE(
-    //         vm.load("/home/comma/projs/vlinux/tmp/test_start").has_value() ==
-    //         true);
-    // }
+    SECTION("Test load()") {
+        REQUIRE(
+            vm.load("/home/comma/projs/vlinux/tmp/test_start").has_value() ==
+            true);
+    }
 
     // SECTION("Test run()") {
     //     (void)vm.load("/home/comma/projs/vlinux/tmp/test_start");
