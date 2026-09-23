@@ -9,6 +9,7 @@
 #include <outcome.hpp>
 #include <outcome/result.hpp>
 #include <set>
+#include <string>
 
 #include "mm.h"
 #include "task.h"
@@ -28,7 +29,12 @@ public:
         add_task_ctx_to_context_manager;
     std::function<outcome::result<std::shared_ptr<Task>>(uc_context* ctx)>
         create_task;
-    std::function<outcome::result<void>(std::shared_ptr<Task>)>
+    std::function<outcome::result<void>(
+        std::shared_ptr<Task> task, std::string name, bool root_task,
+        std::int64_t pid, std::int64_t tgid, std::shared_ptr<Task> parent,
+        std::vector<std::shared_ptr<Task>>& children, Task::State state,
+        std::uint64_t stack_top, std::uint64_t stack_bottom,
+        mm::VirtualMemoryAddressSpace address_space, mm::PageTable page_table)>
         setup_task_properties;
     std::function<outcome::result<void>(std::shared_ptr<Task>)>
         add_task_to_task_manager;
