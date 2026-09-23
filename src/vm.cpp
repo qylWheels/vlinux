@@ -72,6 +72,10 @@ VM::VM() {
         }
         return outcome::success();
     };
+    this->task_initializer_.create_task =
+        [this](uc_context* ctx) -> outcome::result<std::shared_ptr<Task>> {
+        return std::make_shared<vlinux::Task>(ctx);
+    };
 }
 
 VM::~VM() {
