@@ -44,10 +44,14 @@ TEST_CASE("Test PageTable", "[page_table]") {
         REQUIRE(pt.map(va_desc, pa_desc).has_value());
 
         // Test va_to_pa().
-        REQUIRE(pt.va_to_pa(0xbeef'0000) == pa_desc->start_addr);
-        REQUIRE(pt.va_to_pa(0xbeef'1145) == pa_desc->start_addr + 0x1145);
-        REQUIRE(pt.va_to_pa(0xbeef'0000 + 4096 - 1) ==
-                pa_desc->start_addr + 4096 - 1);
+        auto pa1 = pt.va_to_pa(0xbeef'0000);
+        auto pa2 = pt.va_to_pa(0xbeef'1145);
+        auto pa3 = pt.va_to_pa(0xbeef'0000 + 4096 - 1);
+        REQUIRE((pa1.has_value() && pa1.value() == pa_desc->start_addr));
+        REQUIRE(
+            (pa2.has_value() && pa2.value() == pa_desc->start_addr + 0x1145));
+        REQUIRE(
+            (pa3.has_value() && pa3.value() == pa_desc->start_addr + 4096 - 1));
 
         // Test va_to_desc().
         auto va_desc2 = pt.va_to_desc(0xbeef'0000);
