@@ -19,7 +19,7 @@ VM::VM() {
     uc_err result;
 
     // Create Unicorn engine.
-    result = uc_open(UC_ARCH_X86, UC_MODE_64, &this->engine_);
+    result = uc_open(UC_ARCH_X86, UC_MODE_64, &this->uc_);
     if (result != UC_ERR_OK) {
         throw std::runtime_error(
             std::format("uc_open failed: {}", uc_strerror(result)));
@@ -27,13 +27,13 @@ VM::VM() {
 
     // Set TLB to virtual mode. i.e., we translate virtual addresses to physical
     // addresses by ourselves.
-    result = uc_ctl_tlb_mode(this->engine_, UC_TLB_VIRTUAL);
+    result = uc_ctl_tlb_mode(this->uc_, UC_TLB_VIRTUAL);
     if (result != UC_ERR_OK) {
         throw std::runtime_error(
             std::format("uc_ctl_tlb_mode failed: {}", uc_strerror(result)));
     }
 
-    this->scheduler_ = std::make_shared<Scheduler>(this->engine_);
+    this->scheduler_ = std::make_shared<Scheduler>(this->uc_);
 }
 
 VM::~VM() {
@@ -42,7 +42,7 @@ VM::~VM() {
         ::uc_context_free(ctx);
     }
 
-    ::uc_close(this->engine_);
+    ::uc_close(this->uc_);
 }
 
 void VM::reset() {}
@@ -93,21 +93,20 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
             perms |= UC_PROT_EXEC;
         }
         err = uc_mem_map(
-            this->engine_, virtual_address,
+            this->uc_, virtual_address,
             (virtual_size + mm::PAGE_SIZE - 1) & ~(mm::PAGE_SIZE - 1), perms);
         if (err != UC_ERR_OK) {
             return make_error_code(err);
         }
 
         // Write the segment data to the memory.
-        err = uc_mem_write(this->engine_, virtual_address, data.data(),
-                           file_size);
+        err = uc_mem_write(this->uc_, virtual_address, data.data(), file_size);
         if (err != UC_ERR_OK) {
             return make_error_code(err);
         }
         std::vector<char> zeros(virtual_size - file_size);
-        err = uc_mem_write(this->engine_, virtual_address + file_size,
-                           zeros.data(), virtual_size - file_size);
+        err = uc_mem_write(this->uc_, virtual_address + file_size, zeros.data(),
+                           virtual_size - file_size);
         if (err != UC_ERR_OK) {
             return make_error_code(err);
         }
@@ -126,7 +125,7 @@ outcome::result<void> VM::run() noexcept {
     uc_err err;
 
     // Add syscall hook.
-    err = uc_hook_add(this->engine_, &this->syscall_hook_, UC_HOOK_INSN,
+    err = uc_hook_add(this->uc_, &this->syscall_hook_, UC_HOOK_INSN,
                       reinterpret_cast<void*>(VM::syscall_hook_callback), this,
                       0, std::numeric_limits<std::uint64_t>::max(),
                       UC_X86_INS_SYSCALL);
@@ -139,13 +138,13 @@ outcome::result<void> VM::run() noexcept {
     std::uint64_t stack_bottom_pa = stack_bottom_pa_desc->start_addr;
     std::uint64_t stack_bottom_va = 0xf000'0000;
     std::uint64_t stack_top_va = stack_bottom_va + mm::PAGE_SIZE;
-    err = uc_mem_map_ptr(this->engine_, stack_bottom_va, mm::PAGE_SIZE,
+    err = uc_mem_map_ptr(this->uc_, stack_bottom_va, mm::PAGE_SIZE,
                          UC_PROT_READ | UC_PROT_WRITE,
                          reinterpret_cast<void*>(stack_bottom_pa));
     if (err != UC_ERR_OK) {
         return make_error_code(err);
     }
-    err = uc_reg_write(this->engine_, UC_X86_REG_RSP, &stack_top_va);
+    err = uc_reg_write(this->uc_, UC_X86_REG_RSP, &stack_top_va);
     if (err != UC_ERR_OK) {
         return make_error_code(err);
     }
@@ -154,10 +153,10 @@ outcome::result<void> VM::run() noexcept {
     this->curr_task_->state = Task::State::Running;
 
     // Run!
-    err = uc_emu_start(this->engine_, this->entrypoint_, 0, 0, 0);
+    err = uc_emu_start(this->uc_, this->entrypoint_, 0, 0, 0);
     if (err != UC_ERR_OK) {
         std::uint64_t rip;
-        uc_reg_read(this->engine_, UC_X86_REG_RIP, &rip);
+        uc_reg_read(this->uc_, UC_X86_REG_RIP, &rip);
         std::cout << std::format("rip: {:#x}", rip) << std::endl;
         return make_error_code(err);
     }
@@ -173,13 +172,13 @@ outcome::result<void> VM::setup_idle_and_init_task() {
     std::uint8_t code[] = {0xEB, 0xFE};
 
     // Map the code to unicorn.
-    err = ::uc_mem_map_ptr(this->engine_, mm::kIdleTaskCodeRegionStart,
+    err = ::uc_mem_map_ptr(this->uc_, mm::kIdleTaskCodeRegionStart,
                            sizeof(code), UC_PROT_READ | UC_PROT_WRITE,
                            reinterpret_cast<void*>(code));
     if (err != UC_ERR_OK) {
         return make_error_code(err);
     }
-    err = ::uc_mem_map_ptr(this->engine_, mm::kInitTaskCodeRegionStart,
+    err = ::uc_mem_map_ptr(this->uc_, mm::kInitTaskCodeRegionStart,
                            sizeof(code), UC_PROT_READ | UC_PROT_WRITE,
                            reinterpret_cast<void*>(code));
     if (err != UC_ERR_OK) {
@@ -188,11 +187,11 @@ outcome::result<void> VM::setup_idle_and_init_task() {
 
     // Allocate contexts.
     uc_context *idle_task_ctx, *init_task_ctx;
-    err = ::uc_context_alloc(this->engine_, &idle_task_ctx);
+    err = ::uc_context_alloc(this->uc_, &idle_task_ctx);
     if (err != UC_ERR_OK) {
         return make_error_code(err);
     }
-    err = ::uc_context_alloc(this->engine_, &init_task_ctx);
+    err = ::uc_context_alloc(this->uc_, &init_task_ctx);
     if (err != UC_ERR_OK) {
         return make_error_code(err);
     }
@@ -202,7 +201,7 @@ outcome::result<void> VM::setup_idle_and_init_task() {
     this->contexts_.insert(init_task_ctx);
 
     // Initialize the context.
-    err = ::uc_context_save(this->engine_, idle_task_ctx);
+    err = ::uc_context_save(this->uc_, idle_task_ctx);
     if (err != UC_ERR_OK) {
         return make_error_code(err);
     }
@@ -211,7 +210,7 @@ outcome::result<void> VM::setup_idle_and_init_task() {
     if (err != UC_ERR_OK) {
         return make_error_code(err);
     }
-    err = ::uc_context_save(this->engine_, init_task_ctx);
+    err = ::uc_context_save(this->uc_, init_task_ctx);
     if (err != UC_ERR_OK) {
         return make_error_code(err);
     }
@@ -278,7 +277,7 @@ void VM::exit(int status) {
     this->curr_task_->exit_status = status;
     this->curr_task_->state = Task::State::Stopped;
     if (this->curr_task_->root_task) {
-        uc_emu_stop(this->engine_);
+        uc_emu_stop(this->uc_);
     }
 }
 

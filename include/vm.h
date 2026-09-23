@@ -50,7 +50,7 @@ private:
     // Memory-related fields.
     mm::PhysicalPageAllocator ppa_;
 
-    uc_engine* engine_;
+    uc_engine* uc_;
     uc_hook syscall_hook_;
     std::shared_ptr<Task> curr_task_;
 };
