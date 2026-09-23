@@ -10,12 +10,17 @@
 #include "vm.h"
 
 TEST_CASE("Test PhysicalPageAllocator", "[physical_page_allocator]") {
-    vlinux::mm::PhysicalPageAllocator ppa;
+    uc_engine *uc;
+    REQUIRE(::uc_open(UC_ARCH_X86, UC_MODE_64, &uc) == UC_ERR_OK);
+    vlinux::mm::PhysicalPageAllocator ppa(uc);
 
-    SECTION("Test alloc() and free()") {
+    SECTION("Test alloc(), get_page() and free()") {
         auto pa_desc = ppa.alloc();
         REQUIRE(pa_desc.has_value());
-        ppa.free(pa_desc.value());
+        REQUIRE(ppa.get_page(pa_desc.value()).has_value());
+        REQUIRE(ppa.free(pa_desc.value()).has_value());
+        REQUIRE(ppa.free(pa_desc.value()).has_error());
+        REQUIRE(ppa.get_page(pa_desc.value()).has_error());
     }
 }
 
