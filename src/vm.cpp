@@ -135,8 +135,7 @@ outcome::result<void> VM::run() noexcept {
     }
 
     // Setup stack.
-    OUTCOME_TRY(auto stack_bottom_pa_desc,
-                this->ppa_->alloc(UC_PROT_READ | UC_PROT_WRITE));
+    OUTCOME_TRY(auto stack_bottom_pa_desc, this->ppa_->alloc());
     std::uint64_t stack_bottom_pa = stack_bottom_pa_desc->start_addr;
     std::uint64_t stack_bottom_va = 0xf000'0000;
     std::uint64_t stack_top_va = stack_bottom_va + mm::PAGE_SIZE;
