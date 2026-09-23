@@ -16,21 +16,21 @@
 
 namespace vlinux {
 VM::VM() {
-    uc_err result;
+    uc_err err;
 
     // Create Unicorn engine.
-    result = uc_open(UC_ARCH_X86, UC_MODE_64, &this->uc_);
-    if (result != UC_ERR_OK) {
+    err = uc_open(UC_ARCH_X86, UC_MODE_64, &this->uc_);
+    if (err != UC_ERR_OK) {
         throw std::runtime_error(
-            std::format("uc_open failed: {}", uc_strerror(result)));
+            std::format("uc_open failed: {}", uc_strerror(err)));
     }
 
     // Set TLB to virtual mode. i.e., we translate virtual addresses to physical
     // addresses by ourselves.
-    result = uc_ctl_tlb_mode(this->uc_, UC_TLB_VIRTUAL);
-    if (result != UC_ERR_OK) {
+    err = uc_ctl_tlb_mode(this->uc_, UC_TLB_VIRTUAL);
+    if (err != UC_ERR_OK) {
         throw std::runtime_error(
-            std::format("uc_ctl_tlb_mode failed: {}", uc_strerror(result)));
+            std::format("uc_ctl_tlb_mode failed: {}", uc_strerror(err)));
     }
 
     this->scheduler_ = std::make_shared<Scheduler>(this->uc_);
