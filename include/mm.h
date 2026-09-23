@@ -69,7 +69,7 @@ public:
         std::shared_ptr<PhysicalPageDescriptor> desc);
 
     // Desc must be page descriptor allocated by alloc().
-    void free(std::shared_ptr<PhysicalPageDescriptor> desc);
+    outcome::result<void> free(std::shared_ptr<PhysicalPageDescriptor> desc);
 
 private:
     uc_engine* uc_;

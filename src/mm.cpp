@@ -65,7 +65,16 @@ PhysicalPageAllocator::get_page(std::shared_ptr<PhysicalPageDescriptor> desc) {
     return outcome::success(desc);
 }
 
-void PhysicalPageAllocator::free(std::shared_ptr<PhysicalPageDescriptor> desc) {
+outcome::result<void> PhysicalPageAllocator::free(
+    std::shared_ptr<PhysicalPageDescriptor> desc) {
+    if (desc == nullptr) {
+        return std::errc::invalid_argument;
+    }
+
+    if (desc->refcount == 0) {
+        return std::errc::invalid_argument;
+    }
+
     // Remove from alloced_pages.
     this->alloced_pages_.erase(desc);
 
@@ -79,6 +88,8 @@ void PhysicalPageAllocator::free(std::shared_ptr<PhysicalPageDescriptor> desc) {
 
     // Add to free_pages.
     this->free_pages_.push_front(desc);
+
+    return outcome::success();
 }
 
 PageTable::PageTable() = default;
