@@ -22,7 +22,8 @@ public:
 
 public:
     std::function<outcome::result<uc_context*>()> create_task_ctx;
-    std::function<outcome::result<void>(uc_context*)> setup_task_ctx;
+    std::function<outcome::result<void>(uc_context*, std::uint64_t rip)>
+        setup_task_ctx;
     std::function<outcome::result<void>(uc_context*)>
         add_task_ctx_to_context_manager;
     std::function<outcome::result<std::shared_ptr<Task>>()> create_task;
