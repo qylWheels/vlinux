@@ -97,6 +97,14 @@ VM::VM() {
         task->page_table = page_table;
         return outcome::success();
     };
+    this->task_initializer_.add_task_to_task_manager =
+        [this](std::shared_ptr<Task> task) -> outcome::result<void> {
+        auto [it, inserted] = this->tasks_.insert(task);
+        if (!inserted) {
+            return std::errc::file_exists;
+        }
+        return outcome::success();
+    };
 }
 
 VM::~VM() {
