@@ -98,6 +98,9 @@ public:
     // Va needn't be aligned to PAGE_SIZE.
     std::optional<std::uint64_t> va_to_pa(std::uint64_t va);
 
+    // Va needn't be aligned to PAGE_SIZE.
+    std::optional<VirtualPageDescriptor> va_to_desc(std::uint64_t va);
+
 private:
     std::map<std::shared_ptr<VirtualPageDescriptor>,
              std::shared_ptr<PhysicalPageDescriptor>>
