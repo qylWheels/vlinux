@@ -8,11 +8,6 @@
 namespace vlinux {
 namespace mm {
 PhysicalPageAllocator::PhysicalPageAllocator() {
-    // [0, 0x1000): Reserved.
-    // [0x1000, 0x2000): idle task.
-    // [0x2000, 0x3000): init task.
-    // [0x3000, 0x2000,0000): Free pages.
-    // [0x20000000, max): Reserved.
     for (std::uint64_t addr = 0x3000; addr < 0x3000 + kMaxPageCount * PAGE_SIZE;
          addr += PAGE_SIZE) {
         auto desc =

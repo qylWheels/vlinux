@@ -38,6 +38,12 @@ struct PhysicalPageDescriptor {
 };
 
 class PhysicalPageAllocator {
+    // [0, 0x1000): Reserved.
+    // [0x1000, 0x2000): idle task.
+    // [0x2000, 0x3000): init task.
+    // [0x3000, 0x2000,0000): Free pages.
+    // [0x20000000, max): Reserved.
+
 public:
     const std::size_t kMaxPageCount = 128 * 1024;  // 512 MB.
 
