@@ -34,6 +34,7 @@ VM::VM() {
     }
 
     this->scheduler_ = std::make_shared<Scheduler>(this->uc_);
+    this->ppa_ = std::make_shared<mm::PhysicalPageAllocator>(this->uc_);
 }
 
 VM::~VM() {

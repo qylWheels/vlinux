@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <memory>
 #include <outcome.hpp>
+#include <outcome/result.hpp>
 #include <set>
 
 #include "mm.h"
@@ -48,7 +49,7 @@ private:
     std::shared_ptr<Scheduler> scheduler_;
 
     // Memory-related fields.
-    mm::PhysicalPageAllocator ppa_;
+    std::shared_ptr<mm::PhysicalPageAllocator> ppa_;
 
     uc_engine* uc_;
     uc_hook syscall_hook_;
