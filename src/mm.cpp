@@ -18,7 +18,11 @@ PhysicalPageAllocator::PhysicalPageAllocator(uc_engine* uc) : uc_(uc) {
     }
 }
 
-PhysicalPageAllocator::~PhysicalPageAllocator() = default;
+PhysicalPageAllocator::~PhysicalPageAllocator() {
+    for (auto page : this->alloced_pages_) {
+        (void)::uc_mem_unmap(this->uc_, page->start_addr, PAGE_SIZE);
+    }
+};
 
 outcome::result<std::shared_ptr<PhysicalPageDescriptor>>
 PhysicalPageAllocator::alloc() {
