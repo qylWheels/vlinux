@@ -30,6 +30,7 @@ struct PhysicalPageDescriptor {
     std::size_t len;
     std::int32_t refcount;
     std::uint64_t flags;
+    std::uint64_t perm;  // Page permission, use UC_PROT_*.
 
     bool operator<(const PhysicalPageDescriptor& other) const {
         return start_addr < other.start_addr;

@@ -38,8 +38,9 @@ PhysicalPageAllocator::alloc(std::uint32_t prot) {
         return std::errc::invalid_argument;
     }
 
-    // Increment refcount.
-    page->refcount++;
+    // Set page status.
+    page->refcount = 1;
+    page->perm = prot;
 
     // Add to alloced_pages.
     this->alloced_pages_.insert(page);
