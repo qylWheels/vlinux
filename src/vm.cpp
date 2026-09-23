@@ -262,16 +262,26 @@ outcome::result<void> VM::setup_idle_and_init_task() {
     init_task->parent = idle_task;
     init_task->children = {};
     init_task->state = Task::State::Ready;
+
+    auto init_task_vdesc = std::make_shared<mm::VirtualPageDescriptor>();
+    init_task_vdesc->start_addr = mm::kInitTaskCodeRegionStart;
+    init_task_vdesc->len = mm::PAGE_SIZE;
+    init_task_vdesc->perm = UC_PROT_READ | UC_PROT_WRITE;
+
+    auto init_task_pdesc = std::make_shared<mm::PhysicalPageDescriptor>();
+    init_task_pdesc->start_addr = mm::kInitTaskCodeRegionStart;
+    init_task_pdesc->len = mm::PAGE_SIZE;
+    init_task_pdesc->refcount = 1;
+    init_task_pdesc->flags = 0;
+
     init_task->address_space = {
         {{.start = mm::kInitTaskCodeRegionStart,
           .end = mm::kInitTaskCodeRegionStart + mm::kInitTaskCodeRegionLen,
-          .perm =
-              static_cast<std::uint64_t>(mm::VirtualMemoryArea::Perm::Read) |
-              static_cast<std::uint64_t>(
-                  mm::VirtualMemoryArea::Perm::Execute)}}};
+          .perm = UC_PROT_READ | UC_PROT_WRITE,
+          .vdescs = {init_task_vdesc},
+          .address_space = &init_task->address_space}}};
     init_task->page_table = mm::PageTable();
-    OUTCOME_TRY(init_task->page_table.map(mm::kInitTaskCodeRegionStart,
-                                          mm::kInitTaskCodeRegionStart));
+    OUTCOME_TRY(init_task->page_table.map(init_task_vdesc, init_task_pdesc));
 
     // Add tasks to task manager.
     this->tasks_.insert(idle_task);
