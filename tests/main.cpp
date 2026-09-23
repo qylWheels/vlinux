@@ -45,11 +45,11 @@ TEST_CASE("Test PageTable", "[page_table]") {
 
         // Test va_to_pa().
         auto pa1 = pt.va_to_pa(0xbeef'0000);
-        auto pa2 = pt.va_to_pa(0xbeef'1145);
+        auto pa2 = pt.va_to_pa(0xbeef'0114);
         auto pa3 = pt.va_to_pa(0xbeef'0000 + 4096 - 1);
         REQUIRE((pa1.has_value() && pa1.value() == pa_desc->start_addr));
         REQUIRE(
-            (pa2.has_value() && pa2.value() == pa_desc->start_addr + 0x1145));
+            (pa2.has_value() && pa2.value() == pa_desc->start_addr + 0x0114));
         REQUIRE(
             (pa3.has_value() && pa3.value() == pa_desc->start_addr + 4096 - 1));
 
