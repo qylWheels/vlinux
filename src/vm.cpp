@@ -64,6 +64,14 @@ VM::VM() {
 
         return outcome::success();
     };
+    this->task_initializer_.add_task_ctx_to_context_manager =
+        [this](uc_context* ctx) -> outcome::result<void> {
+        auto [it, inserted] = this->contexts_.insert(ctx);
+        if (!inserted) {
+            return std::errc::file_exists;
+        }
+        return outcome::success();
+    };
 }
 
 VM::~VM() {
