@@ -19,7 +19,24 @@ namespace outcome = OUTCOME_V2_NAMESPACE;
 namespace vlinux {
 struct TaskInitializer {
 public:
-    outcome::result<void> init();
+    outcome::result<void> init_task(
+        std::uint64_t rip, std::string name, bool root_task, std::int64_t pid,
+        std::int64_t tgid, std::shared_ptr<Task> parent,
+        std::vector<std::shared_ptr<Task>>& children, Task::State state,
+        std::uint64_t stack_top, std::uint64_t stack_bottom,
+        mm::VirtualMemoryAddressSpace address_space, mm::PageTable page_table) {
+        OUTCOME_TRY(uc_context * ctx, create_task_ctx());
+        OUTCOME_TRY(setup_task_ctx(ctx, rip));
+        OUTCOME_TRY(add_task_ctx_to_context_manager(ctx));
+        OUTCOME_TRY(auto task, create_task(ctx));
+        OUTCOME_TRY(setup_task_properties(
+            task, name, root_task, pid, tgid, parent, children, state,
+            stack_top, stack_bottom, address_space, page_table));
+        OUTCOME_TRY(add_task_to_task_manager(task));
+        OUTCOME_TRY(add_task_to_scheduler(task));
+
+        return outcome::success();
+    }
 
 public:
     std::function<outcome::result<uc_context*>()> create_task_ctx;
