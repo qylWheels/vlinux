@@ -281,9 +281,10 @@ outcome::result<void> VM::setup_idle_and_init_task() {
           .address_space = &*address_space}}};
     auto idle_task_pagetable = std::make_shared<mm::PageTable>();
     OUTCOME_TRY(idle_task_pagetable->map(idle_task_vdesc, idle_task_pdesc));
-    OUTCOME_TRY(this->task_initializer_.init_task(
-        mm::kIdleTaskCodeRegionStart, "idle", true, 0, 0, nullptr, {},
-        Task::State::Ready, 0, 0, address_space, idle_task_pagetable));
+    OUTCOME_TRY(auto idle_task, this->task_initializer_.init_task(
+                                    mm::kIdleTaskCodeRegionStart, "idle", true,
+                                    0, 0, nullptr, {}, Task::State::Ready, 0, 0,
+                                    address_space, idle_task_pagetable));
 
     // Setup init task.
     auto init_task_pdesc = std::make_shared<mm::PhysicalPageDescriptor>();
@@ -305,10 +306,11 @@ outcome::result<void> VM::setup_idle_and_init_task() {
           .address_space = &*init_address_space}}};
     auto init_task_pagetable = std::make_shared<mm::PageTable>();
     OUTCOME_TRY(init_task_pagetable->map(init_task_vdesc, init_task_pdesc));
-    // TODO: Set parent to idle task.
-    OUTCOME_TRY(this->task_initializer_.init_task(
-        mm::kInitTaskCodeRegionStart, "init", true, 1, 1, nullptr, {},
-        Task::State::Ready, 0, 0, init_address_space, init_task_pagetable));
+    OUTCOME_TRY(
+        auto init_task,
+        this->task_initializer_.init_task(
+            mm::kInitTaskCodeRegionStart, "init", true, 1, 1, idle_task, {},
+            Task::State::Ready, 0, 0, init_address_space, init_task_pagetable));
 
     return outcome::success();
 }
