@@ -271,20 +271,20 @@ outcome::result<void> VM::setup_idle_and_init_task() {
     idle_task_vdesc->start_addr = mm::kIdleTaskCodeRegionStart;
     idle_task_vdesc->len = mm::PAGE_SIZE;
     idle_task_vdesc->perm = UC_PROT_READ | UC_PROT_WRITE;
-    std::shared_ptr<mm::VirtualMemoryAddressSpace> address_space =
+    std::shared_ptr<mm::VirtualMemoryAddressSpace> idle_address_space =
         std::make_shared<mm::VirtualMemoryAddressSpace>();
-    *address_space = {
+    *idle_address_space = {
         {{.start = mm::kIdleTaskCodeRegionStart,
           .end = mm::kIdleTaskCodeRegionStart + mm::kIdleTaskCodeRegionLen,
           .perm = UC_PROT_READ | UC_PROT_WRITE,
           .vdescs = {idle_task_vdesc},
-          .address_space = &*address_space}}};
+          .address_space = &*idle_address_space}}};
     auto idle_task_pagetable = std::make_shared<mm::PageTable>();
     OUTCOME_TRY(idle_task_pagetable->map(idle_task_vdesc, idle_task_pdesc));
     OUTCOME_TRY(auto idle_task, this->task_initializer_.init_task(
                                     mm::kIdleTaskCodeRegionStart, "idle", true,
                                     0, 0, nullptr, {}, Task::State::Ready, 0, 0,
-                                    address_space, idle_task_pagetable));
+                                    idle_address_space, idle_task_pagetable));
 
     // Setup init task.
     auto init_task_pdesc = std::make_shared<mm::PhysicalPageDescriptor>();
