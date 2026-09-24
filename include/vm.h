@@ -24,7 +24,8 @@ public:
         std::int64_t tgid, std::shared_ptr<Task> parent,
         std::vector<std::shared_ptr<Task>>& children, Task::State state,
         std::uint64_t stack_top, std::uint64_t stack_bottom,
-        mm::VirtualMemoryAddressSpace address_space, mm::PageTable page_table) {
+        std::shared_ptr<mm::VirtualMemoryAddressSpace> address_space,
+        std::shared_ptr<mm::PageTable> page_table) {
         OUTCOME_TRY(uc_context * ctx, create_task_ctx());
         OUTCOME_TRY(setup_task_ctx(ctx, rip));
         OUTCOME_TRY(add_task_ctx_to_context_manager(ctx));
@@ -51,7 +52,8 @@ public:
         std::int64_t pid, std::int64_t tgid, std::shared_ptr<Task> parent,
         std::vector<std::shared_ptr<Task>>& children, Task::State state,
         std::uint64_t stack_top, std::uint64_t stack_bottom,
-        mm::VirtualMemoryAddressSpace address_space, mm::PageTable page_table)>
+        std::shared_ptr<mm::VirtualMemoryAddressSpace> address_space,
+        std::shared_ptr<mm::PageTable> page_table)>
         setup_task_properties;
     std::function<outcome::result<void>(std::shared_ptr<Task>)>
         add_task_to_task_manager;
