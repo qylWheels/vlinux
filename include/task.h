@@ -95,8 +95,8 @@ public:
     // Memory related fields.
     std::uint64_t stack_top;
     std::uint64_t stack_bottom;
-    mm::VirtualMemoryAddressSpace address_space;
-    mm::PageTable page_table;
+    std::shared_ptr<mm::VirtualMemoryAddressSpace> address_space;
+    std::shared_ptr<mm::PageTable> page_table;
 
     // File system related fields.
     std::vector<std::shared_ptr<IFile>> files;
