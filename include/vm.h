@@ -19,7 +19,7 @@ namespace outcome = OUTCOME_V2_NAMESPACE;
 namespace vlinux {
 struct TaskInitializer {
 public:
-    outcome::result<void> init_task(
+    outcome::result<std::shared_ptr<Task>> init_task(
         std::uint64_t rip, std::string name, bool root_task, std::int64_t pid,
         std::int64_t tgid, std::shared_ptr<Task> parent,
         std::vector<std::shared_ptr<Task>> children, Task::State state,
@@ -36,7 +36,7 @@ public:
         OUTCOME_TRY(add_task_to_task_manager(task));
         OUTCOME_TRY(add_task_to_scheduler(task));
 
-        return outcome::success();
+        return outcome::success(task);
     }
 
 public:
