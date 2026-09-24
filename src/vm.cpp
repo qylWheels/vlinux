@@ -82,8 +82,9 @@ VM::VM() {
                std::shared_ptr<Task> parent,
                std::vector<std::shared_ptr<Task>>& children, Task::State state,
                std::uint64_t stack_top, std::uint64_t stack_bottom,
-               mm::VirtualMemoryAddressSpace address_space,
-               mm::PageTable page_table) -> outcome::result<void> {
+               std::shared_ptr<mm::VirtualMemoryAddressSpace> address_space,
+               std::shared_ptr<mm::PageTable> page_table)
+        -> outcome::result<void> {
         task->name = name;
         task->root_task = root_task;
         task->pid = pid;
