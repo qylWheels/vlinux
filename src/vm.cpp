@@ -80,7 +80,7 @@ VM::VM() {
         [this](std::shared_ptr<Task> task, std::string name, bool root_task,
                std::int64_t pid, std::int64_t tgid,
                std::shared_ptr<Task> parent,
-               std::vector<std::shared_ptr<Task>>& children, Task::State state,
+               std::vector<std::shared_ptr<Task>> children, Task::State state,
                std::uint64_t stack_top, std::uint64_t stack_bottom,
                std::shared_ptr<mm::VirtualMemoryAddressSpace> address_space,
                std::shared_ptr<mm::PageTable> page_table)
