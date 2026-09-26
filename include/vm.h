@@ -88,6 +88,9 @@ private:
 private:
     std::uint64_t entrypoint_;
 
+    // Error-related fields.
+    std::promise<void> err_promise_;
+
     // Task-related fields.
     TaskInitializer task_initializer_;
     PidManager pid_manager_;
