@@ -37,19 +37,18 @@ if(ENABLE_TSAN)
     endif()
 endif()
 
-option(BUILD_TESTS "Build tests" ON)
-if(BUILD_TESTS)
-    add_subdirectory(tests)
-endif()
-
-set(SRC_FILES src/mm.cpp src/vm.cpp src/task.cpp)
-
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(UNICORN REQUIRED IMPORTED_TARGET unicorn)
 find_package(elfio CONFIG REQUIRED)
 find_package(outcome CONFIG REQUIRED)
 find_package(cpptrace CONFIG REQUIRED)
 
+option(BUILD_TESTS "Build tests" ON)
+if(BUILD_TESTS)
+add_subdirectory(tests)
+endif()
+
+set(SRC_FILES src/mm.cpp src/vm.cpp src/task.cpp)
 add_library(vlinux SHARED ${SRC_FILES})
 target_include_directories(vlinux PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(vlinux PUBLIC PkgConfig::UNICORN)
