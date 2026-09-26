@@ -183,9 +183,7 @@ TEST_CASE("Test VM", "[vm]") {
     vm.reset();
 
     SECTION("Test load()") {
-        REQUIRE(
-            vm.load("/home/comma/projs/vlinux/tmp/test_start").has_value() ==
-            true);
+        REQUIRE(vm.load("/home/comma/projs/vlinux/tmp/test_start").has_value());
     }
 
     SECTION("Test run()") {
