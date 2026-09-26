@@ -38,8 +38,8 @@ VM::VM() {
 
     this->scheduler_ = std::make_shared<Scheduler>(this->uc_);
     this->ppa_ = std::make_shared<mm::PhysicalPageAllocator>(this->uc_);
-    this->infinite_loop_code_ =
-        static_cast<std::uint8_t*>(std::aligned_alloc(mm::PAGE_SIZE, 2));
+    this->infinite_loop_code_ = static_cast<std::uint8_t*>(
+        std::aligned_alloc(mm::PAGE_SIZE, mm::PAGE_SIZE));
     this->infinite_loop_code_[0] = 0xEB;
     this->infinite_loop_code_[1] = 0xFE;
 
