@@ -187,7 +187,7 @@ TEST_CASE("Test VM", "[vm]") {
     }
 
     SECTION("Test run()") {
-        (void)vm.load("/home/comma/projs/vlinux/tmp/test_start");
-        REQUIRE(vm.run().has_value() == true);
+        REQUIRE(vm.load("/home/comma/projs/vlinux/tmp/test_start").has_value());
+        REQUIRE(vm.run().has_value());
     }
 }
