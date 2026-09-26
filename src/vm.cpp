@@ -284,14 +284,9 @@ outcome::result<void> VM::run() noexcept {
     // Set state to ready.
     this->curr_task_->state = Task::State::Ready;
 
-    // Run!
-    err = uc_emu_start(this->uc_, this->entrypoint_, 0, 0, 0);
-    if (err != UC_ERR_OK) {
-        std::uint64_t rip;
-        uc_reg_read(this->uc_, UC_X86_REG_RIP, &rip);
-        std::cout << std::format("rip: {:#x}", rip) << std::endl;
-        return make_error_code(err);
-    }
+    // Start the scheduler.
+    OUTCOME_TRY(this->scheduler_->start_schedule(std::chrono::milliseconds(100),
+                                                 this->err_promise_));
 
     return outcome::success();
 }
