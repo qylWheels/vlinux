@@ -128,11 +128,8 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
     uc_err err;
     ELFIO::elfio reader;
 
-    // Create task.
-    this->curr_task_ = std::make_shared<Task>(nullptr);
-    this->curr_task_->state = Task::State::New;
-    this->curr_task_->root_task = true;
-    OUTCOME_TRY(this->curr_task_->pid, this->pid_manager_.alloc_pid());
+    // Initialize idle and init task.
+    OUTCOME_TRY(this->setup_idle_and_init_task());
 
     if (!reader.load(path)) {
         return std::make_error_code(std::errc::io_error);
