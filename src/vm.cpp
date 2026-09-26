@@ -410,6 +410,87 @@ void VM::exit(int status) {
     }
 }
 
+int VM::brk(void* addr) {
+    auto task_result = this->scheduler_->current_task();
+    if (!task_result) {
+        std::abort();  // Unreachable.
+    }
+
+    auto task = task_result.value();
+    if (!task) {
+        std::abort();  // Unreachable.
+    }
+
+    // Check if the address is valid.
+    if (reinterpret_cast<uint64_t>(addr) < task->address_space->start_brk) {
+        return -ENOMEM;
+    }
+
+    // Round up the address to the nearest page boundary.
+    std::uint64_t p = reinterpret_cast<uint64_t>(addr) + mm::PAGE_SIZE - 1;
+    p &= ~(mm::PAGE_SIZE - 1);
+
+    std::uint64_t page_cnt = (p - task->address_space->brk) / mm::PAGE_SIZE;
+
+    // Allocate pages eagerly, we wouldn't implement lazy allocation now.
+    std::vector<std::shared_ptr<mm::PhysicalPageDescriptor>> pdescs;
+    std::vector<std::shared_ptr<mm::VirtualPageDescriptor>> vdescs;
+    for (std::uint64_t i = 0; i < page_cnt; i++) {
+        // Cleanup function.
+        auto cleanup = [this, &task, &pdescs, &vdescs]() {
+            // Clean up page table.
+            for (auto vdesc : vdescs) {
+                (void)task->page_table->unmap(vdesc);
+            }
+            // Free the physical pages.
+            for (auto pdesc : pdescs) {
+                (void)this->ppa_->free(pdesc);
+            }
+        };
+
+        // Allocate physical page.
+        auto pdesc_result = this->ppa_->alloc();
+        if (!pdesc_result) {
+            // Cleanup.
+            cleanup();
+            return -ENOMEM;
+        }
+        pdescs.push_back(pdesc_result.value());
+
+        // Set virtual page descriptor.
+        auto vdesc = std::make_shared<mm::VirtualPageDescriptor>();
+        vdesc->start_addr = task->address_space->brk + i * mm::PAGE_SIZE;
+        vdesc->len = mm::PAGE_SIZE;
+        vdesc->perm = UC_PROT_READ | UC_PROT_WRITE;
+        vdescs.push_back(vdesc);
+
+        // Map virtual page.
+        auto result = task->page_table->map(vdesc, pdesc_result.value());
+        if (!result) {
+            // Cleanup.
+            cleanup();
+            return -ENOMEM;
+        }
+    }
+
+    // Update vma.
+    std::nth_element(
+        task->address_space->vm_areas.begin(),
+        task->address_space->vm_areas.begin() + 1,
+        task->address_space->vm_areas.end(),
+        [](const auto& a, const auto& b) { return a.end > b.end; });
+    auto heap_vma = task->address_space->vm_areas[1];
+    heap_vma.end += page_cnt * mm::PAGE_SIZE;
+    for (auto vdesc : vdescs) {
+        heap_vma.vdescs.push_back(vdesc);
+    }
+
+    // Update brk.
+    task->address_space->brk = p;
+
+    return 0;
+}
+
 void VM::syscall_hook_callback(uc_engine* engine, void* user_data) {
     VM* self = reinterpret_cast<VM*>(user_data);
     std::uint64_t syscall_number;
@@ -445,6 +526,10 @@ void VM::syscall_hook_callback(uc_engine* engine, void* user_data) {
     switch (syscall_number) {
         case 60: {
             self->exit(args[0]);
+            break;
+        }
+        case SYS_brk: {
+            self->brk(reinterpret_cast<void*>(args[0]));
             break;
         }
         default: {

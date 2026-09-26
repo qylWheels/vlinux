@@ -81,6 +81,7 @@ private:
     // Syscalls.
 public:
     void exit(int status);
+    int brk(void* addr);
 
 private:
     static void syscall_hook_callback(uc_engine* engine, void* user_data);
