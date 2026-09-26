@@ -118,6 +118,7 @@ public:
 public:
     outcome::result<void> add_task(std::shared_ptr<Task> task);
     outcome::result<void> remove_task(std::shared_ptr<Task> task);
+    outcome::result<std::shared_ptr<Task>> current_task() const;
     outcome::result<void> start_schedule(std::chrono::milliseconds interval,
                                          std::promise<void>& err_promise);
     outcome::result<void> stop_schedule();

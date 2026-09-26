@@ -43,6 +43,10 @@ outcome::result<void> Scheduler::remove_task(std::shared_ptr<Task> task) {
     return outcome::success();
 }
 
+outcome::result<std::shared_ptr<Task>> Scheduler::current_task() const {
+    return outcome::success(this->current_task_);
+}
+
 outcome::result<void> Scheduler::start_schedule(
     std::chrono::milliseconds interval, std::promise<void> &err_promise) {
     std::unique_lock<std::mutex> lock(this->mutex_);
