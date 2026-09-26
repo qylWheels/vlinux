@@ -43,7 +43,11 @@ outcome::result<void> Scheduler::remove_task(std::shared_ptr<Task> task) {
     return outcome::success();
 }
 
-outcome::result<std::shared_ptr<Task>> Scheduler::current_task() const {
+outcome::result<std::shared_ptr<Task>> Scheduler::current_task() {
+    std::unique_lock<std::mutex> lock(this->mutex_);
+    if (this->current_task_ == nullptr) {
+        return std::errc::no_such_process;
+    }
     return outcome::success(this->current_task_);
 }
 
