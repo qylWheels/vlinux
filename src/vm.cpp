@@ -122,11 +122,19 @@ VM::VM() {
 VM::~VM() {
     // Stop the scheduler.
     (void)this->scheduler_->stop_schedule();
+    // Drop the scheduler before the engine goes away, or tasks will
+    // continue to run after the engine is closed.
+    this->scheduler_.reset();
 
     // Free contexts.
     for (auto ctx : this->contexts_) {
         ::uc_context_free(ctx);
     }
+
+    // Release the physical page allocator *before* closing the engine:
+    // Because ~PhysicalPageAllocator() unmaps every allocated physical page
+    // through uc_mem_unmap().
+    this->ppa_.reset();
 
     // Free infinite loop code.
     std::free(this->infinite_loop_code_);
