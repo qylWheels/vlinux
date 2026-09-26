@@ -40,7 +40,7 @@ public:
             auto pid = (this->next_pid_ + i) % kMaxPid;
             if (this->pid_using_.find(pid) == this->pid_using_.end()) {
                 this->pid_using_.insert(pid);
-                this->next_pid_ = pid + 1;
+                this->next_pid_ = (pid + 1) % kMaxPid;
                 return pid;
             }
         }
@@ -58,7 +58,7 @@ public:
 
 private:
     std::set<std::uint64_t> pid_using_;
-    std::uint64_t next_pid_ = 2;
+    std::uint64_t next_pid_ = 0;
 };
 
 struct Task {
