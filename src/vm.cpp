@@ -120,10 +120,16 @@ VM::VM() {
 }
 
 VM::~VM() {
+    // Stop the scheduler.
+    (void)this->scheduler_->stop_schedule();
+
     // Free contexts.
     for (auto ctx : this->contexts_) {
         ::uc_context_free(ctx);
     }
+
+    // Free infinite loop code.
+    std::free(this->infinite_loop_code_);
 
     ::uc_close(this->uc_);
 }
