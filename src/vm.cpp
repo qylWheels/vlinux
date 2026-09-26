@@ -294,6 +294,8 @@ outcome::result<void> VM::setup_idle_and_init_task() {
     }
 
     // Setup idle task.
+    OUTCOME_TRY(auto idle_task_pid, this->pid_manager_.alloc_pid());
+    auto idle_task_tgid = idle_task_pid;
     auto idle_task_pdesc = std::make_shared<mm::PhysicalPageDescriptor>();
     idle_task_pdesc->start_addr = mm::kIdleTaskCodeRegionStart;
     idle_task_pdesc->len = mm::PAGE_SIZE;
@@ -313,12 +315,15 @@ outcome::result<void> VM::setup_idle_and_init_task() {
           .address_space = &*idle_address_space}}};
     auto idle_task_pagetable = std::make_shared<mm::PageTable>();
     OUTCOME_TRY(idle_task_pagetable->map(idle_task_vdesc, idle_task_pdesc));
-    OUTCOME_TRY(auto idle_task, this->task_initializer_.init_task(
-                                    mm::kIdleTaskCodeRegionStart, "idle", true,
-                                    0, 0, nullptr, {}, Task::State::Ready, 0, 0,
-                                    idle_address_space, idle_task_pagetable));
+    OUTCOME_TRY(auto idle_task,
+                this->task_initializer_.init_task(
+                    mm::kIdleTaskCodeRegionStart, "idle", true, idle_task_pid,
+                    idle_task_tgid, nullptr, {}, Task::State::Ready, 0, 0,
+                    idle_address_space, idle_task_pagetable));
 
     // Setup init task.
+    OUTCOME_TRY(auto init_task_pid, this->pid_manager_.alloc_pid());
+    auto init_task_tgid = init_task_pid;
     auto init_task_pdesc = std::make_shared<mm::PhysicalPageDescriptor>();
     init_task_pdesc->start_addr = mm::kInitTaskCodeRegionStart;
     init_task_pdesc->len = mm::PAGE_SIZE;
@@ -338,11 +343,11 @@ outcome::result<void> VM::setup_idle_and_init_task() {
           .address_space = &*init_address_space}}};
     auto init_task_pagetable = std::make_shared<mm::PageTable>();
     OUTCOME_TRY(init_task_pagetable->map(init_task_vdesc, init_task_pdesc));
-    OUTCOME_TRY(
-        auto init_task,
-        this->task_initializer_.init_task(
-            mm::kInitTaskCodeRegionStart, "init", true, 1, 1, idle_task, {},
-            Task::State::Ready, 0, 0, init_address_space, init_task_pagetable));
+    OUTCOME_TRY(auto init_task,
+                this->task_initializer_.init_task(
+                    mm::kInitTaskCodeRegionStart, "init", true, init_task_pid,
+                    init_task_tgid, idle_task, {}, Task::State::Ready, 0, 0,
+                    init_address_space, init_task_pagetable));
 
     return outcome::success();
 }
