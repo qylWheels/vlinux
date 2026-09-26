@@ -48,6 +48,7 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(UNICORN REQUIRED IMPORTED_TARGET unicorn)
 find_package(elfio CONFIG REQUIRED)
 find_package(outcome CONFIG REQUIRED)
+find_package(cpptrace CONFIG REQUIRED)
 
 add_library(vlinux SHARED ${SRC_FILES})
 target_include_directories(vlinux PUBLIC ${CMAKE_SOURCE_DIR}/include)

@@ -1,7 +1,8 @@
 {
   "dependencies": [
     "elfio",
+    "outcome",
     "unicorn",
-    "outcome"
+    "cpptrace"
   ]
 }
