@@ -8,6 +8,7 @@
 #include <format>
 #include <fstream>
 #include <limits>
+#include <memory>
 #include <outcome.hpp>
 #include <system_error>
 
@@ -137,6 +138,8 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
         return std::make_error_code(std::errc::io_error);
     }
 
+    auto address_space = std::make_shared<mm::VirtualMemoryAddressSpace>();
+    auto page_table = std::make_shared<mm::PageTable>();
     for (const auto& segment : reader.segments) {
         if (segment->get_type() != ELFIO::PT_LOAD) {
             // We only care about LOAD segments.
@@ -149,14 +152,14 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
         auto virtual_size = segment->get_memory_size();
 
         // Read the segment data from the file.
-        std::vector<char> data;
+        std::vector<char> file_data;
         std::ifstream file(path.string(), std::ios::binary);
         file.seekg(file_offset);
-        data.resize(file_size);
-        file.read(data.data(), file_size);
+        file_data.resize(file_size);
+        file.read(file_data.data(), file_size);
         file.close();
 
-        // Create memory mapping.
+        // Setup memory address area.
         std::uint32_t perms = 0;
         auto segment_flags = segment->get_flags();
         if (segment_flags & ELFIO::PF_R) {
@@ -168,24 +171,55 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
         if (segment_flags & ELFIO::PF_X) {
             perms |= UC_PROT_EXEC;
         }
-        err = uc_mem_map(
-            this->uc_, virtual_address,
-            (virtual_size + mm::PAGE_SIZE - 1) & ~(mm::PAGE_SIZE - 1), perms);
-        if (err != UC_ERR_OK) {
-            return make_error_code(err);
+        mm::VirtualMemoryArea area = {
+            .start = virtual_address,
+            .end = virtual_address + virtual_size,
+            .perm = perms,
+            .address_space = &*address_space,
+        };
+        std::uint64_t non_zero_len = file_size;
+        std::uint64_t zero_len = virtual_size - file_size;
+        for (std::uint64_t i = 0; i < virtual_size; i += mm::PAGE_SIZE) {
+            // Allocate a physical page.
+            OUTCOME_TRY(auto pdesc, this->ppa_->alloc());
+
+            // Map the virtual page to the physical page.
+            auto vdesc = std::make_shared<mm::VirtualPageDescriptor>();
+            vdesc->start_addr = virtual_address + i;
+            vdesc->len = mm::PAGE_SIZE;
+            vdesc->perm = perms;
+            OUTCOME_TRY(page_table->map(vdesc, pdesc));
+
+            // Add the virtual page descriptor to the area.
+            area.vdescs.push_back(vdesc);
+
+            // Prepare the non-zero data.
+            std::vector<char> mem_data;
+            if (i >= non_zero_len) {  // The whole page is zero.
+                mem_data = std::vector<char>(mm::PAGE_SIZE, 0);
+                continue;
+            } else {  // Not the whole page is zero/The page is non-zero.
+                std::uint64_t left_non_zero =
+                    virtual_address + non_zero_len - i;
+                std::uint64_t len = left_non_zero > mm::PAGE_SIZE
+                                        ? mm::PAGE_SIZE
+                                        : left_non_zero;
+                mem_data = std::vector<char>(file_data.begin() + i,
+                                             file_data.begin() + i + len);
+                auto zero_data = std::vector<char>(mm::PAGE_SIZE - len, 0);
+                mem_data.insert(mem_data.end(), zero_data.begin(),
+                                zero_data.end());
+            }
+
+            // Write data to physical page.
+            err = ::uc_mem_write(this->uc_, pdesc->start_addr, mem_data.data(),
+                                 mm::PAGE_SIZE);
+            if (err != UC_ERR_OK) {
+                return make_error_code(err);
+            }
         }
 
-        // Write the segment data to the memory.
-        err = uc_mem_write(this->uc_, virtual_address, data.data(), file_size);
-        if (err != UC_ERR_OK) {
-            return make_error_code(err);
-        }
-        std::vector<char> zeros(virtual_size - file_size);
-        err = uc_mem_write(this->uc_, virtual_address + file_size, zeros.data(),
-                           virtual_size - file_size);
-        if (err != UC_ERR_OK) {
-            return make_error_code(err);
-        }
+        address_space->vm_areas.push_back(area);
     }
 
     // Set the entrypoint.
