@@ -209,8 +209,7 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
                 mem_data = std::vector<char>(mm::PAGE_SIZE, 0);
                 continue;
             } else {  // Not the whole page is zero/The page is non-zero.
-                std::uint64_t left_non_zero =
-                    virtual_address + non_zero_len - i;
+                std::uint64_t left_non_zero = non_zero_len - i;
                 std::uint64_t len = left_non_zero > mm::PAGE_SIZE
                                         ? mm::PAGE_SIZE
                                         : left_non_zero;
