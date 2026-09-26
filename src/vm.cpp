@@ -241,22 +241,6 @@ outcome::result<void> VM::run() noexcept {
         return make_error_code(err);
     }
 
-    // Setup stack.
-    OUTCOME_TRY(auto stack_bottom_pa_desc, this->ppa_->alloc());
-    std::uint64_t stack_bottom_pa = stack_bottom_pa_desc->start_addr;
-    std::uint64_t stack_bottom_va = 0xf000'0000;
-    std::uint64_t stack_top_va = stack_bottom_va + mm::PAGE_SIZE;
-    err = uc_mem_map_ptr(this->uc_, stack_bottom_va, mm::PAGE_SIZE,
-                         UC_PROT_READ | UC_PROT_WRITE,
-                         reinterpret_cast<void*>(stack_bottom_pa));
-    if (err != UC_ERR_OK) {
-        return make_error_code(err);
-    }
-    err = uc_reg_write(this->uc_, UC_X86_REG_RSP, &stack_top_va);
-    if (err != UC_ERR_OK) {
-        return make_error_code(err);
-    }
-
     // Set state to Running.
     this->curr_task_->state = Task::State::Running;
 
