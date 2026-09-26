@@ -92,6 +92,7 @@ private:
     std::promise<void> err_promise_;
 
     // Task-related fields.
+    std::uint8_t* infinite_loop_code_;
     TaskInitializer task_initializer_;
     PidManager pid_manager_;
     std::set<uc_context*> contexts_;

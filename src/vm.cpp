@@ -296,23 +296,20 @@ outcome::result<void> VM::run() noexcept {
     return outcome::success();
 }
 
+// Setup task whose PID is 0(idle) and 1(init).
 outcome::result<void> VM::setup_idle_and_init_task() {
     uc_err err;
 
-    // Setup task whose PID is 0(idle) and 1(init).
-    // Infinite loop code for idle and init.
-    std::uint8_t code[] = {0xEB, 0xFE};
-
     // Map the code to unicorn.
     err = ::uc_mem_map_ptr(this->uc_, mm::kIdleTaskCodeRegionStart,
-                           sizeof(code), UC_PROT_READ | UC_PROT_WRITE,
-                           reinterpret_cast<void*>(code));
+                           mm::PAGE_SIZE, UC_PROT_READ | UC_PROT_WRITE,
+                           reinterpret_cast<void*>(this->infinite_loop_code_));
     if (err != UC_ERR_OK) {
         return make_error_code(err);
     }
     err = ::uc_mem_map_ptr(this->uc_, mm::kInitTaskCodeRegionStart,
-                           sizeof(code), UC_PROT_READ | UC_PROT_WRITE,
-                           reinterpret_cast<void*>(code));
+                           mm::PAGE_SIZE, UC_PROT_READ | UC_PROT_WRITE,
+                           reinterpret_cast<void*>(this->infinite_loop_code_));
     if (err != UC_ERR_OK) {
         return make_error_code(err);
     }
