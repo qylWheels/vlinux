@@ -232,6 +232,26 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
         address_space->vm_areas.push_back(area);
     }
 
+    // Set start_brk and brk.
+    auto highest_area = std::max_element(
+        address_space->vm_areas.begin(), address_space->vm_areas.end(),
+        [](const auto& a, const auto& b) { return a.end < b.end; });
+    OUTCOME_TRY(auto heap_page_pdesc, this->ppa_->alloc());
+    auto heap_page_vdesc = std::make_shared<mm::VirtualPageDescriptor>();
+    heap_page_vdesc->start_addr = highest_area->end;
+    heap_page_vdesc->len = mm::PAGE_SIZE;
+    heap_page_vdesc->perm = UC_PROT_READ | UC_PROT_WRITE;
+    OUTCOME_TRY(page_table->map(heap_page_vdesc, heap_page_pdesc));
+    mm::VirtualMemoryArea heap_area = {
+        .start = heap_page_vdesc->start_addr,
+        .end = heap_page_vdesc->start_addr + mm::PAGE_SIZE,
+        .perm = heap_page_vdesc->perm,
+        .address_space = &*address_space,
+    };
+    address_space->vm_areas.push_back(heap_area);
+    address_space->start_brk = heap_page_vdesc->start_addr;
+    address_space->brk = heap_page_vdesc->start_addr;
+
     // Allocate stack memory.
     OUTCOME_TRY(auto stack_page_pdesc, this->ppa_->alloc());
     auto stack_page_vdesc = std::make_shared<mm::VirtualPageDescriptor>();
