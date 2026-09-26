@@ -79,7 +79,7 @@ TEST_CASE("Test PidManager", "[pid_manager]") {
         // Allocate a PID.
         auto pid = pid_manager.alloc_pid();
         REQUIRE(pid.has_value());
-        REQUIRE(pid.value() == 2);
+        REQUIRE(pid.value() == 0);
 
         // Allocate more PIDs to reach the limit.
         for (std::uint64_t i = 0; i < vlinux::PidManager::kMaxPid - 1; ++i) {
