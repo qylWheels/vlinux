@@ -211,21 +211,14 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
             // Add the virtual page descriptor to the area.
             area.vdescs.push_back(vdesc);
 
-            // Prepare the non-zero data.
-            std::vector<char> mem_data;
-            if (i >= non_zero_len) {  // The whole page is zero.
-                mem_data = std::vector<char>(mm::PAGE_SIZE, 0);
-                continue;
-            } else {  // Not the whole page is zero/The page is non-zero.
+            // Prepare the page content.
+            std::vector<char> mem_data(mm::PAGE_SIZE, 0);
+            if (i < non_zero_len) {  // The page has file-backed bytes.
                 std::uint64_t left_non_zero = non_zero_len - i;
                 std::uint64_t len = left_non_zero > mm::PAGE_SIZE
                                         ? mm::PAGE_SIZE
                                         : left_non_zero;
-                mem_data = std::vector<char>(file_data.begin() + i,
-                                             file_data.begin() + i + len);
-                auto zero_data = std::vector<char>(mm::PAGE_SIZE - len, 0);
-                mem_data.insert(mem_data.end(), zero_data.begin(),
-                                zero_data.end());
+                std::copy_n(file_data.begin() + i, len, mem_data.begin());
             }
 
             // Write data to physical page.
