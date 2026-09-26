@@ -349,6 +349,9 @@ outcome::result<void> VM::setup_idle_and_init_task() {
                     init_task_tgid, idle_task, {}, Task::State::Ready, 0, 0,
                     init_address_space, init_task_pagetable));
 
+    // Set idle children to init task.
+    idle_task->children.push_back(init_task);
+
     return outcome::success();
 }
 
