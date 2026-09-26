@@ -263,8 +263,8 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
     // Set the entrypoint.
     this->entrypoint_ = reader.get_entry();
 
-    // Set the state to Ready.
-    this->curr_task_->state = Task::State::Ready;
+    // Set curr_task.
+    this->curr_task_ = task;
 
     return outcome::success();
 }
@@ -281,8 +281,8 @@ outcome::result<void> VM::run() noexcept {
         return make_error_code(err);
     }
 
-    // Set state to Running.
-    this->curr_task_->state = Task::State::Running;
+    // Set state to ready.
+    this->curr_task_->state = Task::State::Ready;
 
     // Run!
     err = uc_emu_start(this->uc_, this->entrypoint_, 0, 0, 0);
