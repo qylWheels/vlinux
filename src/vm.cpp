@@ -3,6 +3,7 @@
 #include <unicorn/unicorn.h>
 #include <unicorn/x86.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <elfio/elfio.hpp>
 #include <format>
@@ -42,12 +43,12 @@ VM::VM() {
     this->task_initializer_.create_task_ctx =
         [this]() -> outcome::result<uc_context*> {
         uc_err err;
-        uc_context* ctx;
+        uc_context* ctx = nullptr;
         err = ::uc_context_alloc(this->uc_, &ctx);
         if (err != UC_ERR_OK) {
             return make_error_code(err);
         }
-        return outcome::success();
+        return outcome::success(ctx);
     };
     this->task_initializer_.setup_task_ctx =
         [this](uc_context* ctx, std::uint64_t rip) -> outcome::result<void> {
@@ -218,6 +219,45 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
         }
 
         address_space->vm_areas.push_back(area);
+    }
+
+    // Allocate stack memory.
+    OUTCOME_TRY(auto stack_page_pdesc, this->ppa_->alloc());
+    auto stack_page_vdesc = std::make_shared<mm::VirtualPageDescriptor>();
+    stack_page_vdesc->start_addr = 0xf000'0000;
+    stack_page_vdesc->len = mm::PAGE_SIZE;
+    stack_page_vdesc->perm = UC_PROT_READ | UC_PROT_WRITE;
+    OUTCOME_TRY(page_table->map(stack_page_vdesc, stack_page_pdesc));
+    mm::VirtualMemoryArea stack_area = {
+        .start = stack_page_vdesc->start_addr,
+        .end = stack_page_vdesc->start_addr + mm::PAGE_SIZE,
+        .perm = stack_page_vdesc->perm,
+        .address_space = &*address_space,
+    };
+    address_space->vm_areas.push_back(stack_area);
+
+    // Create task.
+    OUTCOME_TRY(auto pid, this->pid_manager_.alloc_pid());
+    auto tgid = pid;
+    std::shared_ptr<Task> parent = nullptr;
+    auto parent_it = std::find_if(
+        this->tasks_.begin(), this->tasks_.end(),
+        [](const std::shared_ptr<Task>& task) { return task->pid == 1; });
+    if (parent_it != this->tasks_.end()) {
+        parent = *parent_it;
+    }
+    OUTCOME_TRY(auto task, this->task_initializer_.init_task(
+                               reader.get_entry(), path.filename().string(),
+                               false, pid, tgid, parent, {}, Task::State::New,
+                               stack_page_vdesc->start_addr,
+                               stack_page_vdesc->start_addr + mm::PAGE_SIZE,
+                               address_space, page_table));
+
+    // Set stack top.
+    std::uint64_t rsp = stack_page_vdesc->start_addr + mm::PAGE_SIZE;
+    err = ::uc_context_reg_write(task->ctx, UC_X86_REG_RSP, &rsp);
+    if (err != UC_ERR_OK) {
+        return make_error_code(err);
     }
 
     // Set the entrypoint.
