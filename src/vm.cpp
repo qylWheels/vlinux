@@ -140,6 +140,7 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
 
     auto address_space = std::make_shared<mm::VirtualMemoryAddressSpace>();
     auto page_table = std::make_shared<mm::PageTable>();
+    // Load segments.
     for (const auto& segment : reader.segments) {
         if (segment->get_type() != ELFIO::PT_LOAD) {
             // We only care about LOAD segments.
