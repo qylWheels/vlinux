@@ -410,7 +410,7 @@ void VM::exit(int status) {
     }
 }
 
-int VM::brk(void* addr) {
+void* VM::brk(void* addr) {
     auto task_result = this->scheduler_->current_task();
     if (!task_result) {
         std::abort();  // Unreachable.
@@ -423,7 +423,7 @@ int VM::brk(void* addr) {
 
     // Check if the address is valid.
     if (reinterpret_cast<uint64_t>(addr) < task->address_space->start_brk) {
-        return -ENOMEM;
+        return reinterpret_cast<void*>(task->address_space->brk);
     }
 
     // Round up the address to the nearest page boundary.
@@ -453,7 +453,7 @@ int VM::brk(void* addr) {
         if (!pdesc_result) {
             // Cleanup.
             cleanup();
-            return -ENOMEM;
+            return reinterpret_cast<void*>(task->address_space->brk);
         }
         pdescs.push_back(pdesc_result.value());
 
@@ -469,7 +469,7 @@ int VM::brk(void* addr) {
         if (!result) {
             // Cleanup.
             cleanup();
-            return -ENOMEM;
+            return reinterpret_cast<void*>(task->address_space->brk);
         }
     }
 
@@ -486,9 +486,9 @@ int VM::brk(void* addr) {
     }
 
     // Update brk.
-    task->address_space->brk = p;
+    task->address_space->brk = reinterpret_cast<uint64_t>(addr);
 
-    return 0;
+    return reinterpret_cast<void*>(task->address_space->brk);
 }
 
 void VM::syscall_hook_callback(uc_engine* engine, void* user_data) {
