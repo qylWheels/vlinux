@@ -19,6 +19,43 @@
 #include "mm.h"
 
 namespace vlinux {
+class VM::Impl {
+public:
+    outcome::result<void> setup_idle_and_init_task();
+
+public:
+    static void syscall_hook_callback(uc_engine* engine, void* user_data);
+
+public:  // Syscalls.
+    void exit(int status);
+
+    // brk() syscall.
+    void* brk(void* addr);
+    void* brk_expand(std::shared_ptr<Task> task, void* addr);
+    void* brk_shrink(std::shared_ptr<Task> task, void* addr);
+
+private:
+    std::uint64_t entrypoint_;
+
+    // Error-related fields.
+    std::promise<void> err_promise_;
+
+    // Task-related fields.
+    std::uint8_t* infinite_loop_code_;
+    TaskInitializer task_initializer_;
+    PidManager pid_manager_;
+    std::set<uc_context*> contexts_;
+    std::set<std::shared_ptr<Task>> tasks_;
+    std::shared_ptr<Scheduler> scheduler_;
+
+    // Memory-related fields.
+    std::shared_ptr<mm::PhysicalPageAllocator> ppa_;
+
+    uc_engine* uc_;
+    uc_hook syscall_hook_;
+    std::shared_ptr<Task> curr_task_;
+};
+
 VM::VM() {
     uc_err err;
 
