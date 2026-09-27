@@ -12,7 +12,9 @@
 #include <limits>
 #include <memory>
 #include <outcome.hpp>
+#include <ranges>
 #include <system_error>
+#include <vector>
 
 #include "error.h"
 #include "mm.h"
@@ -189,12 +191,6 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
         if (segment_flags & ELFIO::PF_X) {
             perms |= UC_PROT_EXEC;
         }
-        mm::VirtualMemoryArea area = {
-            .start = virtual_address,
-            .end = virtual_address + virtual_size,
-            .perm = perms,
-            .address_space = &*address_space,
-        };
         std::uint64_t non_zero_len = file_size;
         std::uint64_t zero_len = virtual_size - file_size;
         for (std::uint64_t i = 0; i < virtual_size; i += mm::PAGE_SIZE) {
@@ -208,8 +204,8 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
             vdesc->perm = perms;
             OUTCOME_TRY(page_table->map(vdesc, pdesc));
 
-            // Add the virtual page descriptor to the area.
-            if (!area.vdescs.insert(vdesc).second) {
+            // Add the virtual page descriptor to address space.
+            if (!address_space->vpages.insert(vdesc).second) {
                 return std::errc::address_in_use;
             }
 
@@ -230,30 +226,21 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
                 return make_error_code(err);
             }
         }
-
-        if (!address_space->vm_areas.insert(area).second) {
-            return std::errc::address_in_use;
-        }
     }
 
     // Set start_brk and brk.
-    auto highest_area_it = address_space->vm_areas.rbegin();
-    if (highest_area_it == address_space->vm_areas.rend()) {
+    auto highest_page_it = address_space->vpages.rbegin();
+    if (highest_page_it == address_space->vpages.rend()) {
         return std::errc::address_not_available;
     }
     OUTCOME_TRY(auto heap_page_pdesc, this->ppa_->alloc());
     auto heap_page_vdesc = std::make_shared<mm::VirtualPageDescriptor>();
-    heap_page_vdesc->start_addr = highest_area_it->end;
+    heap_page_vdesc->start_addr =
+        (*highest_page_it)->start_addr + (*highest_page_it)->len;
     heap_page_vdesc->len = mm::PAGE_SIZE;
     heap_page_vdesc->perm = UC_PROT_READ | UC_PROT_WRITE;
     OUTCOME_TRY(page_table->map(heap_page_vdesc, heap_page_pdesc));
-    mm::VirtualMemoryArea heap_area = {
-        .start = heap_page_vdesc->start_addr,
-        .end = heap_page_vdesc->start_addr + mm::PAGE_SIZE,
-        .perm = heap_page_vdesc->perm,
-        .address_space = &*address_space,
-    };
-    if (!address_space->vm_areas.insert(heap_area).second) {
+    if (!address_space->vpages.insert(heap_page_vdesc).second) {
         return std::errc::address_in_use;
     }
     address_space->start_brk = heap_page_vdesc->start_addr;
@@ -266,13 +253,7 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
     stack_page_vdesc->len = mm::PAGE_SIZE;
     stack_page_vdesc->perm = UC_PROT_READ | UC_PROT_WRITE;
     OUTCOME_TRY(page_table->map(stack_page_vdesc, stack_page_pdesc));
-    mm::VirtualMemoryArea stack_area = {
-        .start = stack_page_vdesc->start_addr,
-        .end = stack_page_vdesc->start_addr + mm::PAGE_SIZE,
-        .perm = stack_page_vdesc->perm,
-        .address_space = &*address_space,
-    };
-    if (!address_space->vm_areas.insert(stack_area).second) {
+    if (!address_space->vpages.insert(stack_page_vdesc).second) {
         return std::errc::address_in_use;
     }
 
@@ -364,11 +345,8 @@ outcome::result<void> VM::setup_idle_and_init_task() {
     std::shared_ptr<mm::VirtualMemoryAddressSpace> idle_address_space =
         std::make_shared<mm::VirtualMemoryAddressSpace>();
     *idle_address_space = {
-        {{.start = mm::kIdleTaskCodeRegionStart,
-          .end = mm::kIdleTaskCodeRegionStart + mm::kIdleTaskCodeRegionLen,
-          .perm = UC_PROT_READ | UC_PROT_WRITE,
-          .vdescs = {idle_task_vdesc},
-          .address_space = &*idle_address_space}}};
+        .vpages = {idle_task_vdesc},
+    };
     auto idle_task_pagetable = std::make_shared<mm::PageTable>();
     OUTCOME_TRY(idle_task_pagetable->map(idle_task_vdesc, idle_task_pdesc));
     OUTCOME_TRY(auto idle_task,
@@ -391,12 +369,7 @@ outcome::result<void> VM::setup_idle_and_init_task() {
     init_task_vdesc->perm = UC_PROT_READ | UC_PROT_WRITE;
     std::shared_ptr<mm::VirtualMemoryAddressSpace> init_address_space =
         std::make_shared<mm::VirtualMemoryAddressSpace>();
-    *init_address_space = {
-        {{.start = mm::kInitTaskCodeRegionStart,
-          .end = mm::kInitTaskCodeRegionStart + mm::kInitTaskCodeRegionLen,
-          .perm = UC_PROT_READ | UC_PROT_WRITE,
-          .vdescs = {init_task_vdesc},
-          .address_space = &*init_address_space}}};
+    *init_address_space = {.vpages = {init_task_vdesc}};
     auto init_task_pagetable = std::make_shared<mm::PageTable>();
     OUTCOME_TRY(init_task_pagetable->map(init_task_vdesc, init_task_pdesc));
     OUTCOME_TRY(auto init_task,
@@ -493,6 +466,19 @@ void* VM::brk_expand(std::shared_ptr<Task> task, void* addr) {
         }
     }
 
+    // Update address space.
+    for (auto vdesc : vdescs) {
+        if (!task->address_space->vpages.insert(vdesc).second) {
+            return reinterpret_cast<void*>(task->address_space->brk);
+        }
+    }
+
+    // Update brk.
+    task->address_space->brk = reinterpret_cast<uint64_t>(addr);
+
+    return reinterpret_cast<void*>(task->address_space->brk);
+}
+
     // Update heap vma.
     auto heap_vma_it = task->address_space->vm_areas.rbegin();
     if (heap_vma_it == task->address_space->vm_areas.rend() ||
@@ -515,8 +501,6 @@ void* VM::brk_expand(std::shared_ptr<Task> task, void* addr) {
 
     return reinterpret_cast<void*>(task->address_space->brk);
 }
-
-void* VM::brk_shrink(std::shared_ptr<Task> task, void* addr) {}
 
 void VM::syscall_hook_callback(uc_engine* engine, void* user_data) {
     VM* self = reinterpret_cast<VM*>(user_data);
