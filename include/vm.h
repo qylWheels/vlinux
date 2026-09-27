@@ -91,6 +91,8 @@ private:
     static void syscall_hook_callback(uc_engine* engine, void* user_data);
 
 private:
+    class Impl;
+    std::unique_ptr<Impl> impl_;
     std::uint64_t entrypoint_;
 
     // Error-related fields.
