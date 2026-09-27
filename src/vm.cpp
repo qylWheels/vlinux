@@ -435,9 +435,9 @@ private:
     std::shared_ptr<Task> curr_task_;
 };
 
-VM::VM() {}
+VM::VM() { this->impl_ = std::make_unique<Impl>(); }
 
-VM::~VM() {}
+VM::~VM() = default;
 
 void VM::reset() {}
 
