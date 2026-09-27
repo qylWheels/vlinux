@@ -428,6 +428,17 @@ void* VM::brk(void* addr) {
         std::abort();  // Unreachable.
     }
 
+    auto brk = task->address_space->brk;
+    if (reinterpret_cast<uint64_t>(addr) > brk) {
+        return this->brk_expand(task, addr);
+    } else if (reinterpret_cast<uint64_t>(addr) < brk) {
+        return this->brk_shrink(task, addr);
+    } else {
+        return reinterpret_cast<void*>(brk);
+    }
+}
+
+void* VM::brk_expand(std::shared_ptr<Task> task, void* addr) {
     // Check if the address is valid.
     if (reinterpret_cast<uint64_t>(addr) < task->address_space->start_brk) {
         return reinterpret_cast<void*>(task->address_space->brk);
@@ -500,6 +511,8 @@ void* VM::brk(void* addr) {
 
     return reinterpret_cast<void*>(task->address_space->brk);
 }
+
+void* VM::brk_shrink(std::shared_ptr<Task> task, void* addr) {}
 
 void VM::syscall_hook_callback(uc_engine* engine, void* user_data) {
     VM* self = reinterpret_cast<VM*>(user_data);
