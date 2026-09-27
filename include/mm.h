@@ -118,6 +118,10 @@ struct VirtualMemoryArea {
     std::uint64_t perm;  // Use UC_PROT_*.
     std::vector<std::shared_ptr<VirtualPageDescriptor>> vdescs;
     VirtualMemoryAddressSpace* address_space;
+
+    bool operator<(const VirtualMemoryArea& other) const {
+        return this->start < other.start;
+    }
 };
 
 // i.e mm_struct.
