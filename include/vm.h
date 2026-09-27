@@ -81,7 +81,11 @@ private:
     // Syscalls.
 public:
     void exit(int status);
+
+    // brk() syscall.
     void* brk(void* addr);
+    void* brk_expand(void* addr);
+    void* brk_shrink(void* addr);
 
 private:
     static void syscall_hook_callback(uc_engine* engine, void* user_data);
