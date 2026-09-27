@@ -112,23 +112,9 @@ private:
         map_;
 };
 
-struct VirtualMemoryAddressSpace;
-
-// i.e vm_area_struct.
-struct VirtualMemoryArea {
-    std::uint64_t start, end;
-    std::uint64_t perm;  // Use UC_PROT_*.
-    std::set<std::shared_ptr<VirtualPageDescriptor>> vdescs;
-    VirtualMemoryAddressSpace* address_space;
-
-    bool operator<(const VirtualMemoryArea& other) const {
-        return this->start < other.start;
-    }
-};
-
 // i.e mm_struct.
 struct VirtualMemoryAddressSpace {
-    std::set<VirtualMemoryArea> vm_areas;
+    std::set<std::shared_ptr<VirtualPageDescriptor>> vpages;
     std::uint64_t start_brk;  // Start address of heap.
     std::uint64_t brk;        // End address of heap.
 };
