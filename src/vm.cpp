@@ -364,7 +364,7 @@ public:  // Syscalls.
 
 public:
     static void syscall_hook_callback(uc_engine* engine, void* user_data) {
-        VM* self = reinterpret_cast<VM*>(user_data);
+        Impl* self = reinterpret_cast<Impl*>(user_data);
         std::uint64_t syscall_number;
         std::uint64_t args[6];
         std::uint64_t* argptrs[6] = {&args[0], &args[1], &args[2],
