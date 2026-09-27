@@ -129,7 +129,7 @@ struct VirtualMemoryArea {
 // i.e mm_struct.
 struct VirtualMemoryAddressSpace {
     std::set<VirtualMemoryArea> vm_areas;
-    std::uint64_t start_brk;
+    std::uint64_t start_brk;  // Start address of heap.
     std::uint64_t brk;
 };
 }  // namespace mm
