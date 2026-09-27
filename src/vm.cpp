@@ -413,7 +413,7 @@ public:
         }
     }
 
-private:
+public:
     std::uint64_t entrypoint_;
 
     // Error-related fields.
@@ -446,7 +446,7 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
     ELFIO::elfio reader;
 
     // Initialize idle and init task.
-    OUTCOME_TRY(this->setup_idle_and_init_task());
+    OUTCOME_TRY(this->impl_->setup_idle_and_init_task());
 
     if (!reader.load(path)) {
         return std::make_error_code(std::errc::io_error);
@@ -490,7 +490,7 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
         std::uint64_t zero_len = virtual_size - file_size;
         for (std::uint64_t i = 0; i < virtual_size; i += mm::PAGE_SIZE) {
             // Allocate a physical page.
-            OUTCOME_TRY(auto pdesc, this->ppa_->alloc());
+            OUTCOME_TRY(auto pdesc, this->impl_->ppa_->alloc());
 
             // Map the virtual page to the physical page.
             auto vdesc = std::make_shared<mm::VirtualPageDescriptor>();
@@ -515,8 +515,8 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
             }
 
             // Write data to physical page.
-            err = ::uc_mem_write(this->uc_, pdesc->start_addr, mem_data.data(),
-                                 mm::PAGE_SIZE);
+            err = ::uc_mem_write(this->impl_->uc_, pdesc->start_addr,
+                                 mem_data.data(), mm::PAGE_SIZE);
             if (err != UC_ERR_OK) {
                 return make_error_code(err);
             }
@@ -528,7 +528,7 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
     if (highest_page_it == address_space->vpages.rend()) {
         return std::errc::address_not_available;
     }
-    OUTCOME_TRY(auto heap_page_pdesc, this->ppa_->alloc());
+    OUTCOME_TRY(auto heap_page_pdesc, this->impl_->ppa_->alloc());
     auto heap_page_vdesc = std::make_shared<mm::VirtualPageDescriptor>();
     heap_page_vdesc->start_addr =
         (*highest_page_it)->start_addr + (*highest_page_it)->len;
@@ -542,7 +542,7 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
     address_space->brk = heap_page_vdesc->start_addr;
 
     // Allocate stack memory.
-    OUTCOME_TRY(auto stack_page_pdesc, this->ppa_->alloc());
+    OUTCOME_TRY(auto stack_page_pdesc, this->impl_->ppa_->alloc());
     auto stack_page_vdesc = std::make_shared<mm::VirtualPageDescriptor>();
     stack_page_vdesc->start_addr = 0xf000'0000;
     stack_page_vdesc->len = mm::PAGE_SIZE;
@@ -553,16 +553,16 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
     }
 
     // Create task.
-    OUTCOME_TRY(auto pid, this->pid_manager_.alloc_pid());
+    OUTCOME_TRY(auto pid, this->impl_->pid_manager_.alloc_pid());
     auto tgid = pid;
     std::shared_ptr<Task> parent = nullptr;
     auto parent_it = std::find_if(
-        this->tasks_.begin(), this->tasks_.end(),
+        this->impl_->tasks_.begin(), this->impl_->tasks_.end(),
         [](const std::shared_ptr<Task>& task) { return task->pid == 1; });
-    if (parent_it != this->tasks_.end()) {
+    if (parent_it != this->impl_->tasks_.end()) {
         parent = *parent_it;
     }
-    OUTCOME_TRY(auto task, this->task_initializer_.init_task(
+    OUTCOME_TRY(auto task, this->impl_->task_initializer_.init_task(
                                reader.get_entry(), path.filename().string(),
                                false, pid, tgid, parent, {}, Task::State::New,
                                stack_page_vdesc->start_addr,
@@ -577,10 +577,10 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
     }
 
     // Set the entrypoint.
-    this->entrypoint_ = reader.get_entry();
+    this->impl_->entrypoint_ = reader.get_entry();
 
     // Set curr_task.
-    this->curr_task_ = task;
+    this->impl_->curr_task_ = task;
 
     return outcome::success();
 }
@@ -589,20 +589,20 @@ outcome::result<void> VM::run() noexcept {
     uc_err err;
 
     // Add syscall hook.
-    err = uc_hook_add(this->uc_, &this->syscall_hook_, UC_HOOK_INSN,
-                      reinterpret_cast<void*>(VM::syscall_hook_callback), this,
-                      0, std::numeric_limits<std::uint64_t>::max(),
-                      UC_X86_INS_SYSCALL);
+    err = uc_hook_add(
+        this->impl_->uc_, &this->impl_->syscall_hook_, UC_HOOK_INSN,
+        reinterpret_cast<void*>(Impl::syscall_hook_callback), this, 0,
+        std::numeric_limits<std::uint64_t>::max(), UC_X86_INS_SYSCALL);
     if (err != UC_ERR_OK) {
         return make_error_code(err);
     }
 
     // Set state to ready.
-    this->curr_task_->state = Task::State::Ready;
+    this->impl_->curr_task_->state = Task::State::Ready;
 
     // Start the scheduler.
-    OUTCOME_TRY(this->scheduler_->start_schedule(std::chrono::milliseconds(100),
-                                                 this->err_promise_));
+    OUTCOME_TRY(this->impl_->scheduler_->start_schedule(
+        std::chrono::milliseconds(100), this->impl_->err_promise_));
 
     return outcome::success();
 }
