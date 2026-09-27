@@ -12,7 +12,6 @@
 #include <limits>
 #include <memory>
 #include <outcome.hpp>
-#include <ranges>
 #include <system_error>
 #include <vector>
 
@@ -479,22 +478,43 @@ void* VM::brk_expand(std::shared_ptr<Task> task, void* addr) {
     return reinterpret_cast<void*>(task->address_space->brk);
 }
 
-    // Update heap vma.
-    auto heap_vma_it = task->address_space->vm_areas.rbegin();
-    if (heap_vma_it == task->address_space->vm_areas.rend() ||
-        --heap_vma_it == task->address_space->vm_areas.rend()) {
+void* VM::brk_shrink(std::shared_ptr<Task> task,
+                     void* addr) {  // Check if the address is valid.
+    if (reinterpret_cast<uint64_t>(addr) < task->address_space->start_brk) {
         return reinterpret_cast<void*>(task->address_space->brk);
     }
-    auto heap_vma = *heap_vma_it;
-    // We can't modify it. So we erase it first and insert it back later.
-    task->address_space->vm_areas.erase(heap_vma);
-    heap_vma.end += page_cnt * mm::PAGE_SIZE;
-    for (auto vdesc : vdescs) {
-        if (!heap_vma.vdescs.insert(vdesc).second) {
-            return reinterpret_cast<void*>(task->address_space->brk);
+
+    // Round up the address to the nearest page boundary.
+    std::uint64_t p = reinterpret_cast<uint64_t>(addr) + mm::PAGE_SIZE - 1;
+    p &= ~(mm::PAGE_SIZE - 1);
+
+    // Calculate the number of pages to shrink.
+    std::uint64_t page_cnt = (task->address_space->brk - p) / mm::PAGE_SIZE;
+
+    // Delete page table maps, vdescs and physical pages.
+    for (auto it = task->address_space->vpages.rbegin();
+         it != task->address_space->vpages.rend(); it++) {
+        if (page_cnt == 0) {
+            break;
         }
+
+        // Not in [start_brk, brk), skip.
+        if ((*it)->start_addr >= task->address_space->brk) {
+            continue;
+        }
+
+        // Unmap.
+        (void)task->page_table->unmap(*it);
+
+        // Remove vdesc.
+        auto pdesc = task->page_table->vdesc_to_pdesc(*it).value();
+        (void)task->address_space->vpages.erase(*it);
+
+        // Free physical page.
+        (void)this->ppa_->free(pdesc);
+
+        page_cnt--;
     }
-    task->address_space->vm_areas.insert(heap_vma);
 
     // Update brk.
     task->address_space->brk = reinterpret_cast<uint64_t>(addr);
