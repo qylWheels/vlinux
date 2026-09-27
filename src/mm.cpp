@@ -147,5 +147,14 @@ std::optional<std::shared_ptr<VirtualPageDescriptor>> PageTable::va_to_desc(
     }
     return std::nullopt;
 }
+
+std::optional<std::shared_ptr<PhysicalPageDescriptor>>
+PageTable::vdesc_to_pdesc(std::shared_ptr<VirtualPageDescriptor> vdesc) {
+    auto it = this->map_.find(vdesc);
+    if (it == this->map_.end()) {
+        return std::nullopt;
+    }
+    return it->second;
+}
 }  // namespace mm
 }  // namespace vlinux

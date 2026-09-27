@@ -103,6 +103,9 @@ public:
     std::optional<std::shared_ptr<VirtualPageDescriptor>> va_to_desc(
         std::uint64_t va);
 
+    std::optional<std::shared_ptr<PhysicalPageDescriptor>> vdesc_to_pdesc(
+        std::shared_ptr<VirtualPageDescriptor> vdesc);
+
 private:
     std::map<std::shared_ptr<VirtualPageDescriptor>,
              std::shared_ptr<PhysicalPageDescriptor>>
