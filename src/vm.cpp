@@ -229,16 +229,19 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
             }
         }
 
-        address_space->vm_areas.push_back(area);
+        if (!address_space->vm_areas.insert(area).second) {
+            return std::errc::address_in_use;
+        }
     }
 
     // Set start_brk and brk.
-    auto highest_area = std::max_element(
-        address_space->vm_areas.begin(), address_space->vm_areas.end(),
-        [](const auto& a, const auto& b) { return a.end < b.end; });
+    auto highest_area_it = address_space->vm_areas.rbegin();
+    if (highest_area_it == address_space->vm_areas.rend()) {
+        return std::errc::address_not_available;
+    }
     OUTCOME_TRY(auto heap_page_pdesc, this->ppa_->alloc());
     auto heap_page_vdesc = std::make_shared<mm::VirtualPageDescriptor>();
-    heap_page_vdesc->start_addr = highest_area->end;
+    heap_page_vdesc->start_addr = highest_area_it->end;
     heap_page_vdesc->len = mm::PAGE_SIZE;
     heap_page_vdesc->perm = UC_PROT_READ | UC_PROT_WRITE;
     OUTCOME_TRY(page_table->map(heap_page_vdesc, heap_page_pdesc));
@@ -248,7 +251,9 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
         .perm = heap_page_vdesc->perm,
         .address_space = &*address_space,
     };
-    address_space->vm_areas.push_back(heap_area);
+    if (!address_space->vm_areas.insert(heap_area).second) {
+        return std::errc::address_in_use;
+    }
     address_space->start_brk = heap_page_vdesc->start_addr;
     address_space->brk = heap_page_vdesc->start_addr;
 
@@ -265,7 +270,9 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
         .perm = stack_page_vdesc->perm,
         .address_space = &*address_space,
     };
-    address_space->vm_areas.push_back(stack_area);
+    if (!address_space->vm_areas.insert(stack_area).second) {
+        return std::errc::address_in_use;
+    }
 
     // Create task.
     OUTCOME_TRY(auto pid, this->pid_manager_.alloc_pid());
@@ -473,17 +480,20 @@ void* VM::brk(void* addr) {
         }
     }
 
-    // Update vma.
-    std::nth_element(
-        task->address_space->vm_areas.begin(),
-        task->address_space->vm_areas.begin() + 1,
-        task->address_space->vm_areas.end(),
-        [](const auto& a, const auto& b) { return a.end > b.end; });
-    auto heap_vma = task->address_space->vm_areas[1];
+    // Update heap vma.
+    auto heap_vma_it = task->address_space->vm_areas.rbegin();
+    if (heap_vma_it == task->address_space->vm_areas.rend() ||
+        --heap_vma_it == task->address_space->vm_areas.rend()) {
+        return reinterpret_cast<void*>(task->address_space->brk);
+    }
+    auto heap_vma = *heap_vma_it;
+    // We can't modify it. So we erase it first and insert it back later.
+    task->address_space->vm_areas.erase(heap_vma);
     heap_vma.end += page_cnt * mm::PAGE_SIZE;
     for (auto vdesc : vdescs) {
         heap_vma.vdescs.push_back(vdesc);
     }
+    task->address_space->vm_areas.insert(heap_vma);
 
     // Update brk.
     task->address_space->brk = reinterpret_cast<uint64_t>(addr);

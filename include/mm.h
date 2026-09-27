@@ -126,7 +126,7 @@ struct VirtualMemoryArea {
 
 // i.e mm_struct.
 struct VirtualMemoryAddressSpace {
-    std::vector<VirtualMemoryArea> vm_areas;
+    std::set<VirtualMemoryArea> vm_areas;
     std::uint64_t start_brk;
     std::uint64_t brk;
 };
