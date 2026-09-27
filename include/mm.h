@@ -12,7 +12,6 @@
 #include <outcome/outcome.hpp>
 #include <outcome/result.hpp>
 #include <set>
-#include <vector>
 
 namespace outcome = OUTCOME_V2_NAMESPACE;
 
@@ -116,7 +115,7 @@ struct VirtualMemoryAddressSpace;
 struct VirtualMemoryArea {
     std::uint64_t start, end;
     std::uint64_t perm;  // Use UC_PROT_*.
-    std::vector<std::shared_ptr<VirtualPageDescriptor>> vdescs;
+    std::set<std::shared_ptr<VirtualPageDescriptor>> vdescs;
     VirtualMemoryAddressSpace* address_space;
 
     bool operator<(const VirtualMemoryArea& other) const {

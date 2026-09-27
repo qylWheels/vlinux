@@ -209,7 +209,9 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
             OUTCOME_TRY(page_table->map(vdesc, pdesc));
 
             // Add the virtual page descriptor to the area.
-            area.vdescs.push_back(vdesc);
+            if (!area.vdescs.insert(vdesc).second) {
+                return std::errc::address_in_use;
+            }
 
             // Prepare the page content.
             std::vector<char> mem_data(mm::PAGE_SIZE, 0);
@@ -502,7 +504,9 @@ void* VM::brk_expand(std::shared_ptr<Task> task, void* addr) {
     task->address_space->vm_areas.erase(heap_vma);
     heap_vma.end += page_cnt * mm::PAGE_SIZE;
     for (auto vdesc : vdescs) {
-        heap_vma.vdescs.push_back(vdesc);
+        if (!heap_vma.vdescs.insert(vdesc).second) {
+            return reinterpret_cast<void*>(task->address_space->brk);
+        }
     }
     task->address_space->vm_areas.insert(heap_vma);
 
