@@ -185,8 +185,15 @@ TEST_CASE("Test VM", "[vm]") {
 
     SECTION("Test run()") {
         REQUIRE(vm.load("/home/comma/projs/vlinux/tmp/test_start").has_value());
-        REQUIRE(vm.run(std::chrono::milliseconds(1500),
-                       std::chrono::milliseconds(100))
-                    .has_value());
+        auto result = vm.run(std::chrono::milliseconds(1500),
+                             std::chrono::milliseconds(100));
+        REQUIRE(result.has_value());
+        for (auto &[task, syscalls] : result.value().behav_of_tasks_) {
+            if (task->pid == 0 || task->pid == 1) {
+                continue;
+            }
+            REQUIRE(syscalls[0].id == 60);
+            REQUIRE(syscalls[0].args[0] == 0);
+        }
     }
 }
