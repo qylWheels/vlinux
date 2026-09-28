@@ -417,9 +417,6 @@ public:
 public:
     std::uint64_t entrypoint_;
 
-    // Error-related fields.
-    std::promise<void> err_promise_;
-
     // Task-related fields.
     std::uint8_t* infinite_loop_code_;
     TaskInitializer task_initializer_;
@@ -603,7 +600,7 @@ outcome::result<void> VM::run() noexcept {
 
     // Start the scheduler.
     OUTCOME_TRY(this->impl_->scheduler_->start_schedule(
-        std::chrono::milliseconds(100), this->impl_->err_promise_));
+        std::chrono::milliseconds(100)));
 
     return outcome::success();
 }
