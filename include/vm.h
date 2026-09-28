@@ -73,14 +73,15 @@ public:
 
 public:
     struct Result {
-        std::map<std::shared_ptr<Task>, std::vector<Syscall>> behav_of_tasks_;
+        std::map<std::shared_ptr<Task>, std::vector<Task::Syscall>>
+            behav_of_tasks_;
     };
 
 public:
     void reset();
     outcome::result<void> load(const std::filesystem::path& path);
-    outcome::result<void> run(std::chrono::milliseconds timeout,
-                              std::chrono::milliseconds sched_interval);
+    outcome::result<Result> run(std::chrono::milliseconds timeout,
+                                std::chrono::milliseconds sched_interval);
 
 private:
     class Impl;

@@ -4,6 +4,7 @@
 #include <unicorn/x86.h>
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <cstdlib>
 #include <elfio/elfio.hpp>
@@ -368,7 +369,6 @@ public:
                                      &args[3], &args[4], &args[5]};
         int argregs[] = {UC_X86_REG_RDI, UC_X86_REG_RSI, UC_X86_REG_RDX,
                          UC_X86_REG_R10, UC_X86_REG_R8,  UC_X86_REG_R9};
-        std::uint64_t ret;
         uc_err err;
 
         // Read syscall number.
@@ -392,13 +392,15 @@ public:
                   << std::endl;
 
         // Dispatch.
+        std::uint64_t ret = 0;
         switch (syscall_number) {
             case 60: {
                 self->exit(args[0]);
                 break;
             }
             case SYS_brk: {
-                self->brk(reinterpret_cast<void*>(args[0]));
+                ret = reinterpret_cast<std::uint64_t>(
+                    self->brk(reinterpret_cast<void*>(args[0])));
                 break;
             }
             default: {
@@ -408,6 +410,11 @@ public:
                 break;
             }
         }
+
+        // Record syscall.
+        auto task = self->scheduler_->current_task();
+        task.value()->syscalls.push_back(
+            {static_cast<uint32_t>(syscall_number), std::to_array(args), ret});
     }
 
 public:
@@ -579,8 +586,8 @@ outcome::result<void> VM::load(const std::filesystem::path& path) {
     return outcome::success();
 }
 
-outcome::result<void> VM::run(std::chrono::milliseconds timeout,
-                              std::chrono::milliseconds sched_interval) {
+outcome::result<VM::Result> VM::run(std::chrono::milliseconds timeout,
+                                    std::chrono::milliseconds sched_interval) {
     uc_err err;
 
     // Add syscall hook.
