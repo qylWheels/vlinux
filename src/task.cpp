@@ -4,6 +4,8 @@
 
 #include <algorithm>
 
+#include "error.h"
+
 namespace vlinux {
 Scheduler::Scheduler(uc_engine *uc) : status_(Status::Stopped), uc_(uc) {}
 
@@ -83,14 +85,16 @@ outcome::result<void> Scheduler::start_schedule(
         // Restore the context of the task.
         err = ::uc_context_restore(this->uc_, task->ctx);
         if (err != UC_ERR_OK) {
-            throw std::runtime_error("uc_context_restore failed");
+            this->status_ = Status::Stopped;
+            return make_error_code(err);
         }
 
         // Get the RIP of the task.
         std::uint64_t rip;
         err = ::uc_context_reg_read(task->ctx, UC_X86_REG_RIP, &rip);
         if (err != UC_ERR_OK) {
-            throw std::runtime_error("uc_context_reg_read failed");
+            this->status_ = Status::Stopped;
+            return make_error_code(err);
         }
 
         // Set TLB fill hook for virtual address translation.
@@ -100,26 +104,30 @@ outcome::result<void> Scheduler::start_schedule(
             reinterpret_cast<void *>(Scheduler::tlb_fill_callback), pgtable, 1,
             0);
         if (err != UC_ERR_OK) {
-            throw std::runtime_error("Add memory hook failed");
+            this->status_ = Status::Stopped;
+            return make_error_code(err);
         }
 
         // Flush translation blocks.
         err = ::uc_ctl_flush_tb(this->uc_);
         if (err != UC_ERR_OK) {
-            throw std::runtime_error("uc_ctl_flush_tb failed");
+            this->status_ = Status::Stopped;
+            return make_error_code(err);
         }
 
         // Flush TLB.
         err = ::uc_ctl_flush_tlb(this->uc_);
         if (err != UC_ERR_OK) {
-            throw std::runtime_error("uc_ctl_flush_tlb failed");
+            this->status_ = Status::Stopped;
+            return make_error_code(err);
         }
 
         // Schedule the task. i.e. run it.
         task->state = Task::State::Running;
         err = ::uc_emu_start(this->uc_, rip, 0, interval.count() * 1000, 0);
         if (err != UC_ERR_OK) {
-            throw std::runtime_error("uc_emu_start failed");
+            this->status_ = Status::Stopped;
+            return make_error_code(err);
         }
 
         // Time slice ran out, set the task to ready state.
@@ -128,13 +136,15 @@ outcome::result<void> Scheduler::start_schedule(
         // Remove hook.
         err = ::uc_hook_del(this->uc_, this->tlb_fill_hook_);
         if (err != UC_ERR_OK) {
-            throw std::runtime_error("uc_hook_del failed");
+            this->status_ = Status::Stopped;
+            return make_error_code(err);
         }
 
         // Save context.
         err = ::uc_context_save(this->uc_, task->ctx);
         if (err != UC_ERR_OK) {
-            throw std::runtime_error("uc_context_save failed");
+            this->status_ = Status::Stopped;
+            return make_error_code(err);
         }
 
         // Add the task back to the ready queue.
