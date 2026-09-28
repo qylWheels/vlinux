@@ -196,4 +196,13 @@ TEST_CASE("Test VM", "[vm]") {
             REQUIRE(syscalls[0].args[0] == 0);
         }
     }
+
+    SECTION("Test brk()") {
+        std::string path =
+            std::string(CMAKE_BUILD_DIR_PATH) + "/tests/syscall_tests/test_brk";
+        REQUIRE(vm.load(path).has_value());
+        auto result = vm.run(std::chrono::milliseconds(100),
+                             std::chrono::milliseconds(10));
+        REQUIRE(result.has_value());
+    }
 }
