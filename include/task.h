@@ -106,6 +106,9 @@ public:
 
     // Context saved when scheduled.
     uc_context* ctx;
+
+    // For syscall tracing.
+    std::vector<Syscall> syscalls;
 };
 
 // Schedule tasks whose status is Ready.
