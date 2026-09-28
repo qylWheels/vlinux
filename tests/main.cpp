@@ -185,6 +185,8 @@ TEST_CASE("Test VM", "[vm]") {
 
     SECTION("Test run()") {
         REQUIRE(vm.load("/home/comma/projs/vlinux/tmp/test_start").has_value());
-        REQUIRE(vm.run(std::chrono::milliseconds(1500)).has_value());
+        REQUIRE(vm.run(std::chrono::milliseconds(1500),
+                       std::chrono::milliseconds(100))
+                    .has_value());
     }
 }
