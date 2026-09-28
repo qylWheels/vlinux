@@ -219,16 +219,6 @@ public:
     }
 
 public:  // Syscalls.
-    void exit(int status) {
-        auto task = this->scheduler_->current_task();
-        task.value()->exit_status = status;
-        task.value()->state = Task::State::Stopped;
-        if (task.value()->root_task) {
-            uc_emu_stop(this->uc_);
-        }
-    }
-
-    // brk() syscall.
     void* brk(void* addr) {
         auto task_result = this->scheduler_->current_task();
         if (!task_result) {
@@ -394,10 +384,6 @@ public:
         // Dispatch.
         std::uint64_t ret = 0;
         switch (syscall_number) {
-            case 60: {
-                self->exit(args[0]);
-                break;
-            }
             case SYS_brk: {
                 ret = reinterpret_cast<std::uint64_t>(
                     self->brk(reinterpret_cast<void*>(args[0])));
