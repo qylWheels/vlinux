@@ -116,8 +116,8 @@ public:
     outcome::result<void> add_task(std::shared_ptr<Task> task);
     outcome::result<void> remove_task(std::shared_ptr<Task> task);
     outcome::result<std::shared_ptr<Task>> current_task();
-    outcome::result<void> start_schedule(std::chrono::milliseconds interval);
-    outcome::result<void> stop_schedule();
+    outcome::result<void> start_schedule(std::chrono::milliseconds timeout,
+                                         std::chrono::milliseconds interval);
 
 public:
     enum class Status { Stopped, Running };
@@ -132,6 +132,8 @@ private:
     uc_engine* uc_;
 
     Status status_;
+    std::chrono::time_point<std::chrono::steady_clock> start_time_;
+    std::chrono::time_point<std::chrono::steady_clock> end_time_;
 
     // Task-related fields.
     std::shared_ptr<Task> current_task_;

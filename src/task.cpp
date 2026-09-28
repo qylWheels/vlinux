@@ -7,7 +7,7 @@
 namespace vlinux {
 Scheduler::Scheduler(uc_engine *uc) : status_(Status::Stopped), uc_(uc) {}
 
-Scheduler::~Scheduler() { (void)this->stop_schedule(); };
+Scheduler::~Scheduler() = default;
 
 outcome::result<void> Scheduler::add_task(std::shared_ptr<Task> task) {
     if (this->status_ == Status::Running) {
@@ -51,13 +51,25 @@ outcome::result<std::shared_ptr<Task>> Scheduler::current_task() {
 }
 
 outcome::result<void> Scheduler::start_schedule(
-    std::chrono::milliseconds interval) {
+    std::chrono::milliseconds timeout, std::chrono::milliseconds interval) {
     if (this->status_ == Status::Running) {
         return outcome::success();
     }
 
+    // Set start and end time.
+    this->start_time_ = std::chrono::steady_clock::now();
+    this->end_time_ = this->start_time_ + timeout;
+
+    // Set status to running.
+    this->status_ = Status::Running;
+
     while (true) {
         uc_err err;
+
+        // Check timeout.
+        if (std::chrono::steady_clock::now() >= this->end_time_) {
+            break;
+        }
 
         if (this->ready_task_queue_.empty()) {
             continue;
@@ -122,18 +134,6 @@ outcome::result<void> Scheduler::start_schedule(
         // Add the task back to the ready queue.
         this->ready_task_queue_.push_back(task);
     }
-
-    this->status_ = Status::Running;
-
-    return outcome::success();
-}
-
-outcome::result<void> Scheduler::stop_schedule() {
-    if (this->status_ == Status::Stopped) {
-        return outcome::success();
-    }
-
-    this->status_ = Status::Stopped;
 
     return outcome::success();
 }
