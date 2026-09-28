@@ -264,19 +264,18 @@ public:  // Syscalls.
         // Allocate pages eagerly, we wouldn't implement lazy allocation now.
         std::vector<std::shared_ptr<mm::PhysicalPageDescriptor>> pdescs;
         std::vector<std::shared_ptr<mm::VirtualPageDescriptor>> vdescs;
+        // Cleanup function.
+        auto cleanup = [this, &task, &pdescs, &vdescs]() {
+            // Clean up page table.
+            for (auto vdesc : vdescs) {
+                (void)task->page_table->unmap(vdesc);
+            }
+            // Free the physical pages.
+            for (auto pdesc : pdescs) {
+                (void)this->ppa_->free(pdesc);
+            }
+        };
         for (std::uint64_t i = 0; i < page_cnt; i++) {
-            // Cleanup function.
-            auto cleanup = [this, &task, &pdescs, &vdescs]() {
-                // Clean up page table.
-                for (auto vdesc : vdescs) {
-                    (void)task->page_table->unmap(vdesc);
-                }
-                // Free the physical pages.
-                for (auto pdesc : pdescs) {
-                    (void)this->ppa_->free(pdesc);
-                }
-            };
-
             // Allocate physical page.
             auto pdesc_result = this->ppa_->alloc();
             if (!pdesc_result) {
