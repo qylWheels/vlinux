@@ -50,6 +50,9 @@ endif()
 
 set(SRC_FILES src/mm.cpp src/vm.cpp src/task.cpp)
 add_library(vlinux SHARED ${SRC_FILES})
+target_compile_definitions(vlinux PRIVATE
+    CMAKE_BUILD_DIR_PATH="${CMAKE_BINARY_DIR}"
+)
 target_include_directories(vlinux PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(vlinux PUBLIC PkgConfig::UNICORN)
 target_link_libraries(vlinux PUBLIC elfio::elfio)
