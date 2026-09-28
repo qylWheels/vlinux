@@ -4,6 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
 #include <cstdlib>
+#include <thread>
 
 #include "mm.h"
 #include "task.h"
@@ -157,10 +158,7 @@ TEST_CASE("Test Scheduler", "[scheduler]") {
         REQUIRE(scheduler.add_task(task2).has_value());
 
         // Start schedule.
-        std::promise<void> err_promise;
-        std::future<void> err_future = err_promise.get_future();
-        REQUIRE(scheduler
-                    .start_schedule(std::chrono::milliseconds(500), err_promise)
+        REQUIRE(scheduler.start_schedule(std::chrono::milliseconds(500))
                     .has_value());
 
         // Let the scheduler run for a while.
@@ -169,8 +167,6 @@ TEST_CASE("Test Scheduler", "[scheduler]") {
         // Stop schedule.
         REQUIRE(scheduler.stop_schedule().has_value());
         REQUIRE(scheduler.status() == vlinux::Scheduler::Status::Stopped);
-        REQUIRE(err_future.wait_for(std::chrono::seconds(0)) !=
-                std::future_status::ready);
         REQUIRE(::uc_context_free(ctx1) == UC_ERR_OK);
         REQUIRE(::uc_context_free(ctx2) == UC_ERR_OK);
     }
