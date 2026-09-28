@@ -606,6 +606,11 @@ outcome::result<VM::Result> VM::run(std::chrono::milliseconds timeout,
     OUTCOME_TRY(
         this->impl_->scheduler_->start_schedule(timeout, sched_interval));
 
-    return outcome::success();
+    // Return the result.
+    Result result;
+    for (auto task : this->impl_->tasks_) {
+        result.behav_of_tasks_[task] = task->syscalls;
+    }
+    return outcome::success(result);
 }
 }  // namespace vlinux
