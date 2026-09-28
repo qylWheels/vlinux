@@ -1,3 +1,6 @@
+# Subdirectories
+add_subdirectory(syscall_tests)
+
 # Catch2
 Include(FetchContent)
 FetchContent_Declare(
