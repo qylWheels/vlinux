@@ -2,6 +2,7 @@
 
 #include <unicorn/unicorn.h>
 
+#include <array>
 #include <chrono>
 #include <cstdint>
 #include <deque>
@@ -77,7 +78,7 @@ public:
 
     struct Syscall {
         std::uint32_t id;  // Syscall number.
-        std::uint64_t args[6];
+        std::array<std::uint64_t, 6> args;
         std::uint64_t ret;
     };
 
