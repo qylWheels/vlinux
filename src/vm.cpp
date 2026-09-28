@@ -124,8 +124,7 @@ public:
         };
     }
 
-    ~Impl() {  // Stop the scheduler.
-        (void)this->scheduler_->stop_schedule();
+    ~Impl() {
         // Drop the scheduler before the engine goes away, or tasks will
         // continue to run after the engine is closed.
         this->scheduler_.reset();
