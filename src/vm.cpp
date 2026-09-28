@@ -586,8 +586,8 @@ outcome::result<void> VM::run(
     // Add syscall hook.
     err = uc_hook_add(
         this->impl_->uc_, &this->impl_->syscall_hook_, UC_HOOK_INSN,
-        reinterpret_cast<void*>(Impl::syscall_hook_callback), this, 0,
-        std::numeric_limits<std::uint64_t>::max(), UC_X86_INS_SYSCALL);
+        reinterpret_cast<void*>(Impl::syscall_hook_callback), this->impl_.get(),
+        0, std::numeric_limits<std::uint64_t>::max(), UC_X86_INS_SYSCALL);
     if (err != UC_ERR_OK) {
         return make_error_code(err);
     }
