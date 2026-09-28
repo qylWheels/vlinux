@@ -125,6 +125,12 @@ outcome::result<void> Scheduler::start_schedule(
         // Time slice ran out, set the task to ready state.
         task->state = Task::State::Ready;
 
+        // Remove hook.
+        err = ::uc_hook_del(this->uc_, this->tlb_fill_hook_);
+        if (err != UC_ERR_OK) {
+            throw std::runtime_error("uc_hook_del failed");
+        }
+
         // Save context.
         err = ::uc_context_save(this->uc_, task->ctx);
         if (err != UC_ERR_OK) {
