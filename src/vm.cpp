@@ -435,7 +435,7 @@ VM::~VM() = default;
 
 void VM::reset() {}
 
-outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
+outcome::result<void> VM::load(const std::filesystem::path& path) {
     uc_err err;
     ELFIO::elfio reader;
 
@@ -579,9 +579,8 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
     return outcome::success();
 }
 
-outcome::result<void> VM::run(
-    std::chrono::milliseconds timeout,
-    std::chrono::milliseconds sched_interval) noexcept {
+outcome::result<void> VM::run(std::chrono::milliseconds timeout,
+                              std::chrono::milliseconds sched_interval) {
     uc_err err;
 
     // Add syscall hook.
