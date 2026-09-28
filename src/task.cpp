@@ -135,6 +135,9 @@ outcome::result<void> Scheduler::start_schedule(
         this->ready_task_queue_.push_back(task);
     }
 
+    // Set status to stopped.
+    this->status_ = Status::Stopped;
+
     return outcome::success();
 }
 
