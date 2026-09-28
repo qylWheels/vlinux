@@ -5,13 +5,10 @@
 #include <chrono>
 #include <cstdint>
 #include <deque>
-#include <future>
 #include <memory>
-#include <mutex>
 #include <set>
 #include <string>
 #include <system_error>
-#include <thread>
 #include <vector>
 
 #include "mm.h"
@@ -119,8 +116,7 @@ public:
     outcome::result<void> add_task(std::shared_ptr<Task> task);
     outcome::result<void> remove_task(std::shared_ptr<Task> task);
     outcome::result<std::shared_ptr<Task>> current_task();
-    outcome::result<void> start_schedule(std::chrono::milliseconds interval,
-                                         std::promise<void>& err_promise);
+    outcome::result<void> start_schedule(std::chrono::milliseconds interval);
     outcome::result<void> stop_schedule();
 
 public:
@@ -135,13 +131,9 @@ private:
 private:
     uc_engine* uc_;
 
-    // Protect the following fields.
-    std::mutex mutex_;
-
     Status status_;
 
     // Task-related fields.
-    std::jthread vcpu_;
     std::shared_ptr<Task> current_task_;
     std::deque<std::shared_ptr<Task>> ready_task_queue_;  // Ready queue.
     std::set<std::shared_ptr<Task>>
