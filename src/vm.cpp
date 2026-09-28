@@ -125,10 +125,6 @@ public:
     }
 
     ~Impl() {
-        // Drop the scheduler before the engine goes away, or tasks will
-        // continue to run after the engine is closed.
-        this->scheduler_.reset();
-
         // Free contexts.
         for (auto ctx : this->contexts_) {
             ::uc_context_free(ctx);
