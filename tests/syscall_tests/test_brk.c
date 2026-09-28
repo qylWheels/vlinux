@@ -23,8 +23,5 @@ void _start(void) {
 
     for (;;);
 
-    // Exit.
-    syscall(sys_exit, 0, 0, 0, 0, 0, 0);
-
     return;
 }
