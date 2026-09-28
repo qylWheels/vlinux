@@ -148,14 +148,14 @@ public:
         // Map the code to unicorn.
         err = ::uc_mem_map_ptr(
             this->uc_, mm::kIdleTaskCodeRegionStart, mm::PAGE_SIZE,
-            UC_PROT_READ | UC_PROT_WRITE,
+            UC_PROT_READ | UC_PROT_EXEC,
             reinterpret_cast<void*>(this->infinite_loop_code_));
         if (err != UC_ERR_OK) {
             return make_error_code(err);
         }
         err = ::uc_mem_map_ptr(
             this->uc_, mm::kInitTaskCodeRegionStart, mm::PAGE_SIZE,
-            UC_PROT_READ | UC_PROT_WRITE,
+            UC_PROT_READ | UC_PROT_EXEC,
             reinterpret_cast<void*>(this->infinite_loop_code_));
         if (err != UC_ERR_OK) {
             return make_error_code(err);
