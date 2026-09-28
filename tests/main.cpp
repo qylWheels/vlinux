@@ -158,14 +158,15 @@ TEST_CASE("Test Scheduler", "[scheduler]") {
         REQUIRE(scheduler.add_task(task2).has_value());
 
         // Start schedule.
-        REQUIRE(scheduler.start_schedule(std::chrono::milliseconds(500))
+        REQUIRE(scheduler
+                    .start_schedule(std::chrono::milliseconds(1500),
+                                    std::chrono::milliseconds(500))
                     .has_value());
 
         // Let the scheduler run for a while.
         std::this_thread::sleep_for(std::chrono::seconds(3));
 
-        // Stop schedule.
-        REQUIRE(scheduler.stop_schedule().has_value());
+        // Test status after schedule ends.
         REQUIRE(scheduler.status() == vlinux::Scheduler::Status::Stopped);
         REQUIRE(::uc_context_free(ctx1) == UC_ERR_OK);
         REQUIRE(::uc_context_free(ctx2) == UC_ERR_OK);
@@ -184,6 +185,6 @@ TEST_CASE("Test VM", "[vm]") {
 
     SECTION("Test run()") {
         REQUIRE(vm.load("/home/comma/projs/vlinux/tmp/test_start").has_value());
-        REQUIRE(vm.run().has_value());
+        REQUIRE(vm.run(std::chrono::milliseconds(1500)).has_value());
     }
 }
