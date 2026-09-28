@@ -94,7 +94,7 @@ outcome::result<void> Scheduler::start_schedule(
         }
 
         // Set TLB fill hook for virtual address translation.
-        auto pgtable = &task->page_table;
+        auto pgtable = task->page_table.get();
         err = ::uc_hook_add(
             this->uc_, &this->tlb_fill_hook_, UC_HOOK_TLB_FILL,
             reinterpret_cast<void *>(Scheduler::tlb_fill_callback), pgtable, 1,
