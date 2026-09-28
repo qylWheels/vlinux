@@ -13,3 +13,6 @@ add_executable(tests main.cpp)
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain cpptrace::cpptrace)
 target_link_libraries(tests PRIVATE vlinux)
 target_include_directories(tests PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_compile_definitions(tests PRIVATE
+    CMAKE_BUILD_DIR_PATH="${CMAKE_BINARY_DIR}"
+)
