@@ -172,7 +172,7 @@ public:
         auto idle_task_vdesc = std::make_shared<mm::VirtualPageDescriptor>();
         idle_task_vdesc->start_addr = mm::kIdleTaskCodeRegionStart;
         idle_task_vdesc->len = mm::PAGE_SIZE;
-        idle_task_vdesc->perm = UC_PROT_READ | UC_PROT_WRITE;
+        idle_task_vdesc->perm = UC_PROT_READ | UC_PROT_EXEC;
         std::shared_ptr<mm::VirtualMemoryAddressSpace> idle_address_space =
             std::make_shared<mm::VirtualMemoryAddressSpace>();
         *idle_address_space = {
@@ -198,7 +198,7 @@ public:
         auto init_task_vdesc = std::make_shared<mm::VirtualPageDescriptor>();
         init_task_vdesc->start_addr = mm::kInitTaskCodeRegionStart;
         init_task_vdesc->len = mm::PAGE_SIZE;
-        init_task_vdesc->perm = UC_PROT_READ | UC_PROT_WRITE;
+        init_task_vdesc->perm = UC_PROT_READ | UC_PROT_EXEC;
         std::shared_ptr<mm::VirtualMemoryAddressSpace> init_address_space =
             std::make_shared<mm::VirtualMemoryAddressSpace>();
         *init_address_space = {.vpages = {init_task_vdesc}};
