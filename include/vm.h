@@ -79,7 +79,6 @@ public:
             std::uint64_t ret;
         };
 
-        std::shared_ptr<Task> task_tree_;
         std::map<std::shared_ptr<Task>, std::vector<Syscall>> behav_of_tasks_;
     };
 
