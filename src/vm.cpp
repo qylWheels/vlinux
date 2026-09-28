@@ -224,9 +224,10 @@ public:
 
 public:  // Syscalls.
     void exit(int status) {
-        this->curr_task_->exit_status = status;
-        this->curr_task_->state = Task::State::Stopped;
-        if (this->curr_task_->root_task) {
+        auto task = this->scheduler_->current_task();
+        task.value()->exit_status = status;
+        task.value()->state = Task::State::Stopped;
+        if (task.value()->root_task) {
             uc_emu_stop(this->uc_);
         }
     }
