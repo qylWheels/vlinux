@@ -72,7 +72,7 @@ public:
 public:
     void reset();
     outcome::result<void> load(const std::filesystem::path& path) noexcept;
-    outcome::result<void> run() noexcept;
+    outcome::result<void> run(std::chrono::milliseconds timeout) noexcept;
 
 private:
     class Impl;
