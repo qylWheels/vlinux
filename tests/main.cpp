@@ -4,6 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
 #include <cstdlib>
+#include <filesystem>
 #include <thread>
 
 #include "mm.h"
@@ -178,15 +179,16 @@ TEST_CASE("Test Scheduler", "[scheduler]") {
 TEST_CASE("Test VM", "[vm]") {
     vlinux::VM vm;
     vm.reset();
+    auto build_path = std::filesystem::path(CMAKE_BUILD_DIR_PATH);
 
     SECTION("Test load()") {
-        REQUIRE(vm.load("/home/comma/projs/vlinux/tmp/test_start").has_value());
+        REQUIRE(
+            vm.load(build_path / "tests/syscall_tests/test_brk").has_value());
     }
 
     SECTION("Test brk()") {
-        std::string path =
-            std::string(CMAKE_BUILD_DIR_PATH) + "/tests/syscall_tests/test_brk";
-        REQUIRE(vm.load(path).has_value());
+        REQUIRE(
+            vm.load(build_path / "tests/syscall_tests/test_brk").has_value());
         auto result = vm.run(std::chrono::milliseconds(100),
                              std::chrono::milliseconds(10));
         REQUIRE(result.has_value());
