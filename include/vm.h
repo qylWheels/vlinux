@@ -5,10 +5,12 @@
 #include <cstdint>
 #include <filesystem>
 #include <functional>
+#include <map>
 #include <memory>
 #include <outcome.hpp>
 #include <outcome/result.hpp>
 #include <string>
+#include <vector>
 
 #include "mm.h"
 #include "task.h"
@@ -68,6 +70,18 @@ public:
     VM& operator=(const VM& other) = delete;
     VM(VM&& other) = delete;
     VM& operator=(VM&& other) = delete;
+
+public:
+    struct Result {
+        struct Syscall {
+            std::uint32_t id;  // Syscall number.
+            std::uint64_t args[6];
+            std::uint64_t ret;
+        };
+
+        std::shared_ptr<Task> task_tree_;
+        std::map<std::shared_ptr<Task>, std::vector<Syscall>> behav_of_tasks_;
+    };
 
 public:
     void reset();
