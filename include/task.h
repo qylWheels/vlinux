@@ -112,6 +112,12 @@ public:
     std::vector<Syscall> syscalls;
 };
 
+class ITaskExecutor {
+public:
+    virtual ~ITaskExecutor() = default;
+    virtual outcome::result<void> execute(std::shared_ptr<Task> task) = 0;
+};
+
 // Schedule tasks whose status is Ready.
 class Scheduler {
 public:
