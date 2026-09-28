@@ -73,12 +73,6 @@ public:
 
 public:
     struct Result {
-        struct Syscall {
-            std::uint32_t id;  // Syscall number.
-            std::uint64_t args[6];
-            std::uint64_t ret;
-        };
-
         std::map<std::shared_ptr<Task>, std::vector<Syscall>> behav_of_tasks_;
     };
 

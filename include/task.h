@@ -75,6 +75,12 @@ public:
         Stopped,
     };
 
+    struct Syscall {
+        std::uint32_t id;  // Syscall number.
+        std::uint64_t args[6];
+        std::uint64_t ret;
+    };
+
 public:
     std::string name;
 
