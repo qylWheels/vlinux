@@ -72,7 +72,9 @@ public:
 public:
     void reset();
     outcome::result<void> load(const std::filesystem::path& path) noexcept;
-    outcome::result<void> run(std::chrono::milliseconds timeout) noexcept;
+    outcome::result<void> run(
+        std::chrono::milliseconds timeout,
+        std::chrono::milliseconds sched_interval) noexcept;
 
 private:
     class Impl;

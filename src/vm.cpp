@@ -578,7 +578,9 @@ outcome::result<void> VM::load(const std::filesystem::path& path) noexcept {
     return outcome::success();
 }
 
-outcome::result<void> VM::run(std::chrono::milliseconds timeout) noexcept {
+outcome::result<void> VM::run(
+    std::chrono::milliseconds timeout,
+    std::chrono::milliseconds sched_interval) noexcept {
     uc_err err;
 
     // Add syscall hook.
@@ -594,8 +596,8 @@ outcome::result<void> VM::run(std::chrono::milliseconds timeout) noexcept {
     this->impl_->curr_task_->state = Task::State::Ready;
 
     // Start the scheduler.
-    OUTCOME_TRY(this->impl_->scheduler_->start_schedule(
-        timeout, std::chrono::milliseconds(100)));
+    OUTCOME_TRY(
+        this->impl_->scheduler_->start_schedule(timeout, sched_interval));
 
     return outcome::success();
 }
