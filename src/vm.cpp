@@ -304,6 +304,8 @@ public:  // Syscalls.
         // Update address space.
         for (auto vdesc : vdescs) {
             if (!task->address_space->vpages.insert(vdesc).second) {
+                // Cleanup.
+                cleanup();
                 return reinterpret_cast<void*>(task->address_space->brk);
             }
         }
