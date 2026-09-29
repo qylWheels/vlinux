@@ -79,7 +79,8 @@ public:
 
 public:
     void reset();
-    outcome::result<void> load(const std::filesystem::path& path);
+    outcome::result<std::shared_ptr<Task>> load(
+        const std::filesystem::path& path);
     outcome::result<Result> run(std::chrono::milliseconds timeout,
                                 std::chrono::milliseconds sched_interval);
 

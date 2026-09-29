@@ -428,7 +428,8 @@ VM::~VM() = default;
 
 void VM::reset() {}
 
-outcome::result<void> VM::load(const std::filesystem::path& path) {
+outcome::result<std::shared_ptr<Task>> VM::load(
+    const std::filesystem::path& path) {
     uc_err err;
     ELFIO::elfio reader;
 
@@ -569,7 +570,7 @@ outcome::result<void> VM::load(const std::filesystem::path& path) {
     // Set curr_task.
     this->impl_->curr_task_ = task;
 
-    return outcome::success();
+    return outcome::success(task);
 }
 
 outcome::result<VM::Result> VM::run(std::chrono::milliseconds timeout,
