@@ -19,6 +19,7 @@
 
 #include "error.h"
 #include "mm.h"
+#include "syscall_handler.h"
 
 namespace vlinux {
 class VM::Impl {
@@ -251,24 +252,13 @@ public:
                   << std::endl;
 
         // Dispatch.
-        std::uint64_t ret = 0;
-        switch (syscall_number) {
-            case SYS_brk: {
-                ret = reinterpret_cast<std::uint64_t>(
-                    self->brk(reinterpret_cast<void*>(args[0])));
-                break;
-            }
-            default: {
-                std::cout << std::format("syscall {} not implemented",
-                                         syscall_number)
-                          << std::endl;
-                break;
-            }
-        }
+        auto task = self->scheduler_->current_task().value();
+        std::uint64_t ret = self->syscall_handler_.dispatch(
+            {task, self->ppa_, task->page_table}, syscall_number,
+            std::to_array(args));
 
         // Record syscall.
-        auto task = self->scheduler_->current_task();
-        task.value()->syscalls.push_back(
+        task->syscalls.push_back(
             {static_cast<uint32_t>(syscall_number), std::to_array(args), ret});
     }
 
@@ -285,6 +275,9 @@ public:
 
     // Memory-related fields.
     std::shared_ptr<mm::PhysicalPageAllocator> ppa_;
+
+    // Syscall-related fields.
+    syscall::SyscallHandler syscall_handler_;
 
     uc_engine* uc_;
     uc_hook syscall_hook_;
