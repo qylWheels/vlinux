@@ -12,7 +12,7 @@ public:
     ~SysBrkHandler() = default;
 
 public:
-    void* brk_expand(SyscallDispatcher::Context context,
+    void* brk_expand(SyscallHandler::Context context,
                      void* addr) {  // Check if the address is valid.
         auto task = context.task;
         if (reinterpret_cast<uint64_t>(addr) < task->address_space->start_brk) {
@@ -80,7 +80,7 @@ public:
         return reinterpret_cast<void*>(task->address_space->brk);
     }
 
-    void* brk_shrink(SyscallDispatcher::Context context, void* addr) {
+    void* brk_shrink(SyscallHandler::Context context, void* addr) {
         auto task = context.task;
         if (reinterpret_cast<uint64_t>(addr) < task->address_space->start_brk) {
             return reinterpret_cast<void*>(task->address_space->brk);
@@ -124,7 +124,7 @@ public:
         return reinterpret_cast<void*>(task->address_space->brk);
     }
 
-    void* handle_brk(SyscallDispatcher::Context context, void* addr) {
+    void* handle_brk(SyscallHandler::Context context, void* addr) {
         auto task = context.task;
         auto brk = task->address_space->brk;
         if (reinterpret_cast<uint64_t>(addr) > brk) {
@@ -137,7 +137,7 @@ public:
     }
 };
 
-class SyscallDispatcher::Impl {
+class SyscallHandler::Impl {
 public:
     Impl() = default;
     ~Impl() = default;
@@ -146,9 +146,9 @@ public:
     SysBrkHandler sys_brk_handler_;
 };
 
-std::uint64_t SyscallDispatcher::dispatch(Context context,
-                                          std::uint64_t syscall_id,
-                                          std::array<std::uint64_t, 6> args) {
+std::uint64_t SyscallHandler::dispatch(Context context,
+                                       std::uint64_t syscall_id,
+                                       std::array<std::uint64_t, 6> args) {
     switch (syscall_id) {
         case SYS_brk:
             return reinterpret_cast<std::uint64_t>(

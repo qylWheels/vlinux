@@ -9,10 +9,10 @@
 
 namespace vlinux {
 namespace syscall {
-class SyscallDispatcher {
+class SyscallHandler {
 public:
-    SyscallDispatcher() = default;
-    ~SyscallDispatcher() = default;
+    SyscallHandler() = default;
+    ~SyscallHandler() = default;
 
 public:
     struct Context {
