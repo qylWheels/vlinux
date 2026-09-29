@@ -252,7 +252,7 @@ public:
                   << std::endl;
 
         // Dispatch.
-        auto task = self->scheduler_->current_task().value();
+        auto task = self->scheduler_->current_task();
         std::uint64_t ret = self->syscall_handler_.dispatch(
             {task, self->ppa_, task->page_table}, syscall_number,
             std::to_array(args));
