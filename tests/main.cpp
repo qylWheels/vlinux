@@ -201,8 +201,8 @@ TEST_CASE("Test VM", "[vm]") {
                              std::chrono::milliseconds(10));
 
         // Check mm status after calling brk().
-        // REQUIRE(mm->vpages.size() == vdesc_cnt + 3);
-        // REQUIRE(mm->start_brk == start_brk);
+        REQUIRE(mm->vpages.size() == vdesc_cnt + 3);
+        REQUIRE(mm->start_brk == start_brk);
         REQUIRE(mm->brk == brk + 4096 * 2 + 1);
     }
 }
