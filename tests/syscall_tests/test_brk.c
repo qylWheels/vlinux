@@ -19,7 +19,10 @@ void _start(void) {
     const int sys_exit = 60;
 
     // Get current break.
-    void *ret = (void *)syscall(sys_brk, 0, 0, 0, 0, 0, 0);
+    void *brk = (void *)syscall(sys_brk, 0, 0, 0, 0, 0, 0);
+
+    // Set break.
+    syscall(sys_brk, (unsigned long long)brk + 4096 * 2 + 1, 0, 0, 0, 0, 0);
 
     for (;;);
 
