@@ -1,5 +1,6 @@
 #include "vm.h"
 
+#include <sys/syscall.h>
 #include <unicorn/unicorn.h>
 #include <unicorn/x86.h>
 
