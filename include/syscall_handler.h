@@ -11,8 +11,8 @@ namespace vlinux {
 namespace syscall {
 class SyscallHandler {
 public:
-    SyscallHandler() = default;
-    ~SyscallHandler() = default;
+    SyscallHandler();
+    ~SyscallHandler();
 
 public:
     struct Context {

@@ -146,6 +146,10 @@ public:
     SysBrkHandler sys_brk_handler_;
 };
 
+SyscallHandler::SyscallHandler() : impl_(std::make_unique<Impl>()) {}
+
+SyscallHandler::~SyscallHandler() = default;
+
 std::uint64_t SyscallHandler::dispatch(Context context,
                                        std::uint64_t syscall_id,
                                        std::array<std::uint64_t, 6> args) {
