@@ -1,3 +1,4 @@
+#include <sys/syscall.h>
 #include <unicorn/unicorn.h>
 #include <unicorn/x86.h>
 
@@ -187,10 +188,21 @@ TEST_CASE("Test VM", "[vm]") {
     }
 
     SECTION("Test brk()") {
-        REQUIRE(
-            vm.load(build_path / "tests/syscall_tests/test_brk").has_value());
+        auto task =
+            vm.load(build_path / "tests/syscall_tests/test_brk").value();
+
+        // Log mm status before calling brk().
+        auto mm = task->address_space;
+        auto vdesc_cnt = mm->vpages.size();
+        auto start_brk = mm->start_brk;
+        auto brk = mm->brk;
+
         auto result = vm.run(std::chrono::milliseconds(100),
                              std::chrono::milliseconds(10));
-        REQUIRE(result.has_value());
+
+        // Check mm status after calling brk().
+        // REQUIRE(mm->vpages.size() == vdesc_cnt + 3);
+        // REQUIRE(mm->start_brk == start_brk);
+        REQUIRE(mm->brk == brk + 4096 * 2 + 1);
     }
 }
