@@ -125,7 +125,8 @@ public:
 public:
     outcome::result<void> add_task(std::shared_ptr<Task> task);
     outcome::result<void> remove_task(std::shared_ptr<Task> task);
-    outcome::result<std::shared_ptr<Task>> current_task();
+    // Get the current task. Never returns nullptr.
+    std::shared_ptr<Task> current_task();
     outcome::result<void> start_schedule(std::chrono::milliseconds timeout,
                                          std::chrono::milliseconds interval);
 
