@@ -86,9 +86,6 @@ outcome::result<void> PhysicalPageAllocator::free(
         return std::errc::invalid_argument;
     }
 
-    // Remove from alloced_pages.
-    this->alloced_pages_.erase(desc);
-
     // Decrement refcount.
     desc->refcount--;
 
@@ -96,8 +93,10 @@ outcome::result<void> PhysicalPageAllocator::free(
     // engine's physical-address keyed translation caches (see mm.h). It is
     // simply returned to the pool and reused by a later alloc().
 
-    // Add to free_pages.
-    this->free_pages_.push_front(desc);
+    if (desc->refcount == 0) {
+        this->alloced_pages_.erase(desc);
+        this->free_pages_.push_front(desc);
+    }
 
     return outcome::success();
 }
