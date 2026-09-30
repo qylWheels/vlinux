@@ -194,7 +194,7 @@ TEST_CASE("Test VM", "[vm]") {
 
         // Log mm status before calling brk().
         auto mm = task->address_space;
-        auto old_vdesc_cnt = mm->vpages.size();
+        auto old_vdesc_cnt = static_cast<std::int64_t>(mm->vpages.size());
         auto old_start_brk = mm->start_brk;
         auto old_brk = mm->brk;
 
@@ -230,7 +230,8 @@ TEST_CASE("Test VM", "[vm]") {
                 REQUIRE(ret == mm->brk);
                 auto page_cnt =
                     calc_page_cnt(old_brk, addr, vlinux::mm::PAGE_SIZE);
-                REQUIRE(mm->vpages.size() == old_vdesc_cnt + page_cnt);
+                REQUIRE(mm->vpages.size() ==
+                        static_cast<std::uint64_t>(old_vdesc_cnt + page_cnt));
                 REQUIRE(mm->brk == addr);
             }
 
