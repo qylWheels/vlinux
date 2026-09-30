@@ -391,18 +391,9 @@ outcome::result<std::shared_ptr<Task>> VM::load(
     if (highest_page_it == address_space->vpages.rend()) {
         return std::errc::address_not_available;
     }
-    OUTCOME_TRY(auto heap_page_pdesc, this->impl_->ppa_->alloc());
-    auto heap_page_vdesc = std::make_shared<mm::VirtualPageDescriptor>();
-    heap_page_vdesc->start_addr =
+    address_space->start_brk =
         (*highest_page_it)->start_addr + (*highest_page_it)->len;
-    heap_page_vdesc->len = mm::PAGE_SIZE;
-    heap_page_vdesc->perm = UC_PROT_READ | UC_PROT_WRITE;
-    OUTCOME_TRY(page_table->map(heap_page_vdesc, heap_page_pdesc));
-    if (!address_space->vpages.insert(heap_page_vdesc).second) {
-        return std::errc::address_in_use;
-    }
-    address_space->start_brk = heap_page_vdesc->start_addr;
-    address_space->brk = heap_page_vdesc->start_addr;
+    address_space->brk = address_space->start_brk;
 
     // Allocate stack memory.
     OUTCOME_TRY(auto stack_page_pdesc, this->impl_->ppa_->alloc());
