@@ -81,7 +81,7 @@ private:
     // them routes physical addresses through the TLB fill hook as if they
     // were guest virtual addresses. Freeing a page therefore only returns it
     // to free_pages_, it is never unmapped.
-    std::set<std::uint64_t> mapped_pages_;
+    std::set<std::shared_ptr<PhysicalPageDescriptor>> mapped_pages_;
 };
 
 struct VirtualPageDescriptor {

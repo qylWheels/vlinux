@@ -41,14 +41,13 @@ PhysicalPageAllocator::alloc() {
     // UC_PROT_ALL because this is a physical page of guest.
     // A page that was allocated before is already mapped, and it stays mapped
     // until the allocator is destroyed.
-    if (this->mapped_pages_.find(page->start_addr) ==
-        this->mapped_pages_.end()) {
+    if (this->mapped_pages_.find(page) == this->mapped_pages_.end()) {
         err = ::uc_mem_map(this->uc_, page->start_addr, PAGE_SIZE, UC_PROT_ALL);
         if (err != UC_ERR_OK) {
             this->free_pages_.push_front(page);
             return std::errc::invalid_argument;
         }
-        this->mapped_pages_.insert(page->start_addr);
+        this->mapped_pages_.insert(page);
     }
 
     // Set page status.
