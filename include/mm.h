@@ -74,6 +74,14 @@ private:
     uc_engine* uc_;
     std::list<std::shared_ptr<PhysicalPageDescriptor>> free_pages_;
     std::set<std::shared_ptr<PhysicalPageDescriptor>> alloced_pages_;
+
+    // Addresses of pages already mapped into unicorn. Mappings are grow-only
+    // while the vm runs: uc_mem_unmap() invalidates the engine's internal
+    // translation caches, which are keyed by physical address, and refilling
+    // them routes physical addresses through the TLB fill hook as if they
+    // were guest virtual addresses. Freeing a page therefore only returns it
+    // to free_pages_, it is never unmapped.
+    std::set<std::uint64_t> mapped_pages_;
 };
 
 struct VirtualPageDescriptor {

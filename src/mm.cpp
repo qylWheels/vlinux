@@ -18,10 +18,11 @@ PhysicalPageAllocator::PhysicalPageAllocator(uc_engine* uc) : uc_(uc) {
     }
 }
 
-PhysicalPageAllocator::~PhysicalPageAllocator() {
-    for (auto page : this->alloced_pages_) {
-        (void)::uc_mem_unmap(this->uc_, page->start_addr, PAGE_SIZE);
-    }
+PhysicalPageAllocator::~PhysicalPageAllocator(){
+    // Do not unmap anything here. The allocator may outlive uc_close(), and
+    // the engine frees its own memory on close. Unmapping a page here would
+    // also make the engine drop its physical-address keyed translation
+    // caches (see mm.h).
 };
 
 outcome::result<std::shared_ptr<PhysicalPageDescriptor>>
@@ -36,11 +37,18 @@ PhysicalPageAllocator::alloc() {
     auto page = this->free_pages_.front();
     this->free_pages_.pop_front();
 
-    // Alloc physical page in unicorn. Set permission to UC_PROT_ALL
-    // because this is a physical page of guest.
-    err = ::uc_mem_map(this->uc_, page->start_addr, PAGE_SIZE, UC_PROT_ALL);
-    if (err != UC_ERR_OK) {
-        return std::errc::invalid_argument;
+    // Alloc physical page in unicorn on first use. Set permission to
+    // UC_PROT_ALL because this is a physical page of guest.
+    // A page that was allocated before is already mapped, and it stays mapped
+    // until the allocator is destroyed.
+    if (this->mapped_pages_.find(page->start_addr) ==
+        this->mapped_pages_.end()) {
+        err = ::uc_mem_map(this->uc_, page->start_addr, PAGE_SIZE, UC_PROT_ALL);
+        if (err != UC_ERR_OK) {
+            this->free_pages_.push_front(page);
+            return std::errc::invalid_argument;
+        }
+        this->mapped_pages_.insert(page->start_addr);
     }
 
     // Set page status.
@@ -85,10 +93,9 @@ outcome::result<void> PhysicalPageAllocator::free(
     // Decrement refcount.
     desc->refcount--;
 
-    // Free physical page in unicorn if refcount is 0.
-    if (desc->refcount == 0) {
-        (void)::uc_mem_unmap(this->uc_, desc->start_addr, PAGE_SIZE);
-    }
+    // The page stays mapped in unicorn: unmapping it here would break the
+    // engine's physical-address keyed translation caches (see mm.h). It is
+    // simply returned to the pool and reused by a later alloc().
 
     // Add to free_pages.
     this->free_pages_.push_front(desc);
