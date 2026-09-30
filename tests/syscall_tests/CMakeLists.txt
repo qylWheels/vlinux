@@ -3,4 +3,4 @@ target_compile_options(
     test_brk PRIVATE
     -ffreestanding -fno-sanitize=all
 )
-target_link_options(test_brk PRIVATE -nostdlib)
+target_link_options(test_brk PRIVATE -nostdlib -static)
