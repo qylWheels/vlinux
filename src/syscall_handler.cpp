@@ -144,6 +144,12 @@ public:
 
 public:
     SysBrkHandler sys_brk_handler_;
+
+public:  // Hooks.
+    std::vector<std::function<void(std::uint64_t syscall_id,
+                                   std::array<std::uint64_t, 6> args,
+                                   std::uint64_t ret)>>
+        syscall_hooks_;
 };
 
 SyscallHandler::SyscallHandler() : impl_(std::make_unique<Impl>()) {}
@@ -164,6 +170,14 @@ std::uint64_t SyscallHandler::dispatch(Context context,
 
     // Unreachable.
     std::abort();
+}
+
+outcome::result<void> SyscallHandler::add_syscall_hook(
+    std::function<void(std::uint64_t syscall_id,
+                       std::array<std::uint64_t, 6> args, std::uint64_t ret)>
+        hook) {
+    this->impl_->syscall_hooks_.push_back(hook);
+    return outcome::success();
 }
 }  // namespace syscall
 }  // namespace vlinux

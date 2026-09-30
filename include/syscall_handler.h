@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <functional>
 #include <memory>
 
 #include "mm.h"
@@ -23,6 +24,11 @@ public:
 public:
     std::uint64_t dispatch(Context context, std::uint64_t syscall_id,
                            std::array<std::uint64_t, 6> args);
+    outcome::result<void> add_syscall_hook(
+        std::function<void(std::uint64_t syscall_id,
+                           std::array<std::uint64_t, 6> args,
+                           std::uint64_t ret)>
+            hook);
 
 private:
     class Impl;
