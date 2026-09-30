@@ -114,7 +114,15 @@ private:
 
 // i.e mm_struct.
 struct VirtualMemoryAddressSpace {
-    std::set<std::shared_ptr<VirtualPageDescriptor>> vpages;
+    struct CompareVirtualAddress {
+        bool operator()(const std::shared_ptr<VirtualPageDescriptor>& a,
+                        const std::shared_ptr<VirtualPageDescriptor>& b) const {
+            return a->start_addr > b->start_addr;
+        }
+    };
+
+    std::set<std::shared_ptr<VirtualPageDescriptor>, CompareVirtualAddress>
+        vpages;
     std::uint64_t start_brk;  // Start address of heap.
     std::uint64_t brk;        // End address of heap.
 };
