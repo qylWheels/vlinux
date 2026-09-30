@@ -97,7 +97,9 @@ public:
             calc_page_cnt(task->address_space->brk,
                           reinterpret_cast<uint64_t>(addr), mm::PAGE_SIZE));
 
-        // Delete page table maps, vdescs and physical pages.
+        // Delete page table maps and physical pages.
+        // Record victim vdescs.
+        std::vector<std::shared_ptr<mm::VirtualPageDescriptor>> vdesc_victims;
         for (auto it = task->address_space->vpages.rbegin();
              it != task->address_space->vpages.rend(); it++) {
             if (page_cnt == 0) {
@@ -109,17 +111,24 @@ public:
                 continue;
             }
 
+            // Get pdesc related to vdesc.
+            auto pdesc = task->page_table->vdesc_to_pdesc(*it).value();
+
             // Unmap.
             (void)task->page_table->unmap(*it);
 
-            // Remove vdesc.
-            auto pdesc = task->page_table->vdesc_to_pdesc(*it).value();
-            (void)task->address_space->vpages.erase(*it);
+            // Record victim vdescs.
+            vdesc_victims.push_back(*it);
 
             // Free physical page.
             (void)context.ppa->free(pdesc);
 
             page_cnt--;
+        }
+
+        // Remove victim vdescs from address space.
+        for (auto vdesc : vdesc_victims) {
+            (void)task->address_space->vpages.erase(vdesc);
         }
 
         // Update brk.
