@@ -1,6 +1,7 @@
 #include "syscall_handler.h"
 
 #include <sys/syscall.h>
+#include <unicorn/unicorn.h>
 
 #include <cstdlib>
 #include <functional>
@@ -119,6 +120,10 @@ public:
 
             // Record victim vdescs.
             vdesc_victims.push_back(*it);
+
+            // Flush TLB and TB.
+            ::uc_ctl_flush_tlb(context.uc);
+            ::uc_ctl_flush_tb(context.uc);
 
             // Free physical page.
             (void)context.ppa->free(pdesc);
