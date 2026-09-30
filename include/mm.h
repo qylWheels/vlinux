@@ -117,7 +117,7 @@ struct VirtualMemoryAddressSpace {
     struct CompareVirtualAddress {
         bool operator()(const std::shared_ptr<VirtualPageDescriptor>& a,
                         const std::shared_ptr<VirtualPageDescriptor>& b) const {
-            return a->start_addr > b->start_addr;
+            return a->start_addr < b->start_addr;
         }
     };
 
