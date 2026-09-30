@@ -92,6 +92,9 @@ outcome::result<void> PhysicalPageAllocator::free(
     // The page stays mapped in unicorn: unmapping it here would break the
     // engine's physical-address keyed translation caches (see mm.h). It is
     // simply returned to the pool and reused by a later alloc().
+    // if (desc->refcount == 0) {
+    //     (void)::uc_mem_unmap(this->uc_, desc->start_addr, PAGE_SIZE);
+    // }
 
     if (desc->refcount == 0) {
         this->alloced_pages_.erase(desc);
