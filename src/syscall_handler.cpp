@@ -15,9 +15,6 @@ public:
     void* brk_expand(SyscallHandler::Context context,
                      void* addr) {  // Check if the address is valid.
         auto task = context.task;
-        if (reinterpret_cast<uint64_t>(addr) < task->address_space->start_brk) {
-            return reinterpret_cast<void*>(task->address_space->brk);
-        }
 
         // Round up the address to the nearest page boundary.
         std::uint64_t p = reinterpret_cast<uint64_t>(addr) + mm::PAGE_SIZE - 1;
@@ -82,9 +79,6 @@ public:
 
     void* brk_shrink(SyscallHandler::Context context, void* addr) {
         auto task = context.task;
-        if (reinterpret_cast<uint64_t>(addr) < task->address_space->start_brk) {
-            return reinterpret_cast<void*>(task->address_space->brk);
-        }
 
         // Round up the address to the nearest page boundary.
         std::uint64_t p = reinterpret_cast<uint64_t>(addr) + mm::PAGE_SIZE - 1;
@@ -126,6 +120,10 @@ public:
 
     void* handle_brk(SyscallHandler::Context context, void* addr) {
         auto task = context.task;
+        if (reinterpret_cast<uint64_t>(addr) < task->address_space->start_brk) {
+            return reinterpret_cast<void*>(task->address_space->brk);
+        }
+
         auto brk = task->address_space->brk;
         if (reinterpret_cast<uint64_t>(addr) > brk) {
             return this->brk_expand(context, addr);
