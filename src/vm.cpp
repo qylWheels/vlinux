@@ -343,15 +343,18 @@ outcome::result<std::shared_ptr<Task>> VM::load(
         if (segment_flags & ELFIO::PF_X) {
             perms |= UC_PROT_EXEC;
         }
-        std::uint64_t non_zero_len = file_size;
-        std::uint64_t zero_len = virtual_size - file_size;
-        for (std::uint64_t i = 0; i < virtual_size; i += mm::PAGE_SIZE) {
+        // If segment is not page-aligned, it starts at page_off of its first
+        // page, so map [page_start, page_start + span).
+        std::uint64_t page_start = virtual_address & ~(mm::PAGE_SIZE - 1);
+        std::uint64_t page_off = virtual_address - page_start;
+        std::uint64_t span = page_off + virtual_size;
+        for (std::uint64_t i = 0; i < span; i += mm::PAGE_SIZE) {
             // Allocate a physical page.
             OUTCOME_TRY(auto pdesc, this->impl_->ppa_->alloc());
 
             // Map the virtual page to the physical page.
             auto vdesc = std::make_shared<mm::VirtualPageDescriptor>();
-            vdesc->start_addr = virtual_address + i;
+            vdesc->start_addr = page_start + i;
             vdesc->len = mm::PAGE_SIZE;
             vdesc->perm = perms;
             OUTCOME_TRY(page_table->map(vdesc, pdesc));
@@ -363,12 +366,15 @@ outcome::result<std::shared_ptr<Task>> VM::load(
 
             // Prepare the page content.
             std::vector<char> mem_data(mm::PAGE_SIZE, 0);
-            if (i < non_zero_len) {  // The page has file-backed bytes.
-                std::uint64_t left_non_zero = non_zero_len - i;
-                std::uint64_t len = left_non_zero > mm::PAGE_SIZE
-                                        ? mm::PAGE_SIZE
-                                        : left_non_zero;
-                std::copy_n(file_data.begin() + i, len, mem_data.begin());
+            // Segment byte #src lands at dst of this page.
+            std::uint64_t src = i > page_off ? i - page_off : 0;
+            std::uint64_t dst = i > page_off ? 0 : page_off - i;
+            if (src < file_size) {  // The page has file-backed bytes.
+                std::uint64_t left = file_size - src;
+                std::uint64_t room = mm::PAGE_SIZE - dst;
+                std::uint64_t len = left > room ? room : left;
+                std::copy_n(file_data.begin() + src, len,
+                            mem_data.begin() + dst);
             }
 
             // Write data to physical page.
@@ -380,7 +386,7 @@ outcome::result<std::shared_ptr<Task>> VM::load(
         }
     }
 
-    // Set start_brk and brk.
+    // Set start_brk and brk. It is page-aligned as brk_expand() requires.
     auto highest_page_it = address_space->vpages.rbegin();
     if (highest_page_it == address_space->vpages.rend()) {
         return std::errc::address_not_available;
