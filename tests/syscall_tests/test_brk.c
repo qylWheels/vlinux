@@ -16,7 +16,6 @@ unsigned long long syscall(int syscall_no, unsigned long long arg1,
 
 void _start(void) {
     const int sys_brk = 12;
-    const int sys_exit = 60;
 
     // Get current break.
     void *brk = (void *)syscall(sys_brk, 0, 0, 0, 0, 0, 0);
