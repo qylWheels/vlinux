@@ -217,7 +217,9 @@ TEST_CASE("Test VM", "[vm]") {
                                     (~(vlinux::mm::PAGE_SIZE - 1));
                 auto new_round_up = (new_addr + vlinux::mm::PAGE_SIZE - 1) &
                                     (~(vlinux::mm::PAGE_SIZE - 1));
-                return (new_round_up - old_round_up) / vlinux::mm::PAGE_SIZE;
+                return (static_cast<std::int64_t>(new_round_up) -
+                        static_cast<std::int64_t>(old_round_up)) /
+                       static_cast<std::int64_t>(vlinux::mm::PAGE_SIZE);
             };
 
             if (addr < old_start_brk) {
