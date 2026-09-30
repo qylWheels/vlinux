@@ -4,6 +4,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
+#include <cstdint>
 #include <cstdlib>
 #include <filesystem>
 #include <thread>
@@ -193,16 +194,53 @@ TEST_CASE("Test VM", "[vm]") {
 
         // Log mm status before calling brk().
         auto mm = task->address_space;
-        auto vdesc_cnt = mm->vpages.size();
-        auto start_brk = mm->start_brk;
-        auto brk = mm->brk;
+        auto old_vdesc_cnt = mm->vpages.size();
+        auto old_start_brk = mm->start_brk;
+        auto old_brk = mm->brk;
 
-        auto result = vm.run(std::chrono::milliseconds(100),
-                             std::chrono::milliseconds(10));
+        auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                              std::array<std::uint64_t, 6> args,
+                                              std::uint64_t ret) {
+            if (syscall_id != SYS_brk) {
+                return;
+            }
 
-        // Check mm status after calling brk().
-        REQUIRE(mm->vpages.size() == vdesc_cnt + 3);
-        REQUIRE(mm->start_brk == start_brk);
-        REQUIRE(mm->brk == brk + 4096 * 2 + 1);
+            // start_brk should never change.
+            REQUIRE(mm->start_brk == old_start_brk);
+
+            auto addr = args[0];
+
+            auto calc_page_cnt = [](std::uint64_t old_addr,
+                                    std::uint64_t new_addr,
+                                    std::uint64_t pgsize) -> std::int64_t {
+                auto old_round_up = (old_addr + vlinux::mm::PAGE_SIZE - 1) &
+                                    (~(vlinux::mm::PAGE_SIZE - 1));
+                auto new_round_up = (new_addr + vlinux::mm::PAGE_SIZE - 1) &
+                                    (~(vlinux::mm::PAGE_SIZE - 1));
+                return (new_round_up - old_round_up) / vlinux::mm::PAGE_SIZE;
+            };
+
+            if (addr < old_start_brk) {
+                REQUIRE(ret == old_brk);
+                REQUIRE(mm->vpages.size() == old_vdesc_cnt);
+                REQUIRE(mm->brk == old_brk);
+            } else {
+                REQUIRE(ret == mm->brk);
+                auto page_cnt =
+                    calc_page_cnt(old_brk, addr, vlinux::mm::PAGE_SIZE);
+                REQUIRE(mm->vpages.size() == old_vdesc_cnt + page_cnt);
+                REQUIRE(mm->brk == addr);
+            }
+
+            // Update old data.
+            old_start_brk = mm->start_brk;
+            old_brk = mm->brk;
+            old_vdesc_cnt = mm->vpages.size();
+        });
+        REQUIRE(result.has_value());
+
+        REQUIRE(vm.run(std::chrono::milliseconds(100),
+                       std::chrono::milliseconds(10))
+                    .has_value());
     }
 }
