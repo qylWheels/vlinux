@@ -94,12 +94,10 @@ public:
     void* brk_shrink(SyscallHandler::Context context, void* addr) {
         auto task = context.task;
 
-        // Round up the address to the nearest page boundary.
-        std::uint64_t p = reinterpret_cast<uint64_t>(addr) + mm::PAGE_SIZE - 1;
-        p &= ~(mm::PAGE_SIZE - 1);
-
         // Calculate the number of pages to shrink.
-        std::uint64_t page_cnt = (task->address_space->brk - p) / mm::PAGE_SIZE;
+        std::uint64_t page_cnt =
+            calc_page_cnt(task->address_space->brk,
+                          reinterpret_cast<uint64_t>(addr), mm::PAGE_SIZE);
 
         // Delete page table maps, vdescs and physical pages.
         for (auto it = task->address_space->vpages.rbegin();
