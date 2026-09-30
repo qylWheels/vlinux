@@ -30,11 +30,9 @@ public:
                      void* addr) {  // Check if the address is valid.
         auto task = context.task;
 
-        // Round up the address to the nearest page boundary.
-        std::uint64_t p = reinterpret_cast<uint64_t>(addr) + mm::PAGE_SIZE - 1;
-        p &= ~(mm::PAGE_SIZE - 1);
-
-        std::uint64_t page_cnt = (p - task->address_space->brk) / mm::PAGE_SIZE;
+        std::uint64_t page_cnt =
+            calc_page_cnt(task->address_space->brk,
+                          reinterpret_cast<uint64_t>(addr), mm::PAGE_SIZE);
 
         // Allocate pages eagerly, we wouldn't implement lazy allocation now.
         std::vector<std::shared_ptr<mm::PhysicalPageDescriptor>> pdescs;
