@@ -159,17 +159,24 @@ SyscallHandler::~SyscallHandler() = default;
 std::uint64_t SyscallHandler::dispatch(Context context,
                                        std::uint64_t syscall_id,
                                        std::array<std::uint64_t, 6> args) {
+    std::uint64_t ret;
     switch (syscall_id) {
         case SYS_brk:
-            return reinterpret_cast<std::uint64_t>(
+            ret = reinterpret_cast<std::uint64_t>(
                 this->impl_->sys_brk_handler_.handle_brk(
                     context, reinterpret_cast<void*>(args[0])));
+            break;
         default:
-            return -ENOSYS;
+            ret = -ENOSYS;
+            break;
     }
 
-    // Unreachable.
-    std::abort();
+    // Trigger syscall hooks.
+    for (auto& hook : this->impl_->syscall_hooks_) {
+        hook(syscall_id, args, ret);
+    }
+
+    return ret;
 }
 
 outcome::result<void> SyscallHandler::add_syscall_hook(
