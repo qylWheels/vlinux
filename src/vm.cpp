@@ -257,6 +257,13 @@ public:
             {task, self->ppa_, task->page_table}, syscall_number,
             std::to_array(args));
 
+        // Write return value back to RAX.
+        err = uc_reg_write(engine, UC_X86_REG_RAX, &ret);
+        if (err != UC_ERR_OK) {
+            throw std::runtime_error(
+                std::format("uc_reg_write failed: {}", uc_strerror(err)));
+        }
+
         // Record syscall.
         task->syscalls.push_back(
             {static_cast<uint32_t>(syscall_number), std::to_array(args), ret});
