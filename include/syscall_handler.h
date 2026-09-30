@@ -18,7 +18,6 @@ public:
     struct Context {
         std::shared_ptr<Task> task;
         std::shared_ptr<mm::PhysicalPageAllocator> ppa;
-        std::shared_ptr<mm::PageTable> page_table;
     };
 
 public:
