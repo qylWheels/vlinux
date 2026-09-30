@@ -285,6 +285,12 @@ public:
     // Syscall-related fields.
     syscall::SyscallHandler syscall_handler_;
 
+    // Hooks.
+    std::vector<std::function<void(std::uint64_t syscall_id,
+                                   std::array<std::uint64_t, 6> args,
+                                   std::uint64_t ret)>>
+        syscall_hooks_;
+
     uc_engine* uc_;
     uc_hook syscall_hook_;
     std::shared_ptr<Task> curr_task_;
@@ -465,4 +471,15 @@ outcome::result<VM::Result> VM::run(std::chrono::milliseconds timeout,
     }
     return outcome::success(result);
 }
+
+outcome::result<void> VM::add_syscall_hook(
+    std::function<void(std::uint64_t syscall_id,
+                       std::array<std::uint64_t, 6> args, std::uint64_t ret)>
+        hook) {
+    this->impl_->syscall_hooks_.push_back(hook);
+    return outcome::success();
+}
+
+// Observability.
+Scheduler& VM::get_scheduler() { return *this->impl_->scheduler_; }
 }  // namespace vlinux

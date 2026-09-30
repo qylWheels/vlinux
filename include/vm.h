@@ -84,6 +84,16 @@ public:
     outcome::result<Result> run(std::chrono::milliseconds timeout,
                                 std::chrono::milliseconds sched_interval);
 
+    // Hooks.
+    outcome::result<void> add_syscall_hook(
+        std::function<void(std::uint64_t syscall_id,
+                           std::array<std::uint64_t, 6> args,
+                           std::uint64_t ret)>
+            hook);
+
+    // Observability.
+    Scheduler& get_scheduler();
+
 private:
     class Impl;
     std::unique_ptr<Impl> impl_;
