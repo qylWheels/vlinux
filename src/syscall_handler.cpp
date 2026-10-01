@@ -1,8 +1,10 @@
 #include "syscall_handler.h"
 
+#include <sys/mman.h>
 #include <sys/syscall.h>
 #include <unicorn/unicorn.h>
 
+#include <algorithm>
 #include <cstdlib>
 #include <functional>
 #include <memory>
@@ -31,7 +33,36 @@ public:
     SysMprotectHandler& operator=(SysMprotectHandler&&) = delete;
 
 public:
-    int mprotect(std::shared_ptr<Task> task) { return 0; }
+    int mprotect(std::shared_ptr<Task> task, void* addr, std::size_t len,
+                 int prot) {
+        std::uint64_t start = reinterpret_cast<uint64_t>(addr);
+        if (start % mm::PAGE_SIZE != 0) {
+            return -EINVAL;
+        }
+
+        std::uint64_t end = start + len;
+        std::uint64_t page_cnt =
+            calc_unmap_page_cnt(start, end, mm::PAGE_SIZE) + 1;
+
+        std::uint64_t start_round_down = start - (start % mm::PAGE_SIZE);
+        std::uint64_t end_round_up =
+            (end + (mm::PAGE_SIZE - 1)) & (~(mm::PAGE_SIZE - 1));
+        for (std::uint64_t i = start_round_down; i < end_round_up;
+             i += mm::PAGE_SIZE) {
+            // vdesc_it must be valid.
+            auto vdesc_it = std::find_if(
+                task->address_space->vpages.begin(),
+                task->address_space->vpages.end(),
+                [i](auto vdesc) { return vdesc->start_addr == i; });
+            std::uint64_t uc_prot = 0;
+            uc_prot |= ((prot & PROT_READ) ? UC_PROT_READ : 0);
+            uc_prot |= ((prot & PROT_WRITE) ? UC_PROT_WRITE : 0);
+            uc_prot |= ((prot & PROT_EXEC) ? UC_PROT_EXEC : 0);
+            (*vdesc_it)->perm = uc_prot;
+        }
+
+        return 0;
+    }
 };
 
 class SysBrkHandler {
