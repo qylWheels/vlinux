@@ -60,7 +60,7 @@ public:
                              [&](auto vdesc) {
                                  return vdesc->start_addr == i;
                              }) == task->address_space->vpages.end()) {
-                return -EINVAL;
+                return -ENOMEM;
             }
         }
 
