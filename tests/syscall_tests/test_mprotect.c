@@ -36,5 +36,15 @@ void _start(void) {
     syscall(sys_mprotect, (unsigned long long)brk, 4096 * 100,
             PROT_READ | PROT_EXEC, 0, 0, 0);
 
+    // Error tests.
+    // addr not aligned.
+    syscall(sys_mprotect, (unsigned long long)brk + 1, 4096, PROT_NONE, 0, 0,
+            0);
+    // Invalid prot.
+    syscall(sys_mprotect, (unsigned long long)brk, 4096, 114514, 0, 0, 0);
+    // Address not available.
+    syscall(sys_mprotect, (unsigned long long)brk + 4096 * 100, 4096,
+            PROT_WRITE, 0, 0, 0);
+
     for (;;);
 }
