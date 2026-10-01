@@ -258,6 +258,10 @@ TEST_CASE("Test VM", "[vm]") {
             REQUIRE(ret == -ENOSYS);
         });
         REQUIRE(result.has_value());
+
+        REQUIRE(vm.run(std::chrono::milliseconds(100),
+                       std::chrono::milliseconds(10))
+                    .has_value());
     }
 
     SECTION("Test mprotect()") {
