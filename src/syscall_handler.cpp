@@ -209,6 +209,7 @@ public:
     ~Impl() = default;
 
 public:
+    SysMprotectHandler sys_mprotect_handler_;
     SysBrkHandler sys_brk_handler_;
 
 public:  // Hooks.
@@ -227,6 +228,12 @@ std::uint64_t SyscallHandler::dispatch(Context context,
                                        std::array<std::uint64_t, 6> args) {
     std::uint64_t ret;
     switch (syscall_id) {
+        case SYS_mprotect:
+            ret = static_cast<std::uint64_t>(
+                this->impl_->sys_mprotect_handler_.handle(
+                    context.task, reinterpret_cast<void*>(args[0]), args[1],
+                    static_cast<int>(args[2])));
+            break;
         case SYS_brk:
             ret = reinterpret_cast<std::uint64_t>(
                 this->impl_->sys_brk_handler_.handle_brk(
