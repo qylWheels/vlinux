@@ -7,5 +7,6 @@ function(add_syscall_test test_name)
     target_link_options(${test_name} PRIVATE -nostdlib -static)
 endfunction()
 
-add_syscall_test(test_brk)
+add_syscall_test(test_mmap)
 add_syscall_test(test_mprotect)
+add_syscall_test(test_brk)
