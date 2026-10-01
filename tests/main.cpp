@@ -290,6 +290,51 @@ TEST_CASE("Test VM", "[vm]") {
         });
         REQUIRE(result.has_value());
 
+        // Add hook on mprotect()'s failed execution.
+        result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                         std::array<std::uint64_t, 6> args,
+                                         std::uint64_t ret) {
+            if (syscall_id != SYS_mprotect) {
+                return;
+            }
+
+            auto addr = args[0];
+            auto len = args[1];
+            auto prot = args[2];
+
+            // addr not aligned.
+            if (addr % vlinux::mm::PAGE_SIZE != 0) {
+                REQUIRE(ret == -EINVAL);
+                return;
+            }
+
+            // Invalid prot.
+            if (prot & ~(PROT_READ | PROT_WRITE | PROT_EXEC)) {
+                REQUIRE(ret == -EINVAL);
+                return;
+            }
+
+            // Address not available.
+            std::uint64_t end = addr + len;
+            std::uint64_t start_round_down =
+                addr - (addr % vlinux::mm::PAGE_SIZE);
+            std::uint64_t end_round_up = (end + (vlinux::mm::PAGE_SIZE - 1)) &
+                                         (~(vlinux::mm::PAGE_SIZE - 1));
+            // [addr, addr + len] is not all in the address space.
+            for (auto i = start_round_down; i < end_round_up;
+                 i += vlinux::mm::PAGE_SIZE) {
+                if (std::find_if(task->address_space->vpages.begin(),
+                                 task->address_space->vpages.end(),
+                                 [&](auto vdesc) {
+                                     return vdesc->start_addr == i;
+                                 }) == task->address_space->vpages.end()) {
+                    REQUIRE(ret == -ENOMEM);
+                    return;
+                }
+            }
+        });
+        REQUIRE(result.has_value());
+
         REQUIRE(vm.run(std::chrono::milliseconds(100),
                        std::chrono::milliseconds(10))
                     .has_value());
