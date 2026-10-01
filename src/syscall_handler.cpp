@@ -33,8 +33,8 @@ public:
     SysMprotectHandler& operator=(SysMprotectHandler&&) = delete;
 
 public:
-    int mprotect(std::shared_ptr<Task> task, void* addr, std::size_t len,
-                 int prot) {
+    int handle(std::shared_ptr<Task> task, void* addr, std::size_t len,
+               int prot) {
         std::uint64_t start = reinterpret_cast<uint64_t>(addr);
         if (start % mm::PAGE_SIZE != 0) {
             return -EINVAL;
