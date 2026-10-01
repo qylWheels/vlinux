@@ -15,8 +15,10 @@ void _start(void) {
     // Grow break.
     syscall(sys_brk, (unsigned long long)brk + 4096, 0, 0, 0, 0, 0);
 
-    // mprotect() tests.
+    // Single page, single protection flag.
     syscall(sys_mprotect, (unsigned long long)brk, 4096, PROT_READ, 0, 0, 0);
+    syscall(sys_mprotect, (unsigned long long)brk, 1, PROT_WRITE, 0, 0, 0);
+    syscall(sys_mprotect, (unsigned long long)brk, 0, PROT_EXEC, 0, 0, 0);
 
     for (;;);
 }
