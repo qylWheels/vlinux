@@ -13,12 +13,20 @@ void _start(void) {
     void *brk = (void *)syscall(sys_brk, 0, 0, 0, 0, 0, 0);
 
     // Grow break.
-    syscall(sys_brk, (unsigned long long)brk + 4096, 0, 0, 0, 0, 0);
+    syscall(sys_brk, (unsigned long long)brk + 4096 * 100, 0, 0, 0, 0, 0);
 
     // Single page, single protection flag.
     syscall(sys_mprotect, (unsigned long long)brk, 4096, PROT_READ, 0, 0, 0);
     syscall(sys_mprotect, (unsigned long long)brk, 1, PROT_WRITE, 0, 0, 0);
     syscall(sys_mprotect, (unsigned long long)brk, 0, PROT_EXEC, 0, 0, 0);
+
+    // Multiple pages, single protection flag.
+    syscall(sys_mprotect, (unsigned long long)brk, 4096 + 1, PROT_READ, 0, 0,
+            0);
+    syscall(sys_mprotect, (unsigned long long)brk, 4096 * 2, PROT_WRITE, 0, 0,
+            0);
+    syscall(sys_mprotect, (unsigned long long)brk, 4096 * 100, PROT_EXEC, 0, 0,
+            0);
 
     for (;;);
 }
