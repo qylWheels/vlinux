@@ -47,22 +47,26 @@ public:
             return -EINVAL;
         }
 
-        // addr not valid (i.e. not in the address space).
-        if (!std::any_of(task->address_space->vpages.begin(),
-                         task->address_space->vpages.end(), [&](auto vdesc) {
-                             return vdesc->start_addr <= start &&
-                                    start < vdesc->start_addr + vdesc->len;
-                         })) {
-            return -EINVAL;
-        }
-
         std::uint64_t end = start + len;
-        std::uint64_t page_cnt =
-            calc_unmap_page_cnt(start, end, mm::PAGE_SIZE) + 1;
-
         std::uint64_t start_round_down = start - (start % mm::PAGE_SIZE);
         std::uint64_t end_round_up =
             (end + (mm::PAGE_SIZE - 1)) & (~(mm::PAGE_SIZE - 1));
+
+        // [addr, addr + len] is not all in the address space.
+        // O(n^2).
+        for (auto i = start_round_down; i < end_round_up; i += mm::PAGE_SIZE) {
+            if (std::find_if(task->address_space->vpages.begin(),
+                             task->address_space->vpages.end(),
+                             [&](auto vdesc) {
+                                 return vdesc->start_addr == i;
+                             }) == task->address_space->vpages.end()) {
+                return -EINVAL;
+            }
+        }
+
+        std::uint64_t page_cnt =
+            calc_unmap_page_cnt(start, end, mm::PAGE_SIZE) + 1;
+
         for (std::uint64_t i = start_round_down; i < end_round_up;
              i += mm::PAGE_SIZE) {
             // vdesc_it must be valid.
