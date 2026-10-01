@@ -23,6 +23,22 @@ std::function<std::int64_t(std::uint64_t, std::uint64_t, std::uint64_t)>
            static_cast<std::int64_t>(vlinux::mm::PAGE_SIZE);
 };
 
+class SysMmapHandler {
+public:
+    SysMmapHandler() = default;
+    ~SysMmapHandler() = default;
+    SysMmapHandler(const SysMmapHandler&) = delete;
+    SysMmapHandler& operator=(const SysMmapHandler&) = delete;
+    SysMmapHandler(SysMmapHandler&&) = delete;
+    SysMmapHandler& operator=(SysMmapHandler&&) = delete;
+
+public:
+    int handle(std::shared_ptr<Task> task, void* addr, std::size_t len,
+               int prot, int flags, int fd, std::int64_t offset) {
+        return -ENOSYS;
+    }
+};
+
 class SysMprotectHandler {
 public:
     SysMprotectHandler() = default;
@@ -229,6 +245,7 @@ public:
     ~Impl() = default;
 
 public:
+    SysMmapHandler sys_mmap_handler_;
     SysMprotectHandler sys_mprotect_handler_;
     SysBrkHandler sys_brk_handler_;
 
@@ -248,6 +265,13 @@ std::uint64_t SyscallHandler::dispatch(Context context,
                                        std::array<std::uint64_t, 6> args) {
     std::uint64_t ret;
     switch (syscall_id) {
+        case SYS_mmap:
+            ret = static_cast<std::uint64_t>(
+                this->impl_->sys_mmap_handler_.handle(
+                    context.task, reinterpret_cast<void*>(args[0]), args[1],
+                    static_cast<int>(args[2]), static_cast<int>(args[3]),
+                    static_cast<int>(args[4]), args[5]));
+            break;
         case SYS_mprotect:
             ret = static_cast<std::uint64_t>(
                 this->impl_->sys_mprotect_handler_.handle(
