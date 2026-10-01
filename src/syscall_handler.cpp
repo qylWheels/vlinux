@@ -5,9 +5,23 @@
 
 #include <cstdlib>
 #include <functional>
+#include <memory>
 
 namespace vlinux {
 namespace syscall {
+class SysMprotectHandler {
+public:
+    SysMprotectHandler() = default;
+    ~SysMprotectHandler() = default;
+    SysMprotectHandler(const SysMprotectHandler&) = delete;
+    SysMprotectHandler& operator=(const SysMprotectHandler&) = delete;
+    SysMprotectHandler(SysMprotectHandler&&) = delete;
+    SysMprotectHandler& operator=(SysMprotectHandler&&) = delete;
+
+public:
+    int mprotect(std::shared_ptr<Task> task) { return 0; }
+};
+
 class SysBrkHandler {
 public:
     SysBrkHandler() = default;
