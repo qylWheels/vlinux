@@ -37,6 +37,15 @@ public:
                int prot) {
         std::uint64_t start = reinterpret_cast<uint64_t>(addr);
 
+        // addr not valid (i.e. not in the address space).
+        if (!std::any_of(task->address_space->vpages.begin(),
+                         task->address_space->vpages.end(), [&](auto vdesc) {
+                             return vdesc->start_addr <= start &&
+                                    start < vdesc->start_addr + vdesc->len;
+                         })) {
+            return -EINVAL;
+        }
+
         // addr not a multiple of the system page size.
         if (start % mm::PAGE_SIZE != 0) {
             return -EINVAL;
