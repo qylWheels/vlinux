@@ -28,5 +28,13 @@ void _start(void) {
     syscall(sys_mprotect, (unsigned long long)brk, 4096 * 100, PROT_EXEC, 0, 0,
             0);
 
+    // Multiple pages, multiple protection flags.
+    syscall(sys_mprotect, (unsigned long long)brk, 4096 + 1,
+            PROT_READ | PROT_WRITE, 0, 0, 0);
+    syscall(sys_mprotect, (unsigned long long)brk, 4096 * 3 + 10,
+            PROT_EXEC | PROT_WRITE, 0, 0, 0);
+    syscall(sys_mprotect, (unsigned long long)brk, 4096 * 100,
+            PROT_READ | PROT_EXEC, 0, 0, 0);
+
     for (;;);
 }
