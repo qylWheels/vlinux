@@ -237,7 +237,6 @@ public:
             throw std::runtime_error(
                 std::format("uc_reg_read failed: {}", uc_strerror(err)));
         }
-        std::cout << std::format("syscall: {}", syscall_number) << std::endl;
 
         // Read syscall arguments.
         err = uc_reg_read_batch(engine, argregs,
@@ -246,10 +245,6 @@ public:
             throw std::runtime_error(
                 std::format("uc_reg_read_batch failed: {}", uc_strerror(err)));
         }
-        std::cout << std::format("args: {}, {}, {}, {}, {}, {}", *argptrs[0],
-                                 *argptrs[1], *argptrs[2], *argptrs[3],
-                                 *argptrs[4], *argptrs[5])
-                  << std::endl;
 
         // Dispatch.
         auto task = self->scheduler_->current_task();
