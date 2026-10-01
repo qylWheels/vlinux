@@ -182,6 +182,17 @@ TEST_CASE("Test VM", "[vm]") {
     vlinux::VM vm;
     vm.reset();
     auto build_path = std::filesystem::path(CMAKE_BUILD_DIR_PATH);
+    auto calc_unmap_page_cnt = [](std::uint64_t old_addr,
+                                  std::uint64_t new_addr,
+                                  std::uint64_t pgsize) -> std::int64_t {
+        auto old_round_up = (old_addr + vlinux::mm::PAGE_SIZE - 1) &
+                            (~(vlinux::mm::PAGE_SIZE - 1));
+        auto new_round_up = (new_addr + vlinux::mm::PAGE_SIZE - 1) &
+                            (~(vlinux::mm::PAGE_SIZE - 1));
+        return (static_cast<std::int64_t>(new_round_up) -
+                static_cast<std::int64_t>(old_round_up)) /
+               static_cast<std::int64_t>(vlinux::mm::PAGE_SIZE);
+    };
 
     SECTION("Test load()") {
         REQUIRE(
@@ -209,19 +220,6 @@ TEST_CASE("Test VM", "[vm]") {
             REQUIRE(mm->start_brk == old_start_brk);
 
             auto addr = args[0];
-
-            auto calc_page_cnt = [](std::uint64_t old_addr,
-                                    std::uint64_t new_addr,
-                                    std::uint64_t pgsize) -> std::int64_t {
-                auto old_round_up = (old_addr + vlinux::mm::PAGE_SIZE - 1) &
-                                    (~(vlinux::mm::PAGE_SIZE - 1));
-                auto new_round_up = (new_addr + vlinux::mm::PAGE_SIZE - 1) &
-                                    (~(vlinux::mm::PAGE_SIZE - 1));
-                return (static_cast<std::int64_t>(new_round_up) -
-                        static_cast<std::int64_t>(old_round_up)) /
-                       static_cast<std::int64_t>(vlinux::mm::PAGE_SIZE);
-            };
-
             if (addr < old_start_brk) {
                 REQUIRE(ret == old_brk);
                 REQUIRE(mm->vpages.size() == old_vdesc_cnt);
@@ -229,7 +227,7 @@ TEST_CASE("Test VM", "[vm]") {
             } else {
                 REQUIRE(ret == mm->brk);
                 auto page_cnt =
-                    calc_page_cnt(old_brk, addr, vlinux::mm::PAGE_SIZE);
+                    calc_unmap_page_cnt(old_brk, addr, vlinux::mm::PAGE_SIZE);
                 REQUIRE(mm->vpages.size() ==
                         static_cast<std::uint64_t>(old_vdesc_cnt + page_cnt));
                 REQUIRE(mm->brk == addr);
