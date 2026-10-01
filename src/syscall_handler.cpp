@@ -36,7 +36,14 @@ public:
     int handle(std::shared_ptr<Task> task, void* addr, std::size_t len,
                int prot) {
         std::uint64_t start = reinterpret_cast<uint64_t>(addr);
+
+        // addr not a multiple of the system page size.
         if (start % mm::PAGE_SIZE != 0) {
+            return -EINVAL;
+        }
+
+        // Invalid prot.
+        if (prot & ~(PROT_READ | PROT_WRITE | PROT_EXEC)) {
             return -EINVAL;
         }
 
