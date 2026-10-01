@@ -1,3 +1,4 @@
+#include <sys/mman.h>
 #include <sys/syscall.h>
 #include <unicorn/unicorn.h>
 #include <unicorn/x86.h>
@@ -7,6 +8,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <filesystem>
+#include <ranges>
 #include <thread>
 
 #include "mm.h"
@@ -237,6 +239,54 @@ TEST_CASE("Test VM", "[vm]") {
             old_start_brk = mm->start_brk;
             old_brk = mm->brk;
             old_vdesc_cnt = mm->vpages.size();
+        });
+        REQUIRE(result.has_value());
+
+        REQUIRE(vm.run(std::chrono::milliseconds(100),
+                       std::chrono::milliseconds(10))
+                    .has_value());
+    }
+
+    SECTION("Test mprotect()") {
+        auto task =
+            vm.load(build_path / "tests/syscall_tests/test_mprotect").value();
+
+        // Add hook on mprotect()'s successfully execution.
+        auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                              std::array<std::uint64_t, 6> args,
+                                              std::uint64_t ret) {
+            if (syscall_id != SYS_mprotect) {
+                return;
+            }
+            if (ret != 0) {
+                return;
+            }
+
+            auto addr = args[0];
+            auto len = args[1];
+            auto prot = args[2];
+            auto addr_round_down = addr & ~(vlinux::mm::PAGE_SIZE - 1);
+            auto page_count =
+                calc_unmap_page_cnt(addr, addr + len, vlinux::mm::PAGE_SIZE) +
+                1;
+
+            auto addr_space = task->address_space;
+
+            // Influenced pages.
+            auto vdescs =
+                std::views::filter(addr_space->vpages, [&](auto vdesc) {
+                    return vdesc->start_addr >= addr_round_down &&
+                           vdesc->start_addr < addr + len;
+                });
+
+            // Check protection flags of influenced pages.
+            for (auto vdesc : vdescs) {
+                std::uint64_t uc_prot = 0;
+                uc_prot |= ((prot & PROT_READ) ? UC_PROT_READ : 0);
+                uc_prot |= ((prot & PROT_WRITE) ? UC_PROT_WRITE : 0);
+                uc_prot |= ((prot & PROT_EXEC) ? UC_PROT_EXEC : 0);
+                REQUIRE(vdesc->perm == uc_prot);
+            }
         });
         REQUIRE(result.has_value());
 
