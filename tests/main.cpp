@@ -247,6 +247,19 @@ TEST_CASE("Test VM", "[vm]") {
                     .has_value());
     }
 
+    SECTION("Test mmap()") {
+        auto task =
+            vm.load(build_path / "tests/syscall_tests/test_mmap").value();
+
+        auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                              std::array<std::uint64_t, 6> args,
+                                              std::uint64_t ret) {
+            if (syscall_id != SYS_mmap) return;
+            REQUIRE(ret == -ENOSYS);
+        });
+        REQUIRE(result.has_value());
+    }
+
     SECTION("Test mprotect()") {
         auto task =
             vm.load(build_path / "tests/syscall_tests/test_mprotect").value();
