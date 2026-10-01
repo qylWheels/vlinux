@@ -10,8 +10,8 @@
 namespace vlinux {
 namespace syscall {
 std::function<std::int64_t(std::uint64_t, std::uint64_t, std::uint64_t)>
-    calc_page_cnt = [](std::uint64_t old_addr, std::uint64_t new_addr,
-                       std::uint64_t pgsize) -> std::int64_t {
+    calc_unmap_page_cnt = [](std::uint64_t old_addr, std::uint64_t new_addr,
+                             std::uint64_t pgsize) -> std::int64_t {
     auto old_round_up =
         (old_addr + vlinux::mm::PAGE_SIZE - 1) & (~(vlinux::mm::PAGE_SIZE - 1));
     auto new_round_up =
@@ -44,9 +44,9 @@ public:
                      void* addr) {  // Check if the address is valid.
         auto task = context.task;
 
-        std::uint64_t page_cnt =
-            calc_page_cnt(task->address_space->brk,
-                          reinterpret_cast<uint64_t>(addr), mm::PAGE_SIZE);
+        std::uint64_t page_cnt = calc_unmap_page_cnt(
+            task->address_space->brk, reinterpret_cast<uint64_t>(addr),
+            mm::PAGE_SIZE);
 
         // Allocate pages eagerly, we wouldn't implement lazy allocation now.
         std::vector<std::shared_ptr<mm::PhysicalPageDescriptor>> pdescs;
@@ -107,9 +107,9 @@ public:
         auto task = context.task;
 
         // Calculate the number of pages to shrink.
-        std::uint64_t page_cnt = std::abs(
-            calc_page_cnt(task->address_space->brk,
-                          reinterpret_cast<uint64_t>(addr), mm::PAGE_SIZE));
+        std::uint64_t page_cnt = std::abs(calc_unmap_page_cnt(
+            task->address_space->brk, reinterpret_cast<uint64_t>(addr),
+            mm::PAGE_SIZE));
 
         // Delete page table maps and physical pages.
         // Record victim vdescs.
