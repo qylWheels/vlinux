@@ -9,6 +9,18 @@
 
 namespace vlinux {
 namespace syscall {
+std::function<std::int64_t(std::uint64_t, std::uint64_t, std::uint64_t)>
+    calc_page_cnt = [](std::uint64_t old_addr, std::uint64_t new_addr,
+                       std::uint64_t pgsize) -> std::int64_t {
+    auto old_round_up =
+        (old_addr + vlinux::mm::PAGE_SIZE - 1) & (~(vlinux::mm::PAGE_SIZE - 1));
+    auto new_round_up =
+        (new_addr + vlinux::mm::PAGE_SIZE - 1) & (~(vlinux::mm::PAGE_SIZE - 1));
+    return (static_cast<std::int64_t>(new_round_up) -
+            static_cast<std::int64_t>(old_round_up)) /
+           static_cast<std::int64_t>(vlinux::mm::PAGE_SIZE);
+};
+
 class SysMprotectHandler {
 public:
     SysMprotectHandler() = default;
@@ -26,19 +38,6 @@ class SysBrkHandler {
 public:
     SysBrkHandler() = default;
     ~SysBrkHandler() = default;
-
-public:  // Helpers.
-    std::function<std::int64_t(std::uint64_t, std::uint64_t, std::uint64_t)>
-        calc_page_cnt = [](std::uint64_t old_addr, std::uint64_t new_addr,
-                           std::uint64_t pgsize) -> std::int64_t {
-        auto old_round_up = (old_addr + vlinux::mm::PAGE_SIZE - 1) &
-                            (~(vlinux::mm::PAGE_SIZE - 1));
-        auto new_round_up = (new_addr + vlinux::mm::PAGE_SIZE - 1) &
-                            (~(vlinux::mm::PAGE_SIZE - 1));
-        return (static_cast<std::int64_t>(new_round_up) -
-                static_cast<std::int64_t>(old_round_up)) /
-               static_cast<std::int64_t>(vlinux::mm::PAGE_SIZE);
-    };
 
 public:
     void* brk_expand(SyscallHandler::Context context,
