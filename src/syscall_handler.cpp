@@ -35,6 +35,14 @@ public:
 public:
     int handle(std::shared_ptr<Task> task, void* addr, std::size_t len,
                int prot, int flags, int fd, std::int64_t offset) {
+        if (addr != nullptr) return -EINVAL;
+
+        if (prot & ~(PROT_READ | PROT_WRITE | PROT_EXEC)) return -EINVAL;
+
+        if (flags & ~(MAP_PRIVATE | MAP_SHARED | MAP_ANONYMOUS)) return -EINVAL;
+
+        if (fd != -1) return -EINVAL;
+
         return -ENOSYS;
     }
 };
