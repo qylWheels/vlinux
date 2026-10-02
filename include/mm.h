@@ -120,11 +120,11 @@ private:
         map_;
 };
 
+// Start address of mmap.
+const std::uint64_t kStartMmap = 0x6000'0000;
+
 // i.e mm_struct.
 struct VirtualMemoryAddressSpace {
-    // Start address of mmap.
-    const std::uint64_t kStartMmap = 0x6000'0000;
-
     struct CompareVirtualAddress {
         bool operator()(const std::shared_ptr<VirtualPageDescriptor>& a,
                         const std::shared_ptr<VirtualPageDescriptor>& b) const {
