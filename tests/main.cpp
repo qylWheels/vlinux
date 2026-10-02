@@ -251,11 +251,25 @@ TEST_CASE("Test VM", "[vm]") {
         auto task =
             vm.load(build_path / "tests/syscall_tests/test_mmap").value();
 
+        auto addr_space = task->address_space;
+        auto old_mmap = addr_space->mmap;
+        auto old_vdesc_cnt = addr_space->vpages.size();
+
         auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
                                               std::array<std::uint64_t, 6> args,
                                               std::uint64_t ret) {
             if (syscall_id != SYS_mmap) return;
-            REQUIRE(ret == -ENOSYS);
+
+            auto len = args[1];
+            auto len_round_up = (len + vlinux::mm::PAGE_SIZE - 1) &
+                                ~(vlinux::mm::PAGE_SIZE - 1);
+            auto page_cnt = len_round_up / vlinux::mm::PAGE_SIZE;
+            REQUIRE(ret == old_mmap);
+            REQUIRE(addr_space->mmap ==
+                    old_mmap + page_cnt * vlinux::mm::PAGE_SIZE);
+            REQUIRE(addr_space->vpages.size() == old_vdesc_cnt + page_cnt);
+            old_mmap = addr_space->mmap;
+            old_vdesc_cnt = addr_space->vpages.size();
         });
         REQUIRE(result.has_value());
 
