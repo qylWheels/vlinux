@@ -71,8 +71,8 @@ public:
         auto mmap = task->address_space->mmap;
         std::vector<std::shared_ptr<mm::VirtualPageDescriptor>> vdescs;
         for (auto i = 0; i < pagecnt; i++) {
-            auto vdesc = std::shared_ptr<mm::VirtualPageDescriptor>();
-            vdesc->start_addr = task->address_space->mmap + i * mm::PAGE_SIZE;
+            auto vdesc = std::make_shared<mm::VirtualPageDescriptor>();
+            vdesc->start_addr = mmap + i * mm::PAGE_SIZE;
             vdesc->len = mm::PAGE_SIZE;
             vdesc->perm |= ((prot & PROT_READ) ? UC_PROT_READ : 0);
             vdesc->perm |= ((prot & PROT_WRITE) ? UC_PROT_WRITE : 0);
