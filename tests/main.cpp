@@ -252,6 +252,7 @@ TEST_CASE("Test VM", "[vm]") {
             vm.load(build_path / "tests/syscall_tests/test_mmap").value();
 
         auto addr_space = task->address_space;
+        auto start_mmap = addr_space->start_mmap;
         auto old_mmap = addr_space->mmap;
         auto old_vdesc_cnt = addr_space->vpages.size();
 
@@ -265,6 +266,7 @@ TEST_CASE("Test VM", "[vm]") {
                                 ~(vlinux::mm::PAGE_SIZE - 1);
             auto page_cnt = len_round_up / vlinux::mm::PAGE_SIZE;
             REQUIRE(ret == old_mmap);
+            REQUIRE(addr_space->start_mmap == start_mmap);
             REQUIRE(addr_space->mmap ==
                     old_mmap + page_cnt * vlinux::mm::PAGE_SIZE);
             REQUIRE(addr_space->vpages.size() == old_vdesc_cnt + page_cnt);
