@@ -91,6 +91,9 @@ struct VirtualPageDescriptor {
 };
 
 class PageTable {
+    // Start address of mmap.
+    const std::uint64_t kStartMmap = 0x8000'0000;
+
 public:
     PageTable();
     ~PageTable();
