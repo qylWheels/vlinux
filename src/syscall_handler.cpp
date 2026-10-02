@@ -46,6 +46,7 @@ public:
         if (prot & ~(PROT_READ | PROT_WRITE | PROT_EXEC)) return -EINVAL;
 
         if (flags & ~(MAP_PRIVATE | MAP_ANONYMOUS)) return -EINVAL;
+        if (!(flags & MAP_PRIVATE)) return -EINVAL;
 
         if (fd != -1) return -EINVAL;
 
