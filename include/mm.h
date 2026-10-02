@@ -91,9 +91,6 @@ struct VirtualPageDescriptor {
 };
 
 class PageTable {
-    // Start address of mmap.
-    const std::uint64_t kStartMmap = 0x8000'0000;
-
 public:
     PageTable();
     ~PageTable();
@@ -125,6 +122,9 @@ private:
 
 // i.e mm_struct.
 struct VirtualMemoryAddressSpace {
+    // Start address of mmap.
+    const std::uint64_t kStartMmap = 0x8000'0000;
+
     struct CompareVirtualAddress {
         bool operator()(const std::shared_ptr<VirtualPageDescriptor>& a,
                         const std::shared_ptr<VirtualPageDescriptor>& b) const {
