@@ -282,9 +282,10 @@ std::uint64_t SyscallHandler::dispatch(Context context,
         case SYS_mmap:
             ret = static_cast<std::uint64_t>(
                 this->impl_->sys_mmap_handler_.handle(
-                    context.task, reinterpret_cast<void*>(args[0]), args[1],
-                    static_cast<int>(args[2]), static_cast<int>(args[3]),
-                    static_cast<int>(args[4]), args[5]));
+                    context.task, context.ppa, reinterpret_cast<void*>(args[0]),
+                    args[1], static_cast<int>(args[2]),
+                    static_cast<int>(args[3]), static_cast<int>(args[4]),
+                    args[5]));
             break;
         case SYS_mprotect:
             ret = static_cast<std::uint64_t>(
