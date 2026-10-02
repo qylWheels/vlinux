@@ -137,7 +137,7 @@ struct VirtualMemoryAddressSpace {
     std::uint64_t start_brk;                // Start address of heap.
     std::uint64_t brk;                      // End address of heap.
     std::uint64_t start_mmap = kStartMmap;  // Start address of mmap.
-    std::uint64_t mmap;                     // End address of mmap.
+    std::uint64_t mmap = start_mmap;        // End address of mmap.
 };
 }  // namespace mm
 }  // namespace vlinux
