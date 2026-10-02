@@ -9,6 +9,8 @@
 #include <functional>
 #include <memory>
 
+#include "mm.h"
+
 namespace vlinux {
 namespace syscall {
 std::function<std::int64_t(std::uint64_t, std::uint64_t, std::uint64_t)>
@@ -33,8 +35,10 @@ public:
     SysMmapHandler& operator=(SysMmapHandler&&) = delete;
 
 public:
-    int handle(std::shared_ptr<Task> task, void* addr, std::size_t len,
-               int prot, int flags, int fd, std::int64_t offset) {
+    int handle(std::shared_ptr<Task> task,
+               std::shared_ptr<mm::PhysicalPageAllocator> ppa, void* addr,
+               std::size_t len, int prot, int flags, int fd,
+               std::int64_t offset) {
         if (addr != nullptr) return -EINVAL;
 
         if (len == 0) return -EINVAL;
