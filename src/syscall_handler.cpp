@@ -49,7 +49,52 @@ public:
 
         if (fd != -1) return -EINVAL;
 
-        return -ENOSYS;
+        // Calculate the page count.
+        auto len_round_up = (len + mm::PAGE_SIZE - 1) & (~(mm::PAGE_SIZE - 1));
+        auto pagecnt = len_round_up / mm::PAGE_SIZE;
+
+        // Allocate physical pages.
+        std::vector<std::shared_ptr<mm::PhysicalPageDescriptor>> ppages;
+        for (auto i = 0; i < pagecnt; i++) {
+            auto result = ppa->alloc();
+            if (result.has_error()) {
+                // Rollback.
+                for (auto ppage : ppages) {
+                    (void)ppa->free(ppage);
+                }
+                return -ENOMEM;
+            }
+            ppages.push_back(result.value());
+        }
+
+        // Map virtual pages.
+        auto mmap = task->address_space->mmap;
+        std::vector<std::shared_ptr<mm::VirtualPageDescriptor>> vdescs;
+        for (auto i = 0; i < pagecnt; i++) {
+            auto vdesc = std::shared_ptr<mm::VirtualPageDescriptor>();
+            vdesc->start_addr = task->address_space->mmap + i * mm::PAGE_SIZE;
+            vdesc->len = mm::PAGE_SIZE;
+            vdesc->perm |= ((prot & PROT_READ) ? UC_PROT_READ : 0);
+            vdesc->perm |= ((prot & PROT_WRITE) ? UC_PROT_WRITE : 0);
+            vdesc->perm |= ((prot & PROT_EXEC) ? UC_PROT_EXEC : 0);
+            auto result1 = task->page_table->map(vdesc, ppages[i]);
+            auto result2 = task->address_space->vpages.insert(vdesc);
+            if (result1.has_error() || !result2.second) {
+                // Rollback.
+                for (auto vdesc : vdescs) {
+                    task->address_space->vpages.erase(vdesc);
+                    (void)task->page_table->unmap(vdesc);
+                }
+                for (auto ppage : ppages) {
+                    (void)ppa->free(ppage);
+                }
+                return -ENOMEM;
+            }
+            task->address_space->mmap += mm::PAGE_SIZE;
+            vdescs.push_back(vdesc);
+        }
+
+        return mmap;
     }
 };
 
