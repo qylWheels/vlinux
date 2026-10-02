@@ -3,6 +3,7 @@
 #include <unicorn/unicorn.h>
 #include <unicorn/x86.h>
 
+#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
 #include <cstdint>
@@ -270,6 +271,10 @@ TEST_CASE("Test VM", "[vm]") {
             REQUIRE(addr_space->mmap ==
                     old_mmap + page_cnt * vlinux::mm::PAGE_SIZE);
             REQUIRE(addr_space->vpages.size() == old_vdesc_cnt + page_cnt);
+            auto it = std::find_if(
+                addr_space->vpages.begin(), addr_space->vpages.end(),
+                [&](auto vdesc) { return vdesc->start_addr == ret; });
+            REQUIRE(it != addr_space->vpages.end());
             old_mmap = addr_space->mmap;
             old_vdesc_cnt = addr_space->vpages.size();
         });
