@@ -37,6 +37,8 @@ public:
                int prot, int flags, int fd, std::int64_t offset) {
         if (addr != nullptr) return -EINVAL;
 
+        if (len == 0) return -EINVAL;
+
         if (prot & ~(PROT_READ | PROT_WRITE | PROT_EXEC)) return -EINVAL;
 
         if (flags & ~(MAP_PRIVATE | MAP_ANONYMOUS)) return -EINVAL;
