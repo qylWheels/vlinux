@@ -81,6 +81,7 @@ public:
             auto result2 = task->address_space->vpages.insert(vdesc);
             if (result1.has_error() || !result2.second) {
                 // Rollback.
+                task->address_space->mmap = mmap;
                 for (auto vdesc : vdescs) {
                     task->address_space->vpages.erase(vdesc);
                     (void)task->page_table->unmap(vdesc);
