@@ -5,6 +5,8 @@
 #include <unicorn/unicorn.h>
 
 #include <algorithm>
+#include <array>
+#include <cstddef>
 #include <cstdlib>
 #include <functional>
 #include <memory>
@@ -116,8 +118,12 @@ public:
     SysMprotectHandler& operator=(SysMprotectHandler&&) = delete;
 
 public:
-    int handle(std::shared_ptr<Task> task, void* addr, std::size_t len,
-               int prot) {
+    std::uint64_t handle(std::shared_ptr<Task> task,
+                         std::array<std::uint64_t, 6> args) {
+        void* addr = reinterpret_cast<void*>(args[0]);
+        std::size_t len = args[1];
+        int prot = args[2];
+
         std::uint64_t start = reinterpret_cast<uint64_t>(addr);
 
         // addr not a multiple of the system page size.
@@ -337,10 +343,7 @@ std::uint64_t SyscallHandler::dispatch(Context context,
                                                         context.ppa, args);
             break;
         case SYS_mprotect:
-            ret = static_cast<std::uint64_t>(
-                this->impl_->sys_mprotect_handler_.handle(
-                    context.task, reinterpret_cast<void*>(args[0]), args[1],
-                    static_cast<int>(args[2])));
+            ret = this->impl_->sys_mprotect_handler_.handle(context.task, args);
             break;
         case SYS_brk:
             ret = reinterpret_cast<std::uint64_t>(
