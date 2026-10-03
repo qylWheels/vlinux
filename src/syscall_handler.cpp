@@ -124,7 +124,6 @@ public:
                          std::array<std::uint64_t, 6> args) {
         std::uint64_t start = args[0], len = args[1], end = start + len;
         if (start % mm::PAGE_SIZE != 0) return -EINVAL;
-        if (end >= ctx.task->address_space->mmap) return -EINVAL;
 
         auto end_round_up = (end + mm::PAGE_SIZE - 1) & (~(mm::PAGE_SIZE - 1));
         auto pagecnt = (end_round_up - start) / mm::PAGE_SIZE;
