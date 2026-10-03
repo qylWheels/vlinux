@@ -35,10 +35,16 @@ public:
     SysMmapHandler& operator=(SysMmapHandler&&) = delete;
 
 public:
-    int handle(std::shared_ptr<Task> task,
-               std::shared_ptr<mm::PhysicalPageAllocator> ppa, void* addr,
-               std::size_t len, int prot, int flags, int fd,
-               std::int64_t offset) {
+    std::uint64_t handle(std::shared_ptr<Task> task,
+                         std::shared_ptr<mm::PhysicalPageAllocator> ppa,
+                         std::array<std::uint64_t, 6> args) {
+        void* addr = reinterpret_cast<void*>(args[0]);
+        std::size_t len = args[1];
+        int prot = args[2];
+        int flags = args[3];
+        int fd = args[4];
+        std::int64_t offset = args[5];
+
         if (addr != nullptr) return -EINVAL;
 
         if (len == 0) return -EINVAL;
@@ -328,11 +334,8 @@ std::uint64_t SyscallHandler::dispatch(Context context,
     switch (syscall_id) {
         case SYS_mmap:
             ret = static_cast<std::uint64_t>(
-                this->impl_->sys_mmap_handler_.handle(
-                    context.task, context.ppa, reinterpret_cast<void*>(args[0]),
-                    args[1], static_cast<int>(args[2]),
-                    static_cast<int>(args[3]), static_cast<int>(args[4]),
-                    args[5]));
+                this->impl_->sys_mmap_handler_.handle(context.task, context.ppa,
+                                                      args));
             break;
         case SYS_mprotect:
             ret = static_cast<std::uint64_t>(
