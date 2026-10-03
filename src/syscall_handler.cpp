@@ -37,9 +37,11 @@ public:
     SysMmapHandler& operator=(SysMmapHandler&&) = delete;
 
 public:
-    std::uint64_t handle(std::shared_ptr<Task> task,
-                         std::shared_ptr<mm::PhysicalPageAllocator> ppa,
+    std::uint64_t handle(SyscallHandler::Context ctx,
                          std::array<std::uint64_t, 6> args) {
+        auto task = ctx.task;
+        auto ppa = ctx.ppa;
+
         void* addr = reinterpret_cast<void*>(args[0]);
         std::size_t len = args[1];
         int prot = args[2];
@@ -345,8 +347,7 @@ std::uint64_t SyscallHandler::dispatch(Context context,
     std::uint64_t ret;
     switch (syscall_id) {
         case SYS_mmap:
-            ret = this->impl_->sys_mmap_handler_.handle(context.task,
-                                                        context.ppa, args);
+            ret = this->impl_->sys_mmap_handler_.handle(context, args);
             break;
         case SYS_mprotect:
             ret = this->impl_->sys_mprotect_handler_.handle(context.task, args);
