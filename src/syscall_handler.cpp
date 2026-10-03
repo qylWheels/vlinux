@@ -110,6 +110,22 @@ public:
     }
 };
 
+class SysMunmapHandler {
+public:
+    SysMunmapHandler() = default;
+    ~SysMunmapHandler() = default;
+    SysMunmapHandler(const SysMunmapHandler&) = delete;
+    SysMunmapHandler& operator=(const SysMunmapHandler&) = delete;
+    SysMunmapHandler(SysMunmapHandler&&) = delete;
+    SysMunmapHandler& operator=(SysMunmapHandler&&) = delete;
+
+public:
+    std::uint64_t handle(SyscallHandler::Context ctx,
+                         std::array<std::uint64_t, 6> args) {
+        return -ENOSYS;
+    }
+};
+
 class SysMprotectHandler {
 public:
     SysMprotectHandler() = default;
