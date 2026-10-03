@@ -248,15 +248,16 @@ TEST_CASE("Test VM", "[vm]") {
                     .has_value());
     }
 
-    SECTION("Test mmap()") {
-        auto task =
-            vm.load(build_path / "tests/syscall_tests/test_mmap").value();
+    SECTION("Test mmap() and munmap()") {
+        auto task = vm.load(build_path / "tests/syscall_tests/test_mmap_munmap")
+                        .value();
 
         auto addr_space = task->address_space;
         auto start_mmap = addr_space->start_mmap;
         auto old_mmap = addr_space->mmap;
         auto old_vdesc_cnt = addr_space->vpages.size();
 
+        // Hook on mmap().
         auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
                                               std::array<std::uint64_t, 6> args,
                                               std::uint64_t ret) {
@@ -275,6 +276,52 @@ TEST_CASE("Test VM", "[vm]") {
                 addr_space->vpages.begin(), addr_space->vpages.end(),
                 [&](auto vdesc) { return vdesc->start_addr == ret; });
             REQUIRE(it != addr_space->vpages.end());
+            old_mmap = addr_space->mmap;
+            old_vdesc_cnt = addr_space->vpages.size();
+        });
+        REQUIRE(result.has_value());
+
+        // Hook on munmap().
+        result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                         std::array<std::uint64_t, 6> args,
+                                         std::uint64_t ret) {
+            if (syscall_id != SYS_munmap) return;
+
+            // Args.
+            auto start = args[0];
+            auto len = args[1];
+            auto end = start + len;
+
+            // Round.
+            auto start_round_down = start & ~(vlinux::mm::PAGE_SIZE - 1);
+            auto end_round_up = (end + vlinux::mm::PAGE_SIZE - 1) &
+                                ~(vlinux::mm::PAGE_SIZE - 1);
+
+            // Page count.
+            auto page_cnt =
+                (end_round_up - start_round_down) / vlinux::mm::PAGE_SIZE;
+
+            // Check.
+            REQUIRE(ret == 0);
+            REQUIRE(addr_space->start_mmap == start_mmap);
+            REQUIRE(addr_space->mmap == old_mmap);
+            REQUIRE(addr_space->vpages.size() == old_vdesc_cnt - page_cnt);
+            auto all_pages_is_not_in_va = !std::any_of(
+                addr_space->vpages.begin(), addr_space->vpages.end(),
+                [&](auto vdesc) { return vdesc->start_addr == ret; });
+            REQUIRE(all_pages_is_not_in_va);
+            auto all_pages_is_unmapped = true;
+            for (auto i = start_round_down; i < end_round_up;
+                 i += vlinux::mm::PAGE_SIZE) {
+                auto pa_result = task->page_table->va_to_pa(i);
+                if (pa_result.has_value()) {
+                    all_pages_is_unmapped = false;
+                    break;
+                }
+            }
+            REQUIRE(all_pages_is_unmapped);
+
+            // Update old data.
             old_mmap = addr_space->mmap;
             old_vdesc_cnt = addr_space->vpages.size();
         });
