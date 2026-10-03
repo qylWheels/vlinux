@@ -361,6 +361,22 @@ public:
     }
 };
 
+class SysCloneHandler {
+public:
+    SysCloneHandler() = default;
+    ~SysCloneHandler() = default;
+    SysCloneHandler(const SysCloneHandler&) = delete;
+    SysCloneHandler& operator=(const SysCloneHandler&) = delete;
+    SysCloneHandler(SysCloneHandler&&) = delete;
+    SysCloneHandler& operator=(SysCloneHandler&&) = delete;
+
+public:
+    std::uint64_t handle(SyscallHandler::Context context,
+                         std::array<std::uint64_t, 6> args) {
+        return -ENOSYS;
+    }
+};
+
 class SyscallHandler::Impl {
 public:
     Impl() = default;
