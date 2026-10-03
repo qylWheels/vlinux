@@ -179,7 +179,7 @@ public:
     SysBrkHandler() = default;
     ~SysBrkHandler() = default;
 
-public:
+private:
     void* brk_expand(SyscallHandler::Context context,
                      void* addr) {  // Check if the address is valid.
         auto task = context.task;
@@ -295,19 +295,25 @@ public:
         return reinterpret_cast<void*>(task->address_space->brk);
     }
 
-    void* handle_brk(SyscallHandler::Context context, void* addr) {
+public:
+    std::uint64_t handle_brk(SyscallHandler::Context context,
+                             std::array<std::uint64_t, 6> args) {
+        void* addr = reinterpret_cast<void*>(args[0]);
+
         auto task = context.task;
         if (reinterpret_cast<uint64_t>(addr) < task->address_space->start_brk) {
-            return reinterpret_cast<void*>(task->address_space->brk);
+            return task->address_space->brk;
         }
 
         auto brk = task->address_space->brk;
         if (reinterpret_cast<uint64_t>(addr) > brk) {
-            return this->brk_expand(context, addr);
+            return reinterpret_cast<std::uint64_t>(
+                this->brk_expand(context, addr));
         } else if (reinterpret_cast<uint64_t>(addr) < brk) {
-            return this->brk_shrink(context, addr);
+            return reinterpret_cast<std::uint64_t>(
+                this->brk_shrink(context, addr));
         } else {
-            return reinterpret_cast<void*>(brk);
+            return brk;
         }
     }
 };
@@ -346,9 +352,7 @@ std::uint64_t SyscallHandler::dispatch(Context context,
             ret = this->impl_->sys_mprotect_handler_.handle(context.task, args);
             break;
         case SYS_brk:
-            ret = reinterpret_cast<std::uint64_t>(
-                this->impl_->sys_brk_handler_.handle_brk(
-                    context, reinterpret_cast<void*>(args[0])));
+            ret = this->impl_->sys_brk_handler_.handle_brk(context, args);
             break;
         default:
             ret = -ENOSYS;
