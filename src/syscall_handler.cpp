@@ -129,15 +129,18 @@ public:
         auto pagecnt = (end_round_up - start) / mm::PAGE_SIZE;
 
         for (auto i = start; i < end_round_up; i += mm::PAGE_SIZE) {
+            // Handle vpages.
             auto vdesc_it = std::find_if(
                 ctx.task->address_space->vpages.begin(),
                 ctx.task->address_space->vpages.end(),
                 [i](const auto& vdesc) { return vdesc->start_addr == i; });
             if (vdesc_it == ctx.task->address_space->vpages.end()) continue;
-            auto pdesc_result = ctx.task->page_table->vdesc_to_pdesc(*vdesc_it);
-            if (!pdesc_result.has_value()) continue;
             ctx.task->address_space->vpages.erase(vdesc_it);
             (void)ctx.task->page_table->unmap(*vdesc_it);
+
+            // Handle ppages.
+            auto pdesc_result = ctx.task->page_table->vdesc_to_pdesc(*vdesc_it);
+            if (!pdesc_result.has_value()) continue;
             (void)ctx.ppa->free(pdesc_result.value());
         }
 
