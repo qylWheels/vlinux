@@ -2,21 +2,63 @@
 
 #include <unicorn/unicorn.h>
 
+#include <array>
 #include <chrono>
 #include <cstdint>
 #include <deque>
-#include <future>
 #include <memory>
-#include <mutex>
 #include <set>
 #include <string>
-#include <thread>
+#include <system_error>
 #include <vector>
 
 #include "mm.h"
 #include "vfs.h"
 
 namespace vlinux {
+class PidManager {
+public:
+    PidManager() = default;
+    ~PidManager() = default;
+    PidManager(const PidManager&) = delete;
+    PidManager& operator=(const PidManager&) = delete;
+    PidManager(PidManager&&) = delete;
+    PidManager& operator=(PidManager&&) = delete;
+
+public:
+    static const std::size_t kMaxPid = 4096;
+
+public:
+    outcome::result<std::uint64_t> alloc_pid() {
+        if (this->pid_using_.size() >= kMaxPid) {
+            return std::errc::resource_unavailable_try_again;
+        }
+
+        for (std::uint64_t i = 0; i < kMaxPid; ++i) {
+            auto pid = (this->next_pid_ + i) % kMaxPid;
+            if (this->pid_using_.find(pid) == this->pid_using_.end()) {
+                this->pid_using_.insert(pid);
+                this->next_pid_ = (pid + 1) % kMaxPid;
+                return pid;
+            }
+        }
+
+        std::abort();  // Unreachable.
+    }
+
+    outcome::result<void> free_pid(std::uint64_t pid) {
+        if (this->pid_using_.find(pid) == this->pid_using_.end()) {
+            return outcome::success();
+        }
+        this->pid_using_.erase(pid);
+        return outcome::success();
+    }
+
+private:
+    std::set<std::uint64_t> pid_using_;
+    std::uint64_t next_pid_ = 0;
+};
+
 struct Task {
     Task(uc_context* ctx) : ctx(ctx), state(State::New) {}
     ~Task() = default;
@@ -34,16 +76,22 @@ public:
         Stopped,
     };
 
+    struct Syscall {
+        std::uint32_t id;  // Syscall number.
+        std::array<std::uint64_t, 6> args;
+        std::uint64_t ret;
+    };
+
 public:
     std::string name;
 
     // Whether this task is the root task, whose PID is 0.
-    bool root_task;
+    bool root_task = false;
 
     // Process related fields.
     std::int64_t pid;
     std::int64_t tgid;
-    std::shared_ptr<Task> parent;
+    std::weak_ptr<Task> parent;
     std::vector<std::shared_ptr<Task>> children;
     State state;
     int exit_status;
@@ -51,13 +99,17 @@ public:
     // Memory related fields.
     std::uint64_t stack_top;
     std::uint64_t stack_bottom;
-    VirtualMemoryAddressSpace address_space;
+    std::shared_ptr<mm::VirtualMemoryAddressSpace> address_space;
+    std::shared_ptr<mm::PageTable> page_table;
 
     // File system related fields.
     std::vector<std::shared_ptr<IFile>> files;
 
     // Context saved when scheduled.
     uc_context* ctx;
+
+    // For syscall tracing.
+    std::vector<Syscall> syscalls;
 };
 
 // Schedule tasks whose status is Ready.
@@ -73,25 +125,35 @@ public:
 public:
     outcome::result<void> add_task(std::shared_ptr<Task> task);
     outcome::result<void> remove_task(std::shared_ptr<Task> task);
-    outcome::result<void> start_schedule(std::chrono::milliseconds interval,
-                                         std::promise<void>& err_promise);
-    outcome::result<void> stop_schedule();
+    // Get the current task. Never returns nullptr.
+    std::shared_ptr<Task> current_task();
+    outcome::result<void> start_schedule(std::chrono::milliseconds timeout,
+                                         std::chrono::milliseconds interval);
 
 public:
     enum class Status { Stopped, Running };
     Status status() const { return status_; }
 
 private:
+    static bool tlb_fill_callback(uc_engine* uc, uint64_t vaddr,
+                                  uc_mem_type type, uc_tlb_entry* result,
+                                  void* user_data);
+
+private:
     uc_engine* uc_;
 
-    // Protect the following fields.
-    std::mutex mutex_;
-
     Status status_;
-    std::jthread vcpu_;
+    std::chrono::time_point<std::chrono::steady_clock> start_time_;
+    std::chrono::time_point<std::chrono::steady_clock> end_time_;
+
+    // Task-related fields.
     std::shared_ptr<Task> current_task_;
     std::deque<std::shared_ptr<Task>> ready_task_queue_;  // Ready queue.
     std::set<std::shared_ptr<Task>>
         ready_task_set_;  // For boosting find operation.
+
+    // Memory-related fields.
+    // It is our duty to fill tlb in UC_TLB_VIRTUAL mode.
+    uc_hook tlb_fill_hook_;
 };
 }  // namespace vlinux

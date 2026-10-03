@@ -1,53 +1,111 @@
+#include <sys/mman.h>
+#include <sys/syscall.h>
 #include <unicorn/unicorn.h>
 #include <unicorn/x86.h>
 
+#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
+#include <cstdint>
 #include <cstdlib>
+#include <filesystem>
+#include <ranges>
+#include <thread>
 
 #include "mm.h"
 #include "task.h"
 #include "vm.h"
 
 TEST_CASE("Test PhysicalPageAllocator", "[physical_page_allocator]") {
-    vlinux::PhysicalPageAllocator ppa;
+    uc_engine *uc;
+    REQUIRE(::uc_open(UC_ARCH_X86, UC_MODE_64, &uc) == UC_ERR_OK);
+    vlinux::mm::PhysicalPageAllocator ppa(uc);
 
-    SECTION("Test alloc() and free()") {
-        auto pa = ppa.alloc();
-        REQUIRE(pa.has_value());
-        ppa.free(pa.value());
+    SECTION("Test alloc(), get_page() and free()") {
+        auto pa_desc = ppa.alloc();
+        REQUIRE(pa_desc.has_value());
+        REQUIRE(ppa.get_page(pa_desc.value()).has_value());
+        REQUIRE(ppa.free(pa_desc.value()).has_value());
+        REQUIRE(ppa.free(pa_desc.value()).has_value());
+        REQUIRE(ppa.free(pa_desc.value()).has_error());
     }
+
+    REQUIRE(::uc_close(uc) == UC_ERR_OK);
 }
 
 TEST_CASE("Test PageTable", "[page_table]") {
-    vlinux::PageTable pt;
-    vlinux::PhysicalPageAllocator ppa;
+    uc_engine *uc;
+    REQUIRE(::uc_open(UC_ARCH_X86, UC_MODE_64, &uc) == UC_ERR_OK);
+    vlinux::mm::PageTable pt;
+    vlinux::mm::PhysicalPageAllocator ppa(uc);
 
-    SECTION("Test map(), unmap() and va_to_pa()") {
+    SECTION("Test map(), unmap(), va_to_pa() and va_to_desc()") {
         auto result = ppa.alloc();
         REQUIRE(result.has_value());
+        auto pa_desc = result.value();
 
-        auto pa = result.value();
-        REQUIRE(pt.map(0x1000, pa).has_value());
-        REQUIRE(pt.va_to_pa(0x1000) == pa);
-        REQUIRE(pt.va_to_pa(0x1145) == pa + 0x1145 - 0x1000);
-        REQUIRE(pt.va_to_pa(0x1000 + 4096 - 1) == pa + 4096 - 1);
-        REQUIRE(pt.unmap(0x1000).has_value());
-        REQUIRE(pt.va_to_pa(0x1000) == std::nullopt);
+        auto va_desc = std::make_shared<vlinux::mm::VirtualPageDescriptor>();
+        va_desc->start_addr = 0xbeef'0000;
+        va_desc->len = vlinux::mm::PAGE_SIZE;
+        va_desc->perm = UC_PROT_READ | UC_PROT_WRITE;
 
-        ppa.free(pa);
+        // Test map().
+        REQUIRE(pt.map(va_desc, pa_desc).has_value());
+
+        // Test va_to_pa().
+        auto pa1 = pt.va_to_pa(0xbeef'0000);
+        auto pa2 = pt.va_to_pa(0xbeef'0114);
+        auto pa3 = pt.va_to_pa(0xbeef'0000 + 4096 - 1);
+        REQUIRE((pa1.has_value() && pa1.value() == pa_desc->start_addr));
+        REQUIRE(
+            (pa2.has_value() && pa2.value() == pa_desc->start_addr + 0x0114));
+        REQUIRE(
+            (pa3.has_value() && pa3.value() == pa_desc->start_addr + 4096 - 1));
+
+        // Test va_to_desc().
+        auto va_desc2 = pt.va_to_desc(0xbeef'0000);
+        REQUIRE(va_desc2.has_value());
+        REQUIRE(va_desc2.value().get() == va_desc.get());
+
+        // Test unmap().
+        REQUIRE(pt.unmap(va_desc).has_value());
+
+        // Test va_to_pa() after unmap().
+        REQUIRE(pt.va_to_pa(0xbeef'0000) == std::nullopt);
+
+        // Free physical page.
+        REQUIRE(ppa.free(pa_desc).has_value());
     }
 
-    SECTION("Test map() with unaligned va and pa") {
-        REQUIRE(pt.map(0x1001, 0x2000).has_error());
-        REQUIRE(pt.map(0x1000, 0x2001).has_error());
-        REQUIRE(pt.map(0x1001, 0x2001).has_error());
-    }
+    REQUIRE(::uc_close(uc) == UC_ERR_OK);
+}
 
-    SECTION("Test unmap() with unaligned va") {
-        REQUIRE(pt.map(0x1000, 0x2000).has_value());
-        REQUIRE(pt.unmap(0x1001).has_error());
-        REQUIRE(pt.unmap(0x1000).has_value());
+TEST_CASE("Test PidManager", "[pid_manager]") {
+    vlinux::PidManager pid_manager;
+    SECTION("Test alloc_pid() and free_pid()") {
+        // Allocate a PID.
+        auto pid = pid_manager.alloc_pid();
+        REQUIRE(pid.has_value());
+        REQUIRE(pid.value() == 0);
+
+        // Allocate more PIDs to reach the limit.
+        for (std::uint64_t i = 0; i < vlinux::PidManager::kMaxPid - 1; ++i) {
+            REQUIRE(pid_manager.alloc_pid().has_value());
+        }
+
+        // Allocate a PID after the limit, expect error.
+        REQUIRE(pid_manager.alloc_pid().has_error());
+
+        // Free a PID.
+        REQUIRE(pid_manager.free_pid(pid.value()).has_value());
+
+        // Allocate a PID after freeing, expect success.
+        REQUIRE(pid_manager.alloc_pid().has_value());
+
+        // Free all PIDs.
+        for (std::uint64_t i = 0; i < vlinux::PidManager::kMaxPid; ++i) {
+            REQUIRE(pid_manager.free_pid(i).has_value());
+        }
     }
 }
 
@@ -106,37 +164,269 @@ TEST_CASE("Test Scheduler", "[scheduler]") {
         REQUIRE(scheduler.add_task(task2).has_value());
 
         // Start schedule.
-        std::promise<void> err_promise;
-        std::future<void> err_future = err_promise.get_future();
         REQUIRE(scheduler
-                    .start_schedule(std::chrono::milliseconds(500), err_promise)
+                    .start_schedule(std::chrono::milliseconds(1500),
+                                    std::chrono::milliseconds(500))
                     .has_value());
 
         // Let the scheduler run for a while.
         std::this_thread::sleep_for(std::chrono::seconds(3));
 
-        // Stop schedule.
-        REQUIRE(scheduler.stop_schedule().has_value());
+        // Test status after schedule ends.
         REQUIRE(scheduler.status() == vlinux::Scheduler::Status::Stopped);
-        REQUIRE(err_future.wait_for(std::chrono::seconds(0)) !=
-                std::future_status::ready);
         REQUIRE(::uc_context_free(ctx1) == UC_ERR_OK);
         REQUIRE(::uc_context_free(ctx2) == UC_ERR_OK);
     }
+
+    REQUIRE(::uc_close(uc) == UC_ERR_OK);
 }
 
 TEST_CASE("Test VM", "[vm]") {
     vlinux::VM vm;
     vm.reset();
+    auto build_path = std::filesystem::path(CMAKE_BUILD_DIR_PATH);
+    auto calc_unmap_page_cnt = [](std::uint64_t old_addr,
+                                  std::uint64_t new_addr,
+                                  std::uint64_t pgsize) -> std::int64_t {
+        auto old_round_up = (old_addr + vlinux::mm::PAGE_SIZE - 1) &
+                            (~(vlinux::mm::PAGE_SIZE - 1));
+        auto new_round_up = (new_addr + vlinux::mm::PAGE_SIZE - 1) &
+                            (~(vlinux::mm::PAGE_SIZE - 1));
+        return (static_cast<std::int64_t>(new_round_up) -
+                static_cast<std::int64_t>(old_round_up)) /
+               static_cast<std::int64_t>(vlinux::mm::PAGE_SIZE);
+    };
 
     SECTION("Test load()") {
         REQUIRE(
-            vm.load("/home/comma/projs/vlinux/tmp/test_start").has_value() ==
-            true);
+            vm.load(build_path / "tests/syscall_tests/test_brk").has_value());
     }
 
-    SECTION("Test run()") {
-        (void)vm.load("/home/comma/projs/vlinux/tmp/test_start");
-        REQUIRE(vm.run().has_value() == true);
+    SECTION("Test brk()") {
+        auto task =
+            vm.load(build_path / "tests/syscall_tests/test_brk").value();
+
+        // Log mm status before calling brk().
+        auto mm = task->address_space;
+        auto old_vdesc_cnt = static_cast<std::int64_t>(mm->vpages.size());
+        auto old_start_brk = mm->start_brk;
+        auto old_brk = mm->brk;
+
+        auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                              std::array<std::uint64_t, 6> args,
+                                              std::uint64_t ret) {
+            if (syscall_id != SYS_brk) {
+                return;
+            }
+
+            // start_brk should never change.
+            REQUIRE(mm->start_brk == old_start_brk);
+
+            auto addr = args[0];
+            if (addr < old_start_brk) {
+                REQUIRE(ret == old_brk);
+                REQUIRE(mm->vpages.size() == old_vdesc_cnt);
+                REQUIRE(mm->brk == old_brk);
+            } else {
+                REQUIRE(ret == mm->brk);
+                auto page_cnt =
+                    calc_unmap_page_cnt(old_brk, addr, vlinux::mm::PAGE_SIZE);
+                REQUIRE(mm->vpages.size() ==
+                        static_cast<std::uint64_t>(old_vdesc_cnt + page_cnt));
+                REQUIRE(mm->brk == addr);
+            }
+
+            // Update old data.
+            old_start_brk = mm->start_brk;
+            old_brk = mm->brk;
+            old_vdesc_cnt = mm->vpages.size();
+        });
+        REQUIRE(result.has_value());
+
+        REQUIRE(vm.run(std::chrono::milliseconds(100),
+                       std::chrono::milliseconds(10))
+                    .has_value());
+    }
+
+    SECTION("Test mmap() and munmap()") {
+        auto task = vm.load(build_path / "tests/syscall_tests/test_mmap_munmap")
+                        .value();
+
+        auto addr_space = task->address_space;
+        auto start_mmap = addr_space->start_mmap;
+        auto old_mmap = addr_space->mmap;
+        auto old_vdesc_cnt = addr_space->vpages.size();
+
+        // Hook on mmap().
+        auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                              std::array<std::uint64_t, 6> args,
+                                              std::uint64_t ret) {
+            if (syscall_id != SYS_mmap) return;
+
+            auto len = args[1];
+            auto len_round_up = (len + vlinux::mm::PAGE_SIZE - 1) &
+                                ~(vlinux::mm::PAGE_SIZE - 1);
+            auto page_cnt = len_round_up / vlinux::mm::PAGE_SIZE;
+            REQUIRE(ret == old_mmap);
+            REQUIRE(addr_space->start_mmap == start_mmap);
+            REQUIRE(addr_space->mmap ==
+                    old_mmap + page_cnt * vlinux::mm::PAGE_SIZE);
+            REQUIRE(addr_space->vpages.size() == old_vdesc_cnt + page_cnt);
+            auto it = std::find_if(
+                addr_space->vpages.begin(), addr_space->vpages.end(),
+                [&](auto vdesc) { return vdesc->start_addr == ret; });
+            REQUIRE(it != addr_space->vpages.end());
+            old_mmap = addr_space->mmap;
+            old_vdesc_cnt = addr_space->vpages.size();
+        });
+        REQUIRE(result.has_value());
+
+        // Hook on munmap().
+        result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                         std::array<std::uint64_t, 6> args,
+                                         std::uint64_t ret) {
+            if (syscall_id != SYS_munmap) return;
+
+            // Args.
+            auto start = args[0];
+            auto len = args[1];
+            auto end = start + len;
+
+            // Round.
+            auto start_round_down = start & ~(vlinux::mm::PAGE_SIZE - 1);
+            auto end_round_up = (end + vlinux::mm::PAGE_SIZE - 1) &
+                                ~(vlinux::mm::PAGE_SIZE - 1);
+
+            // Page count.
+            auto page_cnt =
+                (end_round_up - start_round_down) / vlinux::mm::PAGE_SIZE;
+
+            // Check.
+            REQUIRE(ret == 0);
+            REQUIRE(addr_space->start_mmap == start_mmap);
+            REQUIRE(addr_space->mmap == old_mmap);
+            // We only require that the number of vpages is not greater than
+            // the old number of vpages. Because munmap() doesn't unmap pages
+            // that are not mapped.
+            REQUIRE(addr_space->vpages.size() <= old_vdesc_cnt);
+            auto all_pages_is_not_in_va = !std::any_of(
+                addr_space->vpages.begin(), addr_space->vpages.end(),
+                [&](auto vdesc) { return vdesc->start_addr == ret; });
+            REQUIRE(all_pages_is_not_in_va);
+            auto all_pages_is_unmapped = true;
+            for (auto i = start_round_down; i < end_round_up;
+                 i += vlinux::mm::PAGE_SIZE) {
+                auto pa_result = task->page_table->va_to_pa(i);
+                if (pa_result.has_value()) {
+                    all_pages_is_unmapped = false;
+                    break;
+                }
+            }
+            REQUIRE(all_pages_is_unmapped);
+
+            // Update old data.
+            old_mmap = addr_space->mmap;
+            old_vdesc_cnt = addr_space->vpages.size();
+        });
+        REQUIRE(result.has_value());
+
+        // It will takes longer than other tests because we have lots
+        // of pages to unmap.
+        REQUIRE(vm.run(std::chrono::milliseconds(5000),
+                       std::chrono::milliseconds(100))
+                    .has_value());
+    }
+
+    SECTION("Test mprotect()") {
+        auto task =
+            vm.load(build_path / "tests/syscall_tests/test_mprotect").value();
+
+        // Add hook on mprotect()'s successfully execution.
+        auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                              std::array<std::uint64_t, 6> args,
+                                              std::uint64_t ret) {
+            if (syscall_id != SYS_mprotect) {
+                return;
+            }
+            if (ret != 0) {
+                return;
+            }
+
+            auto addr = args[0];
+            auto len = args[1];
+            auto prot = args[2];
+            auto addr_round_down = addr & ~(vlinux::mm::PAGE_SIZE - 1);
+            auto page_count =
+                calc_unmap_page_cnt(addr, addr + len, vlinux::mm::PAGE_SIZE) +
+                1;
+
+            auto addr_space = task->address_space;
+
+            // Influenced pages.
+            auto vdescs =
+                std::views::filter(addr_space->vpages, [&](auto vdesc) {
+                    return vdesc->start_addr >= addr_round_down &&
+                           vdesc->start_addr < addr + len;
+                });
+
+            // Check protection flags of influenced pages.
+            for (auto vdesc : vdescs) {
+                std::uint64_t uc_prot = 0;
+                uc_prot |= ((prot & PROT_READ) ? UC_PROT_READ : 0);
+                uc_prot |= ((prot & PROT_WRITE) ? UC_PROT_WRITE : 0);
+                uc_prot |= ((prot & PROT_EXEC) ? UC_PROT_EXEC : 0);
+                REQUIRE(vdesc->perm == uc_prot);
+            }
+        });
+        REQUIRE(result.has_value());
+
+        // Add hook on mprotect()'s failed execution.
+        result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                         std::array<std::uint64_t, 6> args,
+                                         std::uint64_t ret) {
+            if (syscall_id != SYS_mprotect) {
+                return;
+            }
+
+            auto addr = args[0];
+            auto len = args[1];
+            auto prot = args[2];
+
+            // addr not aligned.
+            if (addr % vlinux::mm::PAGE_SIZE != 0) {
+                REQUIRE(ret == -EINVAL);
+                return;
+            }
+
+            // Invalid prot.
+            if (prot & ~(PROT_READ | PROT_WRITE | PROT_EXEC)) {
+                REQUIRE(ret == -EINVAL);
+                return;
+            }
+
+            // Address not available.
+            std::uint64_t end = addr + len;
+            std::uint64_t start_round_down =
+                addr - (addr % vlinux::mm::PAGE_SIZE);
+            std::uint64_t end_round_up = (end + (vlinux::mm::PAGE_SIZE - 1)) &
+                                         (~(vlinux::mm::PAGE_SIZE - 1));
+            // [addr, addr + len] is not all in the address space.
+            for (auto i = start_round_down; i < end_round_up;
+                 i += vlinux::mm::PAGE_SIZE) {
+                if (std::find_if(task->address_space->vpages.begin(),
+                                 task->address_space->vpages.end(),
+                                 [&](auto vdesc) {
+                                     return vdesc->start_addr == i;
+                                 }) == task->address_space->vpages.end()) {
+                    REQUIRE(ret == -ENOMEM);
+                    return;
+                }
+            }
+        });
+        REQUIRE(result.has_value());
+
+        REQUIRE(vm.run(std::chrono::milliseconds(100),
+                       std::chrono::milliseconds(10))
+                    .has_value());
     }
 }
