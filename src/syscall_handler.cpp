@@ -367,6 +367,7 @@ public:
 
 public:
     SysMmapHandler sys_mmap_handler_;
+    SysMunmapHandler sys_munmap_handler_;
     SysMprotectHandler sys_mprotect_handler_;
     SysBrkHandler sys_brk_handler_;
 
@@ -388,6 +389,9 @@ std::uint64_t SyscallHandler::dispatch(Context context,
     switch (syscall_id) {
         case SYS_mmap:
             ret = this->impl_->sys_mmap_handler_.handle(context, args);
+            break;
+        case SYS_munmap:
+            ret = this->impl_->sys_munmap_handler_.handle(context, args);
             break;
         case SYS_mprotect:
             ret = this->impl_->sys_mprotect_handler_.handle(context, args);
