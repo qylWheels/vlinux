@@ -129,19 +129,20 @@ public:
         auto pagecnt = (end_round_up - start) / mm::PAGE_SIZE;
 
         for (auto i = start; i < end_round_up; i += mm::PAGE_SIZE) {
-            // Handle vpages.
+            // Unmap virtual pages.
             auto vdesc_it = std::find_if(
                 ctx.task->address_space->vpages.begin(),
                 ctx.task->address_space->vpages.end(),
                 [i](const auto& vdesc) { return vdesc->start_addr == i; });
             if (vdesc_it == ctx.task->address_space->vpages.end()) continue;
             (void)ctx.task->page_table->unmap(*vdesc_it);
-            ctx.task->address_space->vpages.erase(vdesc_it);
 
-            // Handle ppages.
+            // Free physical pages.
             auto pdesc_result = ctx.task->page_table->vdesc_to_pdesc(*vdesc_it);
-            if (!pdesc_result.has_value()) continue;
-            (void)ctx.ppa->free(pdesc_result.value());
+            if (pdesc_result.has_value()) {
+                (void)ctx.ppa->free(pdesc_result.value());
+            }
+            ctx.task->address_space->vpages.erase(vdesc_it);
         }
 
         return 0;
