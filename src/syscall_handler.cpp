@@ -120,8 +120,10 @@ public:
     SysMprotectHandler& operator=(SysMprotectHandler&&) = delete;
 
 public:
-    std::uint64_t handle(std::shared_ptr<Task> task,
+    std::uint64_t handle(SyscallHandler::Context ctx,
                          std::array<std::uint64_t, 6> args) {
+        auto task = ctx.task;
+
         void* addr = reinterpret_cast<void*>(args[0]);
         std::size_t len = args[1];
         int prot = args[2];
@@ -350,7 +352,7 @@ std::uint64_t SyscallHandler::dispatch(Context context,
             ret = this->impl_->sys_mmap_handler_.handle(context, args);
             break;
         case SYS_mprotect:
-            ret = this->impl_->sys_mprotect_handler_.handle(context.task, args);
+            ret = this->impl_->sys_mprotect_handler_.handle(context, args);
             break;
         case SYS_brk:
             ret = this->impl_->sys_brk_handler_.handle_brk(context, args);
