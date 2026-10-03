@@ -333,9 +333,8 @@ std::uint64_t SyscallHandler::dispatch(Context context,
     std::uint64_t ret;
     switch (syscall_id) {
         case SYS_mmap:
-            ret = static_cast<std::uint64_t>(
-                this->impl_->sys_mmap_handler_.handle(context.task, context.ppa,
-                                                      args));
+            ret = this->impl_->sys_mmap_handler_.handle(context.task,
+                                                        context.ppa, args);
             break;
         case SYS_mprotect:
             ret = static_cast<std::uint64_t>(
