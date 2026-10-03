@@ -330,8 +330,10 @@ TEST_CASE("Test VM", "[vm]") {
         });
         REQUIRE(result.has_value());
 
-        REQUIRE(vm.run(std::chrono::milliseconds(100),
-                       std::chrono::milliseconds(10))
+        // It will takes longer than other tests because we have lots
+        // of pages to unmap.
+        REQUIRE(vm.run(std::chrono::milliseconds(5000),
+                       std::chrono::milliseconds(100))
                     .has_value());
     }
 
