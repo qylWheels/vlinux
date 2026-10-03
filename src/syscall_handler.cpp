@@ -135,8 +135,8 @@ public:
                 ctx.task->address_space->vpages.end(),
                 [i](const auto& vdesc) { return vdesc->start_addr == i; });
             if (vdesc_it == ctx.task->address_space->vpages.end()) continue;
-            ctx.task->address_space->vpages.erase(vdesc_it);
             (void)ctx.task->page_table->unmap(*vdesc_it);
+            ctx.task->address_space->vpages.erase(vdesc_it);
 
             // Handle ppages.
             auto pdesc_result = ctx.task->page_table->vdesc_to_pdesc(*vdesc_it);
