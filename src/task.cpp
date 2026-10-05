@@ -16,6 +16,10 @@ outcome::result<void> Scheduler::add_task(std::shared_ptr<Task> task) {
         return std::errc::device_or_resource_busy;
     }
 
+    return this->add_task_running(task);
+}
+
+outcome::result<void> Scheduler::add_task_running(std::shared_ptr<Task> task) {
     auto it = this->ready_task_set_.find(task);
     if (it != this->ready_task_set_.end()) {
         return std::errc::file_exists;

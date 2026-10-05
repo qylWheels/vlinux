@@ -124,6 +124,10 @@ public:
 
 public:
     outcome::result<void> add_task(std::shared_ptr<Task> task);
+    // Add a task to the ready queue from inside start_schedule(), i.e. from a
+    // syscall handler such as clone(). Unlike add_task(), this is allowed while
+    // scheduling.
+    outcome::result<void> add_task_running(std::shared_ptr<Task> task);
     outcome::result<void> remove_task(std::shared_ptr<Task> task);
     // Get the current task. Never returns nullptr.
     std::shared_ptr<Task> current_task();
