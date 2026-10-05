@@ -476,6 +476,7 @@ public:
                 }
             }
         }
+        task->syscalls = {};
 
         // Add task to scheduler. clone() runs inside the scheduling loop, so
         // the running scheduler must accept the new task.
