@@ -477,8 +477,9 @@ public:
             }
         }
 
-        // Add task to scheduler.
-        auto add_result = context.scheduler->add_task(task);
+        // Add task to scheduler. clone() runs inside the scheduling loop, so
+        // the running scheduler must accept the new task.
+        auto add_result = context.scheduler->add_task_running(task);
         if (!add_result) {
             cleanup();
             return -ENOMEM;
