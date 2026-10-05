@@ -471,6 +471,7 @@ public:
     SysMunmapHandler sys_munmap_handler_;
     SysMprotectHandler sys_mprotect_handler_;
     SysBrkHandler sys_brk_handler_;
+    SysCloneHandler sys_clone_handler_;
 
 public:  // Hooks.
     std::vector<std::function<void(std::uint64_t syscall_id,
@@ -499,6 +500,9 @@ std::uint64_t SyscallHandler::dispatch(Context context,
             break;
         case SYS_brk:
             ret = this->impl_->sys_brk_handler_.handle_brk(context, args);
+            break;
+        case SYS_clone:
+            ret = this->impl_->sys_clone_handler_.handle(context, args);
             break;
         default:
             ret = -ENOSYS;
