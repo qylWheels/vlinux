@@ -455,6 +455,26 @@ public:
                 cleanup();
                 return -ENOMEM;
             }
+
+            // Copy the content of the parent's page.
+            auto parent_ppage = parent->page_table->vdesc_to_pdesc(vdesc);
+            if (parent_ppage.has_value()) {
+                std::vector<std::uint8_t> page_data(mm::PAGE_SIZE);
+                err =
+                    ::uc_mem_read(context.uc, parent_ppage.value()->start_addr,
+                                  page_data.data(), mm::PAGE_SIZE);
+                if (err != UC_ERR_OK) {
+                    cleanup();
+                    return -ENOMEM;
+                }
+                err =
+                    ::uc_mem_write(context.uc, ppage_result.value()->start_addr,
+                                   page_data.data(), mm::PAGE_SIZE);
+                if (err != UC_ERR_OK) {
+                    cleanup();
+                    return -ENOMEM;
+                }
+            }
         }
 
         // Add task to scheduler.
