@@ -249,8 +249,9 @@ public:
         // Dispatch.
         auto task = self->scheduler_->current_task();
         std::uint64_t ret = self->syscall_handler_.dispatch(
-            {self->uc_, self->scheduler_, task, self->ppa_}, syscall_number,
-            std::to_array(args));
+            {self->uc_, &self->pid_manager_, self->scheduler_, task,
+             self->ppa_},
+            syscall_number, std::to_array(args));
 
         // Write return value back to RAX.
         err = uc_reg_write(engine, UC_X86_REG_RAX, &ret);
