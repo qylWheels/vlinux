@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cerrno>
 #include <cstddef>
 #include <cstdlib>
 #include <functional>
@@ -382,7 +383,80 @@ public:
         if (stack_addr == 0) return -EINVAL;
         if (flags != 0) return -EINVAL;  // Only support flags = 0 for now.
 
-        return -ENOSYS;
+        // Create task context.
+        uc_err err;
+        uc_context* ctx = nullptr;
+        err = ::uc_context_alloc(context.uc, &ctx);
+        if (err != UC_ERR_OK) {
+            return -ENOMEM;
+        }
+
+        // Setup task context.
+        err = ::uc_context_save(context.uc, ctx);
+        if (err != UC_ERR_OK) {
+            return -ENOMEM;
+        }
+        err = ::uc_context_reg_write(ctx, UC_X86_REG_RIP, &fn_addr);
+        if (err != UC_ERR_OK) {
+            return -ENOMEM;
+        }
+
+        // Create task.
+        auto task = std::make_shared<vlinux::Task>(ctx);
+
+        // Setup task.
+        auto parent = context.scheduler->current_task();
+        task->name = parent->name;
+        task->root_task = false;
+        auto pid_result = context.pid_manager->alloc_pid();
+        if (!pid_result) {
+            return -EAGAIN;
+        }
+        task->pid = pid_result.value();
+        task->tgid = parent->tgid;
+        task->parent = parent;
+        task->children = {};
+        task->state = Task::State::Ready;
+        task->stack_bottom = stack_addr;
+        // We are not able to set stack_top because we do not
+        // know the stack size.
+        // task->stack_top = stack_addr;
+        task->address_space = std::make_shared<mm::VirtualMemoryAddressSpace>(
+            *parent->address_space);
+        task->address_space->vpages = {};
+        std::vector<std::shared_ptr<mm::PhysicalPageDescriptor>> alloced_ppages;
+        auto cleanup = [&]() {
+            for (auto alloced_ppage : alloced_ppages) {
+                (void)context.ppa->free(alloced_ppage);
+            }
+        };
+        for (auto& vdesc : parent->address_space->vpages) {
+            auto child_vdesc =
+                std::make_shared<mm::VirtualPageDescriptor>(*vdesc);
+            task->address_space->vpages.insert(child_vdesc);
+            // Allocate physical page eagerly.
+            auto ppage_result = context.ppa->alloc();
+            if (!ppage_result) {
+                cleanup();
+                return -ENOMEM;
+            }
+            alloced_ppages.push_back(ppage_result.value());
+            auto map_result =
+                task->page_table->map(child_vdesc, ppage_result.value());
+            if (!map_result) {
+                cleanup();
+                return -ENOMEM;
+            }
+        }
+
+        // Add task to scheduler.
+        auto add_result = context.scheduler->add_task(task);
+        if (!add_result) {
+            cleanup();
+            return -ENOMEM;
+        }
+
+        return task->pid;
     }
 };
 
