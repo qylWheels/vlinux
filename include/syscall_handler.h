@@ -18,6 +18,7 @@ public:
 public:
     struct Context {
         uc_engine *uc;
+        Scheduler *scheduler;
         std::shared_ptr<Task> task;
         std::shared_ptr<mm::PhysicalPageAllocator> ppa;
     };
