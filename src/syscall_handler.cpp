@@ -416,6 +416,7 @@ public:
         task->tgid = parent->tgid;
         task->parent = parent;
         task->children = {};
+        parent->children.push_back(task);
         task->state = Task::State::Ready;
         task->stack_bottom = stack_addr;
         // We are not able to set stack_top because we do not
