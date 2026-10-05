@@ -114,6 +114,12 @@ public:
     std::optional<std::shared_ptr<PhysicalPageDescriptor>> vdesc_to_pdesc(
         std::shared_ptr<VirtualPageDescriptor> vdesc);
 
+    const std::map<std::shared_ptr<VirtualPageDescriptor>,
+                   std::shared_ptr<PhysicalPageDescriptor>>&
+    all_maps() const {
+        return this->map_;
+    }
+
 private:
     std::map<std::shared_ptr<VirtualPageDescriptor>,
              std::shared_ptr<PhysicalPageDescriptor>>
