@@ -391,6 +391,12 @@ public:
             return -ENOMEM;
         }
 
+        // Hand the context over to the VM.
+        if (!context.reg_ctx_in_vm(ctx)) {
+            ::uc_context_free(ctx);
+            return -ENOMEM;
+        }
+
         // Setup task context.
         err = ::uc_context_save(context.uc, ctx);
         if (err != UC_ERR_OK) {
