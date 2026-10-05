@@ -373,6 +373,15 @@ public:
 public:
     std::uint64_t handle(SyscallHandler::Context context,
                          std::array<std::uint64_t, 6> args) {
+        auto fn_addr = args[0];
+        auto stack_addr = args[1];
+        auto flags = args[2];
+        auto arg_addr = args[3];
+
+        if (fn_addr == 0) return -EINVAL;
+        if (stack_addr == 0) return -EINVAL;
+        if (flags != 0) return -EINVAL;  // Only support flags = 0 for now.
+
         return -ENOSYS;
     }
 };
