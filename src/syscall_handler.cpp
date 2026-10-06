@@ -490,6 +490,22 @@ public:
     }
 };
 
+class SysForkHandler {
+public:
+    SysForkHandler() = default;
+    ~SysForkHandler() = default;
+    SysForkHandler(const SysForkHandler&) = delete;
+    SysForkHandler& operator=(const SysForkHandler&) = delete;
+    SysForkHandler(SysForkHandler&&) = delete;
+    SysForkHandler& operator=(SysForkHandler&&) = delete;
+
+public:
+    std::uint64_t handle(SyscallHandler::Context context,
+                         std::array<std::uint64_t, 6> args) {
+        return -ENOSYS;
+    }
+};
+
 class SyscallHandler::Impl {
 public:
     Impl() = default;
@@ -501,6 +517,7 @@ public:
     SysMprotectHandler sys_mprotect_handler_;
     SysBrkHandler sys_brk_handler_;
     SysCloneHandler sys_clone_handler_;
+    SysForkHandler sys_fork_handler_;
 
 public:  // Hooks.
     std::vector<std::function<void(std::uint64_t syscall_id,
@@ -532,6 +549,9 @@ std::uint64_t SyscallHandler::dispatch(Context context,
             break;
         case SYS_clone:
             ret = this->impl_->sys_clone_handler_.handle(context, args);
+            break;
+        case SYS_fork:
+            ret = this->impl_->sys_fork_handler_.handle(context, args);
             break;
         default:
             ret = -ENOSYS;
