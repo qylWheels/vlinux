@@ -38,8 +38,8 @@ public:
     SysMmapHandler& operator=(SysMmapHandler&&) = delete;
 
 public:
-    std::uint64_t handle(SyscallHandler::Context ctx,
-                         std::array<std::uint64_t, 6> args) {
+    static std::uint64_t handle(SyscallHandler::Context ctx,
+                                std::array<std::uint64_t, 6> args) {
         auto task = ctx.task;
         auto ppa = ctx.ppa;
 
@@ -121,8 +121,8 @@ public:
     SysMunmapHandler& operator=(SysMunmapHandler&&) = delete;
 
 public:
-    std::uint64_t handle(SyscallHandler::Context ctx,
-                         std::array<std::uint64_t, 6> args) {
+    static std::uint64_t handle(SyscallHandler::Context ctx,
+                                std::array<std::uint64_t, 6> args) {
         std::uint64_t start = args[0], len = args[1], end = start + len;
         if (start % mm::PAGE_SIZE != 0) return -EINVAL;
 
@@ -160,8 +160,8 @@ public:
     SysMprotectHandler& operator=(SysMprotectHandler&&) = delete;
 
 public:
-    std::uint64_t handle(SyscallHandler::Context ctx,
-                         std::array<std::uint64_t, 6> args) {
+    static std::uint64_t handle(SyscallHandler::Context ctx,
+                                std::array<std::uint64_t, 6> args) {
         auto task = ctx.task;
 
         void* addr = reinterpret_cast<void*>(args[0]);
@@ -224,8 +224,8 @@ public:
     ~SysBrkHandler() = default;
 
 private:
-    void* brk_expand(SyscallHandler::Context context,
-                     void* addr) {  // Check if the address is valid.
+    static void* brk_expand(SyscallHandler::Context context,
+                            void* addr) {  // Check if the address is valid.
         auto task = context.task;
 
         std::uint64_t page_cnt = calc_unmap_page_cnt(
@@ -236,7 +236,7 @@ private:
         std::vector<std::shared_ptr<mm::PhysicalPageDescriptor>> pdescs;
         std::vector<std::shared_ptr<mm::VirtualPageDescriptor>> vdescs;
         // Cleanup function.
-        auto cleanup = [this, &task, &pdescs, &vdescs, &context]() {
+        auto cleanup = [&task, &pdescs, &vdescs, &context]() {
             // Clean up page table.
             for (auto vdesc : vdescs) {
                 (void)task->page_table->unmap(vdesc);
@@ -287,7 +287,7 @@ private:
         return reinterpret_cast<void*>(task->address_space->brk);
     }
 
-    void* brk_shrink(SyscallHandler::Context context, void* addr) {
+    static void* brk_shrink(SyscallHandler::Context context, void* addr) {
         auto task = context.task;
 
         // Calculate the number of pages to shrink.
@@ -340,8 +340,8 @@ private:
     }
 
 public:
-    std::uint64_t handle_brk(SyscallHandler::Context context,
-                             std::array<std::uint64_t, 6> args) {
+    static std::uint64_t handle_brk(SyscallHandler::Context context,
+                                    std::array<std::uint64_t, 6> args) {
         void* addr = reinterpret_cast<void*>(args[0]);
 
         auto task = context.task;
@@ -352,10 +352,10 @@ public:
         auto brk = task->address_space->brk;
         if (reinterpret_cast<uint64_t>(addr) > brk) {
             return reinterpret_cast<std::uint64_t>(
-                this->brk_expand(context, addr));
+                SysBrkHandler::brk_expand(context, addr));
         } else if (reinterpret_cast<uint64_t>(addr) < brk) {
             return reinterpret_cast<std::uint64_t>(
-                this->brk_shrink(context, addr));
+                SysBrkHandler::brk_shrink(context, addr));
         } else {
             return brk;
         }
@@ -519,14 +519,6 @@ public:
     Impl() = default;
     ~Impl() = default;
 
-public:
-    SysMmapHandler sys_mmap_handler_;
-    SysMunmapHandler sys_munmap_handler_;
-    SysMprotectHandler sys_mprotect_handler_;
-    SysBrkHandler sys_brk_handler_;
-    SysCloneHandler sys_clone_handler_;
-    SysForkHandler sys_fork_handler_;
-
 public:  // Hooks.
     std::vector<std::function<void(std::uint64_t syscall_id,
                                    std::array<std::uint64_t, 6> args,
@@ -544,16 +536,16 @@ std::uint64_t SyscallHandler::dispatch(Context context,
     std::uint64_t ret;
     switch (syscall_id) {
         case SYS_mmap:
-            ret = this->impl_->sys_mmap_handler_.handle(context, args);
+            ret = SysMmapHandler::handle(context, args);
             break;
         case SYS_munmap:
-            ret = this->impl_->sys_munmap_handler_.handle(context, args);
+            ret = SysMunmapHandler::handle(context, args);
             break;
         case SYS_mprotect:
-            ret = this->impl_->sys_mprotect_handler_.handle(context, args);
+            ret = SysMprotectHandler::handle(context, args);
             break;
         case SYS_brk:
-            ret = this->impl_->sys_brk_handler_.handle_brk(context, args);
+            ret = SysBrkHandler::handle_brk(context, args);
             break;
         case SYS_clone:
             ret = SysCloneHandler::handle(context, args);
