@@ -404,7 +404,13 @@ public:
         }
 
         // Setup task context to ensure it is same as parent process.
+        // Except RAX, it must be set to 0 in child process.
         err = ::uc_context_save(context.uc, ctx);
+        if (err != UC_ERR_OK) {
+            return -ENOMEM;
+        }
+        std::uint64_t zero = 0;
+        err = ::uc_context_reg_write(ctx, UC_X86_REG_RAX, &zero);
         if (err != UC_ERR_OK) {
             return -ENOMEM;
         }
