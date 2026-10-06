@@ -374,14 +374,20 @@ public:
 public:
     static std::uint64_t handle(SyscallHandler::Context context,
                                 std::array<std::uint64_t, 6> args) {
-        auto fn_addr = args[0];
+        auto flags = args[0];
         auto stack_addr = args[1];
-        auto flags = args[2];
-        auto arg_addr = args[3];
+        auto parent_tid = args[2];
+        auto child_tid = args[3];
+        auto tls = args[4];
 
-        if (fn_addr == 0) return -EINVAL;
-        if (stack_addr == 0) return -EINVAL;
         if (flags != 0) return -EINVAL;  // Only support flags = 0 for now.
+        if (stack_addr != 0)
+            return -EINVAL;  // Only support stack_addr = 0 for now.
+        if (parent_tid != 0)
+            return -EINVAL;  // Only support parent_tid = 0 for now.
+        if (child_tid != 0)
+            return -EINVAL;            // Only support child_tid = 0 for now.
+        if (tls != 0) return -EINVAL;  // Only support tls = 0 for now.
 
         // Create task context.
         uc_err err;
@@ -402,7 +408,7 @@ public:
         if (err != UC_ERR_OK) {
             return -ENOMEM;
         }
-        err = ::uc_context_reg_write(ctx, UC_X86_REG_RIP, &fn_addr);
+        err = ::uc_context_reg_write(ctx, UC_X86_REG_RIP, &parent_tid);
         if (err != UC_ERR_OK) {
             return -ENOMEM;
         }
