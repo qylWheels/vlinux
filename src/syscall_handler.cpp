@@ -430,9 +430,9 @@ public:
         task->children = {};
         parent->children.push_back(task);
         task->state = Task::State::Ready;
-        task->stack_bottom = stack_addr;
-        // We are not able to set stack_top because we do not
-        // know the stack size.
+        // No need to set stack_bottom and stack_top for now,
+        // just do it like fork().
+        // task->stack_bottom = stack_addr;
         // task->stack_top = stack_addr;
         task->address_space = std::make_shared<mm::VirtualMemoryAddressSpace>(
             *parent->address_space);
