@@ -403,7 +403,7 @@ public:
             return -ENOMEM;
         }
 
-        // Setup task context.
+        // Setup task context to ensure it is same as parent process.
         err = ::uc_context_save(context.uc, ctx);
         if (err != UC_ERR_OK) {
             return -ENOMEM;
