@@ -224,8 +224,8 @@ public:
     ~SysBrkHandler() = default;
 
 private:
-    static void* brk_expand(SyscallHandler::Context context,
-                            void* addr) {  // Check if the address is valid.
+    static void* expand(SyscallHandler::Context context,
+                        void* addr) {  // Check if the address is valid.
         auto task = context.task;
 
         std::uint64_t page_cnt = calc_unmap_page_cnt(
@@ -287,7 +287,7 @@ private:
         return reinterpret_cast<void*>(task->address_space->brk);
     }
 
-    static void* brk_shrink(SyscallHandler::Context context, void* addr) {
+    static void* shrink(SyscallHandler::Context context, void* addr) {
         auto task = context.task;
 
         // Calculate the number of pages to shrink.
@@ -340,8 +340,8 @@ private:
     }
 
 public:
-    static std::uint64_t handle_brk(SyscallHandler::Context context,
-                                    std::array<std::uint64_t, 6> args) {
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
         void* addr = reinterpret_cast<void*>(args[0]);
 
         auto task = context.task;
@@ -352,10 +352,10 @@ public:
         auto brk = task->address_space->brk;
         if (reinterpret_cast<uint64_t>(addr) > brk) {
             return reinterpret_cast<std::uint64_t>(
-                SysBrkHandler::brk_expand(context, addr));
+                SysBrkHandler::expand(context, addr));
         } else if (reinterpret_cast<uint64_t>(addr) < brk) {
             return reinterpret_cast<std::uint64_t>(
-                SysBrkHandler::brk_shrink(context, addr));
+                SysBrkHandler::shrink(context, addr));
         } else {
             return brk;
         }
@@ -545,7 +545,7 @@ std::uint64_t SyscallHandler::dispatch(Context context,
             ret = SysMprotectHandler::handle(context, args);
             break;
         case SYS_brk:
-            ret = SysBrkHandler::handle_brk(context, args);
+            ret = SysBrkHandler::handle(context, args);
             break;
         case SYS_clone:
             ret = SysCloneHandler::handle(context, args);
