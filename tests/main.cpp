@@ -455,7 +455,8 @@ TEST_CASE("Test VM", "[vm]") {
             REQUIRE(parent->tgid == child->tgid);
             REQUIRE(child->parent.lock() == parent);
             REQUIRE(child->children.empty());
-            REQUIRE(child->stack_bottom == args[1]);
+            REQUIRE(child->stack_bottom == parent->stack_bottom);
+            REQUIRE(child->stack_top == parent->stack_top);
             REQUIRE((parent->address_space->start_brk ==
                          child->address_space->start_brk &&
                      parent->address_space->brk == child->address_space->brk));
