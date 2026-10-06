@@ -408,10 +408,6 @@ public:
         if (err != UC_ERR_OK) {
             return -ENOMEM;
         }
-        err = ::uc_context_reg_write(ctx, UC_X86_REG_RIP, &parent_tid);
-        if (err != UC_ERR_OK) {
-            return -ENOMEM;
-        }
 
         // Create task.
         auto task = std::make_shared<vlinux::Task>(ctx);
