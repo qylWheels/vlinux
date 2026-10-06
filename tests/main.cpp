@@ -442,7 +442,6 @@ TEST_CASE("Test VM", "[vm]") {
                 return;
             }
 
-            REQUIRE(ret == 0);
             auto parent = task;
             auto child_pid = static_cast<std::int64_t>(ret);
             REQUIRE(child_pid > 0);
