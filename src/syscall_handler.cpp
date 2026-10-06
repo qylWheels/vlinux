@@ -372,8 +372,8 @@ public:
     SysCloneHandler& operator=(SysCloneHandler&&) = delete;
 
 public:
-    std::uint64_t handle(SyscallHandler::Context context,
-                         std::array<std::uint64_t, 6> args) {
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
         auto fn_addr = args[0];
         auto stack_addr = args[1];
         auto flags = args[2];
@@ -548,7 +548,7 @@ std::uint64_t SyscallHandler::dispatch(Context context,
             ret = this->impl_->sys_brk_handler_.handle_brk(context, args);
             break;
         case SYS_clone:
-            ret = this->impl_->sys_clone_handler_.handle(context, args);
+            ret = SysCloneHandler::handle(context, args);
             break;
         case SYS_fork:
             ret = this->impl_->sys_fork_handler_.handle(context, args);
