@@ -508,9 +508,9 @@ public:
     SysForkHandler& operator=(SysForkHandler&&) = delete;
 
 public:
-    std::uint64_t handle(SyscallHandler::Context context,
-                         std::array<std::uint64_t, 6> args) {
-        return -ENOSYS;
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        return SysCloneHandler::handle(context, {0, 0, 0, 0, 0, 0});
     }
 };
 
@@ -559,7 +559,7 @@ std::uint64_t SyscallHandler::dispatch(Context context,
             ret = SysCloneHandler::handle(context, args);
             break;
         case SYS_fork:
-            ret = this->impl_->sys_fork_handler_.handle(context, args);
+            ret = SysForkHandler::handle(context, args);
             break;
         default:
             ret = -ENOSYS;
