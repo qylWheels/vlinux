@@ -430,10 +430,10 @@ public:
         task->children = {};
         parent->children.push_back(task);
         task->state = Task::State::Ready;
-        // No need to set stack_bottom and stack_top for now,
-        // just do it like fork().
-        // task->stack_bottom = stack_addr;
-        // task->stack_top = stack_addr;
+        // No need to set seperate stack_bottom and stack_top for now,
+        // just keep it same as parent process.
+        task->stack_bottom = parent->stack_bottom;
+        task->stack_top = parent->stack_top;
         task->address_space = std::make_shared<mm::VirtualMemoryAddressSpace>(
             *parent->address_space);
         task->address_space->vpages = {};
