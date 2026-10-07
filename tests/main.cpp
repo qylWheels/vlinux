@@ -547,4 +547,34 @@ TEST_CASE("Test VM", "[vm]") {
                        std::chrono::milliseconds(10))
                     .has_value());
     }
+
+    SECTION("Test getpid() and getppid()") {
+        auto task =
+            vm.load(build_path / "tests/syscall_tests/test_getpid_getppid")
+                .value();
+
+        int parent_pid = -1, child_ppid = -1;
+        auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                              std::array<std::uint64_t, 6> args,
+                                              std::uint64_t ret) {
+            if (syscall_id != SYS_getpid && syscall_id != SYS_getppid) {
+                return;
+            }
+
+            if (syscall_id == SYS_getpid) {
+                parent_pid = static_cast<int>(ret);
+            } else if (syscall_id == SYS_getppid) {
+                child_ppid = static_cast<int>(ret);
+            }
+        });
+        REQUIRE(result.has_value());
+
+        REQUIRE(vm.run(std::chrono::milliseconds(100),
+                       std::chrono::milliseconds(10))
+                    .has_value());
+
+        REQUIRE(parent_pid != -1);
+        REQUIRE(child_ppid != -1);
+        REQUIRE(parent_pid == child_ppid);
+    }
 }
