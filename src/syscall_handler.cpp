@@ -404,13 +404,26 @@ public:
         }
 
         // Setup task context to ensure it is same as parent process.
-        // Except RAX, it must be set to 0 in child process.
+        // Except:
+        // - RAX, it must be set to 0 in child process.
+        // - RIP, it must be set to current RIP + 2. (2 is the size of syscall
+        // instruction)
         err = ::uc_context_save(context.uc, ctx);
         if (err != UC_ERR_OK) {
             return -ENOMEM;
         }
         std::uint64_t zero = 0;
         err = ::uc_context_reg_write(ctx, UC_X86_REG_RAX, &zero);
+        if (err != UC_ERR_OK) {
+            return -ENOMEM;
+        }
+        std::uint64_t rip = 0;
+        err = ::uc_context_reg_read(ctx, UC_X86_REG_RIP, &rip);
+        if (err != UC_ERR_OK) {
+            return -ENOMEM;
+        }
+        rip += 2;
+        err = ::uc_context_reg_write(ctx, UC_X86_REG_RIP, &rip);
         if (err != UC_ERR_OK) {
             return -ENOMEM;
         }
