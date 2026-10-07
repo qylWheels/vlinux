@@ -37,6 +37,11 @@ public:
 class IFile {
 public:
     ~IFile() = default;
+
+public:
+    virtual std::uint64_t refcount() const = 0;
+    virtual std::uint64_t flags() const = 0;
+    virtual std::int64_t offset() const = 0;
 };
 
 class VFS {
