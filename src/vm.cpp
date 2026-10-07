@@ -255,6 +255,7 @@ public:
         auto task = self->scheduler_->current_task();
         std::uint64_t ret = self->syscall_handler_.dispatch(
             {self->uc_, &self->pid_manager_, self->scheduler_, task, self->ppa_,
+             &self->tasks_,
              [self](uc_context* ctx) -> outcome::result<void> {
                  return self->register_context(ctx);
              }},
