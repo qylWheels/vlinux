@@ -546,6 +546,9 @@ public:
             }
         }
 
+        // Set exit status.
+        task->exit_status = args[0];
+
         // Set task state to Zombie.
         task->state = Task::State::Zombie;
 
