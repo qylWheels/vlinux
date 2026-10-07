@@ -34,6 +34,6 @@ public:
     VFS& operator=(VFS&&) = delete;
 
 private:
-    std::vector<std::unique_ptr<ISuperBlock>> super_blocks_;
+    std::vector<std::shared_ptr<ISuperBlock>> super_blocks_;
 };
 }  // namespace vlinux
