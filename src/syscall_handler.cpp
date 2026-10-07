@@ -574,6 +574,22 @@ public:
     }
 };
 
+class SysGetpidHandler {
+public:
+    SysGetpidHandler() = default;
+    ~SysGetpidHandler() = default;
+    SysGetpidHandler(const SysGetpidHandler&) = delete;
+    SysGetpidHandler& operator=(const SysGetpidHandler&) = delete;
+    SysGetpidHandler(SysGetpidHandler&&) = delete;
+    SysGetpidHandler& operator=(SysGetpidHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        return context.scheduler->current_task()->pid;
+    }
+};
+
 class SyscallHandler::Impl {
 public:
     Impl() = default;
@@ -615,6 +631,9 @@ std::uint64_t SyscallHandler::dispatch(Context context,
             break;
         case SYS_exit:
             ret = SysExitHandler::handle(context, args);
+            break;
+        case SYS_getpid:
+            ret = SysGetpidHandler::handle(context, args);
             break;
         default:
             ret = -ENOSYS;
