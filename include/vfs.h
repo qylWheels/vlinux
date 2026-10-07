@@ -21,6 +21,12 @@ public:
 class IINode {
 public:
     ~IINode() = default;
+
+public:
+    virtual std::uint64_t mem_refcount() const = 0;
+    virtual std::uint64_t disk_refcount() const = 0;
+    virtual std::uint64_t mode() const = 0;
+    virtual std::weak_ptr<ISuperBlock> super_block() const = 0;
 };
 
 class IDEntry {
