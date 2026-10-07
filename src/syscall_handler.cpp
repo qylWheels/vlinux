@@ -610,6 +610,9 @@ std::uint64_t SyscallHandler::dispatch(Context context,
         case SYS_fork:
             ret = SysForkHandler::handle(context, args);
             break;
+        case SYS_exit:
+            ret = SysExitHandler::handle(context, args);
+            break;
         default:
             ret = -ENOSYS;
             break;
