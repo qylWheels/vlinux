@@ -526,7 +526,45 @@ public:
 public:
     static std::uint64_t handle(SyscallHandler::Context context,
                                 std::array<std::uint64_t, 6> args) {
-        return -ENOSYS;
+        auto task = context.scheduler->current_task();
+        // Exit() is not allowed for idle and init process.
+        if (task->pid == 0 || task->pid == 1) {
+            std::abort();
+        }
+
+        // Remove it from scheduler.
+        auto remove_result = context.scheduler->remove_task_running(task);
+        if (!remove_result) {
+            std::abort();
+        }
+
+        // Free physical pages.
+        for (auto& vdesc : task->address_space->vpages) {
+            auto ppage = task->page_table->vdesc_to_pdesc(vdesc);
+            if (ppage.has_value()) {
+                (void)context.ppa->free(ppage.value());
+            }
+        }
+
+        // Set task state to Zombie.
+        task->state = Task::State::Zombie;
+
+        // Entrust child processes to init.
+        auto init = std::find_if(
+            context.tasks->begin(), context.tasks->end(),
+            [](const std::shared_ptr<Task>& t) { return t->pid == 1; });
+        if (init == context.tasks->end()) {
+            std::abort();  // Unreachable.
+        }
+        for (auto& child : task->children) {
+            child->parent = *init;
+            (*init)->children.push_back(child);
+        }
+
+        // TODO: Wake up parent process who called wait().
+
+        // Actually, the task never returns.
+        return 0;
     }
 };
 
