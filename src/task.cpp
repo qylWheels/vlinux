@@ -36,6 +36,11 @@ outcome::result<void> Scheduler::remove_task(std::shared_ptr<Task> task) {
         return std::errc::device_or_resource_busy;
     }
 
+    return this->remove_task_running(task);
+}
+
+outcome::result<void> Scheduler::remove_task_running(
+    std::shared_ptr<Task> task) {
     auto set_it = this->ready_task_set_.find(task);
     if (set_it == this->ready_task_set_.end()) {
         return std::errc::no_such_file_or_directory;
