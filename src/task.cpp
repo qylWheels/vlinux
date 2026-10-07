@@ -134,8 +134,11 @@ outcome::result<void> Scheduler::start_schedule(
             return make_error_code(err);
         }
 
-        // Time slice ran out, set the task to ready state.
-        task->state = Task::State::Ready;
+        // Time slice ran out, set the task to ready state
+        // if it is not a zombie.
+        if (task->state != Task::State::Zombie) {
+            task->state = Task::State::Ready;
+        }
 
         // Remove hook.
         err = ::uc_hook_del(this->uc_, this->tlb_fill_hook_);
@@ -144,15 +147,19 @@ outcome::result<void> Scheduler::start_schedule(
             return make_error_code(err);
         }
 
-        // Save context.
-        err = ::uc_context_save(this->uc_, task->ctx);
-        if (err != UC_ERR_OK) {
-            this->status_ = Status::Stopped;
-            return make_error_code(err);
+        // Save context if it is not a zombie.
+        if (task->state != Task::State::Zombie) {
+            err = ::uc_context_save(this->uc_, task->ctx);
+            if (err != UC_ERR_OK) {
+                this->status_ = Status::Stopped;
+                return make_error_code(err);
+            }
         }
 
-        // Add the task back to the ready queue.
-        this->ready_task_queue_.push_back(task);
+        // Add the task back to the ready queue if it is not a zombie.
+        if (task->state != Task::State::Zombie) {
+            this->ready_task_queue_.push_back(task);
+        }
     }
 
     // Set status to stopped.
