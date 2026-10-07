@@ -534,6 +534,7 @@ TEST_CASE("Test VM", "[vm]") {
                 return;
             }
 
+            REQUIRE(!task->children.empty());
             for (auto &childs : task->children) {
                 REQUIRE(childs->parent.lock()->pid == 1);
             }
