@@ -32,6 +32,13 @@ public:
 class IDEntry {
 public:
     ~IDEntry() = default;
+
+public:
+    virtual IDEntry* parent() const = 0;
+    virtual std::string name() const = 0;
+    virtual IINode* inode() const = 0;
+    virtual std::shared_ptr<ISuperBlock> super_block() const = 0;
+    virtual std::vector<IDEntry*> subdirs() const = 0;
 };
 
 class IFile {
