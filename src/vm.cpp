@@ -80,11 +80,7 @@ public:
         };
         this->task_initializer_.add_task_ctx_to_context_manager =
             [this](uc_context* ctx) -> outcome::result<void> {
-            auto [it, inserted] = this->contexts_.insert(ctx);
-            if (!inserted) {
-                return std::errc::file_exists;
-            }
-            return outcome::success();
+            return this->register_context(ctx);
         };
         this->task_initializer_.create_task =
             [this](uc_context* ctx) -> outcome::result<std::shared_ptr<Task>> {
@@ -221,6 +217,15 @@ public:
     }
 
 public:
+    outcome::result<void> register_context(uc_context* ctx) {
+        auto [it, inserted] = this->contexts_.insert(ctx);
+        if (!inserted) {
+            return std::errc::file_exists;
+        }
+        return outcome::success();
+    }
+
+public:
     static void syscall_hook_callback(uc_engine* engine, void* user_data) {
         Impl* self = reinterpret_cast<Impl*>(user_data);
         std::uint64_t syscall_number;
@@ -249,7 +254,12 @@ public:
         // Dispatch.
         auto task = self->scheduler_->current_task();
         std::uint64_t ret = self->syscall_handler_.dispatch(
-            {self->uc_, task, self->ppa_}, syscall_number, std::to_array(args));
+            {self->uc_, &self->pid_manager_, self->scheduler_, task, self->ppa_,
+             &self->tasks_,
+             [self](uc_context* ctx) -> outcome::result<void> {
+                 return self->register_context(ctx);
+             }},
+            syscall_number, std::to_array(args));
 
         // Write return value back to RAX.
         err = uc_reg_write(engine, UC_X86_REG_RAX, &ret);

@@ -16,6 +16,10 @@ outcome::result<void> Scheduler::add_task(std::shared_ptr<Task> task) {
         return std::errc::device_or_resource_busy;
     }
 
+    return this->add_task_running(task);
+}
+
+outcome::result<void> Scheduler::add_task_running(std::shared_ptr<Task> task) {
     auto it = this->ready_task_set_.find(task);
     if (it != this->ready_task_set_.end()) {
         return std::errc::file_exists;
@@ -32,6 +36,11 @@ outcome::result<void> Scheduler::remove_task(std::shared_ptr<Task> task) {
         return std::errc::device_or_resource_busy;
     }
 
+    return this->remove_task_running(task);
+}
+
+outcome::result<void> Scheduler::remove_task_running(
+    std::shared_ptr<Task> task) {
     auto set_it = this->ready_task_set_.find(task);
     if (set_it == this->ready_task_set_.end()) {
         return std::errc::no_such_file_or_directory;
@@ -125,8 +134,11 @@ outcome::result<void> Scheduler::start_schedule(
             return make_error_code(err);
         }
 
-        // Time slice ran out, set the task to ready state.
-        task->state = Task::State::Ready;
+        // Time slice ran out, set the task to ready state
+        // if it is not a zombie.
+        if (task->state != Task::State::Zombie) {
+            task->state = Task::State::Ready;
+        }
 
         // Remove hook.
         err = ::uc_hook_del(this->uc_, this->tlb_fill_hook_);
@@ -135,15 +147,19 @@ outcome::result<void> Scheduler::start_schedule(
             return make_error_code(err);
         }
 
-        // Save context.
-        err = ::uc_context_save(this->uc_, task->ctx);
-        if (err != UC_ERR_OK) {
-            this->status_ = Status::Stopped;
-            return make_error_code(err);
+        // Save context if it is not a zombie.
+        if (task->state != Task::State::Zombie) {
+            err = ::uc_context_save(this->uc_, task->ctx);
+            if (err != UC_ERR_OK) {
+                this->status_ = Status::Stopped;
+                return make_error_code(err);
+            }
         }
 
-        // Add the task back to the ready queue.
-        this->ready_task_queue_.push_back(task);
+        // Add the task back to the ready queue if it is not a zombie.
+        if (task->state != Task::State::Zombie) {
+            this->ready_task_queue_.push_back(task);
+        }
     }
 
     // Set status to stopped.

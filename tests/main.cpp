@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <filesystem>
+#include <memory>
 #include <ranges>
 #include <thread>
 
@@ -428,5 +429,152 @@ TEST_CASE("Test VM", "[vm]") {
         REQUIRE(vm.run(std::chrono::milliseconds(100),
                        std::chrono::milliseconds(10))
                     .has_value());
+    }
+
+    SECTION("Test clone()") {
+        auto task =
+            vm.load(build_path / "tests/syscall_tests/test_clone").value();
+
+        auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                              std::array<std::uint64_t, 6> args,
+                                              std::uint64_t ret) {
+            if (syscall_id != SYS_clone) {
+                return;
+            }
+
+            auto parent = task;
+            auto child_pid = static_cast<std::int64_t>(ret);
+            REQUIRE(child_pid > 0);
+            auto child_it =
+                std::find_if(task->children.begin(), task->children.end(),
+                             [&](auto t) { return t->pid == child_pid; });
+            REQUIRE(child_it != task->children.end());
+            auto child = *child_it;
+            REQUIRE(parent->name == child->name);
+            REQUIRE(parent->pid != child->pid);
+            REQUIRE(parent->tgid == child->tgid);
+            REQUIRE(child->parent.lock() == parent);
+            REQUIRE(child->children.empty());
+            REQUIRE(child->stack_bottom == parent->stack_bottom);
+            REQUIRE(child->stack_top == parent->stack_top);
+            REQUIRE((parent->address_space->start_brk ==
+                         child->address_space->start_brk &&
+                     parent->address_space->brk == child->address_space->brk));
+            REQUIRE(
+                (parent->address_space->start_mmap ==
+                     child->address_space->start_mmap &&
+                 parent->address_space->mmap == child->address_space->mmap));
+            REQUIRE(parent->address_space->vpages.size() ==
+                    child->address_space->vpages.size());
+            REQUIRE(parent->page_table->all_maps().size() ==
+                    child->page_table->all_maps().size());
+            REQUIRE(child->syscalls.empty());
+        });
+        REQUIRE(result.has_value());
+
+        REQUIRE(vm.run(std::chrono::milliseconds(100),
+                       std::chrono::milliseconds(10))
+                    .has_value());
+    }
+
+    SECTION("Test fork()") {
+        auto task =
+            vm.load(build_path / "tests/syscall_tests/test_fork").value();
+
+        auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                              std::array<std::uint64_t, 6> args,
+                                              std::uint64_t ret) {
+            if (syscall_id != SYS_fork) {
+                return;
+            }
+
+            auto parent = task;
+            auto child_pid = static_cast<std::int64_t>(ret);
+            REQUIRE(child_pid > 0);
+            auto child_it =
+                std::find_if(task->children.begin(), task->children.end(),
+                             [&](auto t) { return t->pid == child_pid; });
+            REQUIRE(child_it != task->children.end());
+            auto child = *child_it;
+            REQUIRE(parent->name == child->name);
+            REQUIRE(parent->pid != child->pid);
+            REQUIRE(parent->tgid == child->tgid);
+            REQUIRE(child->parent.lock() == parent);
+            REQUIRE(child->children.empty());
+            REQUIRE(child->stack_bottom == parent->stack_bottom);
+            REQUIRE(child->stack_top == parent->stack_top);
+            REQUIRE((parent->address_space->start_brk ==
+                         child->address_space->start_brk &&
+                     parent->address_space->brk == child->address_space->brk));
+            REQUIRE(
+                (parent->address_space->start_mmap ==
+                     child->address_space->start_mmap &&
+                 parent->address_space->mmap == child->address_space->mmap));
+            REQUIRE(parent->address_space->vpages.size() ==
+                    child->address_space->vpages.size());
+            REQUIRE(parent->page_table->all_maps().size() ==
+                    child->page_table->all_maps().size());
+            REQUIRE(child->syscalls.empty());
+        });
+        REQUIRE(result.has_value());
+
+        REQUIRE(vm.run(std::chrono::milliseconds(100),
+                       std::chrono::milliseconds(10))
+                    .has_value());
+    }
+
+    SECTION("Test exit()") {
+        auto task =
+            vm.load(build_path / "tests/syscall_tests/test_exit").value();
+
+        auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                              std::array<std::uint64_t, 6> args,
+                                              std::uint64_t ret) {
+            if (syscall_id != SYS_exit) {
+                return;
+            }
+
+            REQUIRE(!task->children.empty());
+            for (auto &childs : task->children) {
+                REQUIRE(childs->parent.lock()->pid == 1);
+            }
+            REQUIRE(task->exit_status == static_cast<int>(args[0]));
+            REQUIRE(task->state == vlinux::Task::State::Zombie);
+        });
+        REQUIRE(result.has_value());
+
+        REQUIRE(vm.run(std::chrono::milliseconds(100),
+                       std::chrono::milliseconds(10))
+                    .has_value());
+    }
+
+    SECTION("Test getpid() and getppid()") {
+        auto task =
+            vm.load(build_path / "tests/syscall_tests/test_getpid_getppid")
+                .value();
+
+        int parent_pid = -1, child_ppid = -1;
+        auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                              std::array<std::uint64_t, 6> args,
+                                              std::uint64_t ret) {
+            if (syscall_id != SYS_getpid && syscall_id != SYS_getppid) {
+                return;
+            }
+
+            if (syscall_id == SYS_getpid) {
+                parent_pid = static_cast<int>(ret);
+            } else if (syscall_id == SYS_getppid) {
+                child_ppid = static_cast<int>(ret);
+            }
+        });
+        REQUIRE(result.has_value());
+
+        REQUIRE(vm.run(std::chrono::milliseconds(100),
+                       std::chrono::milliseconds(10))
+                    .has_value());
+
+        REQUIRE(parent_pid != -1);
+        REQUIRE(child_ppid != -1);
+        REQUIRE(parent_pid == child_ppid);
     }
 }

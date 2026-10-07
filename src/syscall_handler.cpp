@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cerrno>
 #include <cstddef>
 #include <cstdlib>
 #include <functional>
@@ -37,8 +38,8 @@ public:
     SysMmapHandler& operator=(SysMmapHandler&&) = delete;
 
 public:
-    std::uint64_t handle(SyscallHandler::Context ctx,
-                         std::array<std::uint64_t, 6> args) {
+    static std::uint64_t handle(SyscallHandler::Context ctx,
+                                std::array<std::uint64_t, 6> args) {
         auto task = ctx.task;
         auto ppa = ctx.ppa;
 
@@ -120,8 +121,8 @@ public:
     SysMunmapHandler& operator=(SysMunmapHandler&&) = delete;
 
 public:
-    std::uint64_t handle(SyscallHandler::Context ctx,
-                         std::array<std::uint64_t, 6> args) {
+    static std::uint64_t handle(SyscallHandler::Context ctx,
+                                std::array<std::uint64_t, 6> args) {
         std::uint64_t start = args[0], len = args[1], end = start + len;
         if (start % mm::PAGE_SIZE != 0) return -EINVAL;
 
@@ -159,8 +160,8 @@ public:
     SysMprotectHandler& operator=(SysMprotectHandler&&) = delete;
 
 public:
-    std::uint64_t handle(SyscallHandler::Context ctx,
-                         std::array<std::uint64_t, 6> args) {
+    static std::uint64_t handle(SyscallHandler::Context ctx,
+                                std::array<std::uint64_t, 6> args) {
         auto task = ctx.task;
 
         void* addr = reinterpret_cast<void*>(args[0]);
@@ -223,8 +224,8 @@ public:
     ~SysBrkHandler() = default;
 
 private:
-    void* brk_expand(SyscallHandler::Context context,
-                     void* addr) {  // Check if the address is valid.
+    static void* expand(SyscallHandler::Context context,
+                        void* addr) {  // Check if the address is valid.
         auto task = context.task;
 
         std::uint64_t page_cnt = calc_unmap_page_cnt(
@@ -235,7 +236,7 @@ private:
         std::vector<std::shared_ptr<mm::PhysicalPageDescriptor>> pdescs;
         std::vector<std::shared_ptr<mm::VirtualPageDescriptor>> vdescs;
         // Cleanup function.
-        auto cleanup = [this, &task, &pdescs, &vdescs, &context]() {
+        auto cleanup = [&task, &pdescs, &vdescs, &context]() {
             // Clean up page table.
             for (auto vdesc : vdescs) {
                 (void)task->page_table->unmap(vdesc);
@@ -286,7 +287,7 @@ private:
         return reinterpret_cast<void*>(task->address_space->brk);
     }
 
-    void* brk_shrink(SyscallHandler::Context context, void* addr) {
+    static void* shrink(SyscallHandler::Context context, void* addr) {
         auto task = context.task;
 
         // Calculate the number of pages to shrink.
@@ -339,8 +340,8 @@ private:
     }
 
 public:
-    std::uint64_t handle_brk(SyscallHandler::Context context,
-                             std::array<std::uint64_t, 6> args) {
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
         void* addr = reinterpret_cast<void*>(args[0]);
 
         auto task = context.task;
@@ -351,13 +352,270 @@ public:
         auto brk = task->address_space->brk;
         if (reinterpret_cast<uint64_t>(addr) > brk) {
             return reinterpret_cast<std::uint64_t>(
-                this->brk_expand(context, addr));
+                SysBrkHandler::expand(context, addr));
         } else if (reinterpret_cast<uint64_t>(addr) < brk) {
             return reinterpret_cast<std::uint64_t>(
-                this->brk_shrink(context, addr));
+                SysBrkHandler::shrink(context, addr));
         } else {
             return brk;
         }
+    }
+};
+
+class SysCloneHandler {
+public:
+    SysCloneHandler() = default;
+    ~SysCloneHandler() = default;
+    SysCloneHandler(const SysCloneHandler&) = delete;
+    SysCloneHandler& operator=(const SysCloneHandler&) = delete;
+    SysCloneHandler(SysCloneHandler&&) = delete;
+    SysCloneHandler& operator=(SysCloneHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        auto flags = args[0];
+        auto stack_addr = args[1];
+        auto parent_tid = args[2];
+        auto child_tid = args[3];
+        auto tls = args[4];
+
+        if (flags != 0) return -EINVAL;  // Only support flags = 0 for now.
+        if (stack_addr != 0)
+            return -EINVAL;  // Only support stack_addr = 0 for now.
+        if (parent_tid != 0)
+            return -EINVAL;  // Only support parent_tid = 0 for now.
+        if (child_tid != 0)
+            return -EINVAL;            // Only support child_tid = 0 for now.
+        if (tls != 0) return -EINVAL;  // Only support tls = 0 for now.
+
+        // Create task context.
+        uc_err err;
+        uc_context* ctx = nullptr;
+        err = ::uc_context_alloc(context.uc, &ctx);
+        if (err != UC_ERR_OK) {
+            return -ENOMEM;
+        }
+
+        // Hand the context over to the VM.
+        if (!context.reg_ctx_in_vm(ctx)) {
+            ::uc_context_free(ctx);
+            return -ENOMEM;
+        }
+
+        // Setup task context to ensure it is same as parent process.
+        // Except:
+        // - RAX, it must be set to 0 in child process.
+        // - RIP, it must be set to current RIP + 2. (2 is the size of syscall
+        // instruction)
+        err = ::uc_context_save(context.uc, ctx);
+        if (err != UC_ERR_OK) {
+            return -ENOMEM;
+        }
+        std::uint64_t zero = 0;
+        err = ::uc_context_reg_write(ctx, UC_X86_REG_RAX, &zero);
+        if (err != UC_ERR_OK) {
+            return -ENOMEM;
+        }
+        std::uint64_t rip = 0;
+        err = ::uc_context_reg_read(ctx, UC_X86_REG_RIP, &rip);
+        if (err != UC_ERR_OK) {
+            return -ENOMEM;
+        }
+        rip += 2;
+        err = ::uc_context_reg_write(ctx, UC_X86_REG_RIP, &rip);
+        if (err != UC_ERR_OK) {
+            return -ENOMEM;
+        }
+
+        // Create task.
+        auto task = std::make_shared<vlinux::Task>(ctx);
+
+        // Setup task.
+        auto parent = context.scheduler->current_task();
+        task->name = parent->name;
+        task->root_task = false;
+        auto pid_result = context.pid_manager->alloc_pid();
+        if (!pid_result) {
+            return -EAGAIN;
+        }
+        task->pid = pid_result.value();
+        task->tgid = parent->tgid;
+        task->parent = parent;
+        task->children = {};
+        parent->children.push_back(task);
+        task->state = Task::State::Ready;
+        // No need to set seperate stack_bottom and stack_top for now,
+        // just keep it same as parent process.
+        task->stack_bottom = parent->stack_bottom;
+        task->stack_top = parent->stack_top;
+        task->address_space = std::make_shared<mm::VirtualMemoryAddressSpace>(
+            *parent->address_space);
+        task->address_space->vpages = {};
+        task->page_table = std::make_shared<mm::PageTable>();
+        std::vector<std::shared_ptr<mm::PhysicalPageDescriptor>> alloced_ppages;
+        auto cleanup = [&]() {
+            for (auto alloced_ppage : alloced_ppages) {
+                (void)context.ppa->free(alloced_ppage);
+            }
+        };
+        for (auto& vdesc : parent->address_space->vpages) {
+            auto child_vdesc =
+                std::make_shared<mm::VirtualPageDescriptor>(*vdesc);
+            task->address_space->vpages.insert(child_vdesc);
+            // Allocate physical page eagerly.
+            auto ppage_result = context.ppa->alloc();
+            if (!ppage_result) {
+                cleanup();
+                return -ENOMEM;
+            }
+            alloced_ppages.push_back(ppage_result.value());
+            auto map_result =
+                task->page_table->map(child_vdesc, ppage_result.value());
+            if (!map_result) {
+                cleanup();
+                return -ENOMEM;
+            }
+
+            // Copy the content of the parent's page.
+            auto parent_ppage = parent->page_table->vdesc_to_pdesc(vdesc);
+            if (parent_ppage.has_value()) {
+                std::vector<std::uint8_t> page_data(mm::PAGE_SIZE);
+                err =
+                    ::uc_mem_read(context.uc, parent_ppage.value()->start_addr,
+                                  page_data.data(), mm::PAGE_SIZE);
+                if (err != UC_ERR_OK) {
+                    cleanup();
+                    return -ENOMEM;
+                }
+                err =
+                    ::uc_mem_write(context.uc, ppage_result.value()->start_addr,
+                                   page_data.data(), mm::PAGE_SIZE);
+                if (err != UC_ERR_OK) {
+                    cleanup();
+                    return -ENOMEM;
+                }
+            }
+        }
+        task->syscalls = {};
+
+        // Add task to scheduler. clone() runs inside the scheduling loop, so
+        // the running scheduler must accept the new task.
+        auto add_result = context.scheduler->add_task_running(task);
+        if (!add_result) {
+            cleanup();
+            return -ENOMEM;
+        }
+
+        return task->pid;
+    }
+};
+
+class SysForkHandler {
+public:
+    SysForkHandler() = default;
+    ~SysForkHandler() = default;
+    SysForkHandler(const SysForkHandler&) = delete;
+    SysForkHandler& operator=(const SysForkHandler&) = delete;
+    SysForkHandler(SysForkHandler&&) = delete;
+    SysForkHandler& operator=(SysForkHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        return SysCloneHandler::handle(context, {0, 0, 0, 0, 0, 0});
+    }
+};
+
+class SysExitHandler {
+public:
+    SysExitHandler() = default;
+    ~SysExitHandler() = default;
+    SysExitHandler(const SysExitHandler&) = delete;
+    SysExitHandler& operator=(const SysExitHandler&) = delete;
+    SysExitHandler(SysExitHandler&&) = delete;
+    SysExitHandler& operator=(SysExitHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        auto task = context.scheduler->current_task();
+        // Exit() is not allowed for idle and init process.
+        if (task->pid == 0 || task->pid == 1) {
+            std::abort();
+        }
+
+        // Stop unicorn engine.
+        ::uc_emu_stop(context.uc);
+
+        // Remove it from scheduler.
+        auto remove_result = context.scheduler->remove_task_running(task);
+        if (!remove_result) {
+            std::abort();
+        }
+
+        // Free physical pages.
+        for (auto& vdesc : task->address_space->vpages) {
+            auto ppage = task->page_table->vdesc_to_pdesc(vdesc);
+            if (ppage.has_value()) {
+                (void)context.ppa->free(ppage.value());
+            }
+        }
+
+        // Set exit status.
+        task->exit_status = args[0];
+
+        // Set task state to Zombie.
+        task->state = Task::State::Zombie;
+
+        // Entrust child processes to init.
+        auto init = std::find_if(
+            context.tasks->begin(), context.tasks->end(),
+            [](const std::shared_ptr<Task>& t) { return t->pid == 1; });
+        if (init == context.tasks->end()) {
+            std::abort();  // Unreachable.
+        }
+        for (auto& child : task->children) {
+            child->parent = *init;
+            (*init)->children.push_back(child);
+        }
+
+        // TODO: Wake up parent process who called wait().
+
+        // Actually, the task never returns.
+        return 0;
+    }
+};
+
+class SysGetpidHandler {
+public:
+    SysGetpidHandler() = default;
+    ~SysGetpidHandler() = default;
+    SysGetpidHandler(const SysGetpidHandler&) = delete;
+    SysGetpidHandler& operator=(const SysGetpidHandler&) = delete;
+    SysGetpidHandler(SysGetpidHandler&&) = delete;
+    SysGetpidHandler& operator=(SysGetpidHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        return context.scheduler->current_task()->pid;
+    }
+};
+
+class SysGetppidHandler {
+public:
+    SysGetppidHandler() = default;
+    ~SysGetppidHandler() = default;
+    SysGetppidHandler(const SysGetppidHandler&) = delete;
+    SysGetppidHandler& operator=(const SysGetppidHandler&) = delete;
+    SysGetppidHandler(SysGetppidHandler&&) = delete;
+    SysGetppidHandler& operator=(SysGetppidHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        return context.scheduler->current_task()->parent.lock()->pid;
     }
 };
 
@@ -365,12 +623,6 @@ class SyscallHandler::Impl {
 public:
     Impl() = default;
     ~Impl() = default;
-
-public:
-    SysMmapHandler sys_mmap_handler_;
-    SysMunmapHandler sys_munmap_handler_;
-    SysMprotectHandler sys_mprotect_handler_;
-    SysBrkHandler sys_brk_handler_;
 
 public:  // Hooks.
     std::vector<std::function<void(std::uint64_t syscall_id,
@@ -389,16 +641,31 @@ std::uint64_t SyscallHandler::dispatch(Context context,
     std::uint64_t ret;
     switch (syscall_id) {
         case SYS_mmap:
-            ret = this->impl_->sys_mmap_handler_.handle(context, args);
+            ret = SysMmapHandler::handle(context, args);
             break;
         case SYS_munmap:
-            ret = this->impl_->sys_munmap_handler_.handle(context, args);
+            ret = SysMunmapHandler::handle(context, args);
             break;
         case SYS_mprotect:
-            ret = this->impl_->sys_mprotect_handler_.handle(context, args);
+            ret = SysMprotectHandler::handle(context, args);
             break;
         case SYS_brk:
-            ret = this->impl_->sys_brk_handler_.handle_brk(context, args);
+            ret = SysBrkHandler::handle(context, args);
+            break;
+        case SYS_clone:
+            ret = SysCloneHandler::handle(context, args);
+            break;
+        case SYS_fork:
+            ret = SysForkHandler::handle(context, args);
+            break;
+        case SYS_exit:
+            ret = SysExitHandler::handle(context, args);
+            break;
+        case SYS_getpid:
+            ret = SysGetpidHandler::handle(context, args);
+            break;
+        case SYS_getppid:
+            ret = SysGetppidHandler::handle(context, args);
             break;
         default:
             ret = -ENOSYS;
