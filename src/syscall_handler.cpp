@@ -532,6 +532,9 @@ public:
             std::abort();
         }
 
+        // Stop unicorn engine.
+        ::uc_emu_stop(context.uc);
+
         // Remove it from scheduler.
         auto remove_result = context.scheduler->remove_task_running(task);
         if (!remove_result) {
