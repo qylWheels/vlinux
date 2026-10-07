@@ -522,4 +522,25 @@ TEST_CASE("Test VM", "[vm]") {
                        std::chrono::milliseconds(10))
                     .has_value());
     }
+
+    SECTION("Test exit()") {
+        auto task =
+            vm.load(build_path / "tests/syscall_tests/test_exit").value();
+
+        auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                              std::array<std::uint64_t, 6> args,
+                                              std::uint64_t ret) {
+            if (syscall_id != SYS_exit) {
+                return;
+            }
+
+            REQUIRE(task->exit_status == static_cast<int>(args[0]));
+            REQUIRE(task->state == vlinux::Task::State::Zombie);
+        });
+        REQUIRE(result.has_value());
+
+        REQUIRE(vm.run(std::chrono::milliseconds(100),
+                       std::chrono::milliseconds(10))
+                    .has_value());
+    }
 }
