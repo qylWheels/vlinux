@@ -15,7 +15,7 @@ public:
 public:
     virtual std::size_t block_size() const = 0;
     virtual std::uint64_t magic() const = 0;
-    virtual IDEntry* root_dentry() const = 0;
+    virtual std::shared_ptr<IDEntry> root_dentry() const = 0;
 };
 
 class IINode {
@@ -26,7 +26,7 @@ public:
     virtual std::uint64_t mem_refcount() const = 0;
     virtual std::uint64_t disk_refcount() const = 0;
     virtual std::uint64_t mode() const = 0;
-    virtual std::weak_ptr<ISuperBlock> super_block() const = 0;
+    virtual std::shared_ptr<ISuperBlock> super_block() const = 0;
 };
 
 class IDEntry {
@@ -34,11 +34,11 @@ public:
     ~IDEntry() = default;
 
 public:
-    virtual IDEntry* parent() const = 0;
+    virtual std::shared_ptr<IDEntry> parent() const = 0;
     virtual std::string name() const = 0;
-    virtual IINode* inode() const = 0;
+    virtual std::shared_ptr<IINode> inode() const = 0;
     virtual std::shared_ptr<ISuperBlock> super_block() const = 0;
-    virtual std::vector<IDEntry*> subdirs() const = 0;
+    virtual std::vector<std::shared_ptr<IDEntry>> subdirs() const = 0;
 };
 
 class IFile {
