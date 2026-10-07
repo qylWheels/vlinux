@@ -534,6 +534,9 @@ TEST_CASE("Test VM", "[vm]") {
                 return;
             }
 
+            for (auto &childs : task->children) {
+                REQUIRE(childs->parent.lock()->pid == 1);
+            }
             REQUIRE(task->exit_status == static_cast<int>(args[0]));
             REQUIRE(task->state == vlinux::Task::State::Zombie);
         });
