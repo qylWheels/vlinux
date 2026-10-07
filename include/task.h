@@ -73,6 +73,7 @@ public:
         Ready,
         Running,
         Waiting,  // Waiting for I/O completion.
+        Zombie,
         Stopped,
     };
 
