@@ -514,6 +514,22 @@ public:
     }
 };
 
+class SysExitHandler {
+public:
+    SysExitHandler() = default;
+    ~SysExitHandler() = default;
+    SysExitHandler(const SysExitHandler&) = delete;
+    SysExitHandler& operator=(const SysExitHandler&) = delete;
+    SysExitHandler(SysExitHandler&&) = delete;
+    SysExitHandler& operator=(SysExitHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        return -ENOSYS;
+    }
+};
+
 class SyscallHandler::Impl {
 public:
     Impl() = default;
