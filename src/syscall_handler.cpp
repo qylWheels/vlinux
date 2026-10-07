@@ -590,6 +590,22 @@ public:
     }
 };
 
+class SysGetppidHandler {
+public:
+    SysGetppidHandler() = default;
+    ~SysGetppidHandler() = default;
+    SysGetppidHandler(const SysGetppidHandler&) = delete;
+    SysGetppidHandler& operator=(const SysGetppidHandler&) = delete;
+    SysGetppidHandler(SysGetppidHandler&&) = delete;
+    SysGetppidHandler& operator=(SysGetppidHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        return context.scheduler->current_task()->parent.lock()->pid;
+    }
+};
+
 class SyscallHandler::Impl {
 public:
     Impl() = default;
@@ -634,6 +650,9 @@ std::uint64_t SyscallHandler::dispatch(Context context,
             break;
         case SYS_getpid:
             ret = SysGetpidHandler::handle(context, args);
+            break;
+        case SYS_getppid:
+            ret = SysGetppidHandler::handle(context, args);
             break;
         default:
             ret = -ENOSYS;
