@@ -66,7 +66,6 @@ public:
     File& operator=(File&&) = delete;
 
 public:  // Operations.
-         //
     // References.
     virtual std::int64_t get();
     virtual std::int64_t put();
