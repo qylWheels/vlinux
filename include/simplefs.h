@@ -34,7 +34,7 @@ public:
 
 public:
     virtual std::uint64_t mem_refcount() const;
-    virtual std::uint64_t disk_refcount() const;
+    virtual std::uint64_t disk_refcount() const { return 0; }
     virtual std::uint64_t mode() const;
     virtual std::shared_ptr<ISuperBlock> super_block() const;
 };
