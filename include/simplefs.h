@@ -67,21 +67,21 @@ public:
 
 public:  // Operations.
     // References.
-    virtual std::int64_t get() override;
-    virtual std::int64_t put() override;
+    virtual outcome::result<void> get() override;
+    virtual outcome::result<void> put() override;
     virtual std::uint64_t refcount() const override;
 
     // Flags.
-    virtual void set_flags(std::uint64_t flags) override;
+    virtual outcome::result<void> set_flags(std::uint64_t flags) override;
     virtual std::uint64_t flags() const override;
 
     // Offset.
-    virtual std::int64_t lseek(std::int64_t offset) override;
-    virtual std::int64_t offset() const override;
+    virtual outcome::result<void> set_offset(std::uint64_t offset) override;
+    virtual std::uint64_t offset() const override;
 
     virtual std::shared_ptr<IINode> inode() const override;
-    virtual std::int64_t iov_read(std::vector<IoVector> iov) override;
-    virtual std::int64_t iov_write(std::vector<IoVector> iov) override;
+    virtual outcome::result<void> iov_read(std::vector<IoVector> iov) override;
+    virtual outcome::result<void> iov_write(std::vector<IoVector> iov) override;
 
 private:
     class Impl;
