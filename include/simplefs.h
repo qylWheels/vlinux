@@ -73,6 +73,10 @@ public:  // Operations.
     virtual std::int64_t lseek(std::int64_t offset);
     virtual std::int64_t iov_read(std::vector<IoVector> iov);
     virtual std::int64_t iov_write(std::vector<IoVector> iov);
+
+private:
+    class Impl;
+    std::unique_ptr<Impl> impl_;
 };
 }  // namespace simplefs
 }  // namespace fs
