@@ -56,13 +56,22 @@ public:
     ~IFile() = default;
 
 public:  // Operations.
-    virtual std::uint64_t refcount() const = 0;
-    virtual std::uint64_t flags() const = 0;
-    virtual std::int64_t offset() const = 0;
-    virtual std::shared_ptr<IINode> inode() const = 0;
-    virtual std::int64_t lseek(std::int64_t offset) = 0;
-    virtual std::int64_t iov_read(std::vector<IoVector> iov) = 0;
-    virtual std::int64_t iov_write(std::vector<IoVector> iov) = 0;
+    // References.
+    virtual std::int64_t get();
+    virtual std::int64_t put();
+    virtual std::uint64_t refcount() const;
+
+    // Flags.
+    virtual void set_flags(std::uint64_t flags);
+    virtual std::uint64_t flags() const;
+
+    // Offset.
+    virtual std::int64_t lseek(std::int64_t offset);
+    virtual std::int64_t offset() const;
+
+    virtual std::shared_ptr<IINode> inode() const;
+    virtual std::int64_t iov_read(std::vector<IoVector> iov);
+    virtual std::int64_t iov_write(std::vector<IoVector> iov);
 };
 
 class VFS {
