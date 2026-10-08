@@ -3,7 +3,11 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <outcome/config.hpp>
+#include <outcome/outcome.hpp>
 #include <vector>
+
+namespace outcome = OUTCOME_V2_NAMESPACE;
 
 namespace vlinux {
 class IDEntry;
@@ -57,21 +61,21 @@ public:
 
 public:  // Operations.
     // References.
-    virtual std::int64_t get();
-    virtual std::int64_t put();
+    virtual outcome::result<void> get();
+    virtual outcome::result<void> put();
     virtual std::uint64_t refcount() const;
 
     // Flags.
-    virtual void set_flags(std::uint64_t flags);
+    virtual outcome::result<void> set_flags(std::uint64_t flags);
     virtual std::uint64_t flags() const;
 
     // Offset.
-    virtual std::int64_t lseek(std::int64_t offset);
-    virtual std::int64_t offset() const;
+    virtual outcome::result<void> set_offset(std::uint64_t offset);
+    virtual std::uint64_t offset() const;
 
     virtual std::shared_ptr<IINode> inode() const;
-    virtual std::int64_t iov_read(std::vector<IoVector> iov);
-    virtual std::int64_t iov_write(std::vector<IoVector> iov);
+    virtual outcome::result<void> iov_read(std::vector<IoVector> iov);
+    virtual outcome::result<void> iov_write(std::vector<IoVector> iov);
 };
 
 class VFS {
