@@ -58,7 +58,7 @@ public:
 
 class File : public IFile {
 public:
-    File();
+    File(std::shared_ptr<Inode> inode);
     ~File();
     File(const File&) = delete;
     File& operator=(const File&) = delete;

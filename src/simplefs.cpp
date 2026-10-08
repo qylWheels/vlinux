@@ -17,7 +17,8 @@ public:
     std::shared_ptr<Inode> inode;
 };
 
-File::File() = default;
+File::File(std::shared_ptr<Inode> inode) { this->impl_->inode = inode; }
+
 File::~File() = default;
 
 outcome::result<void> File::get() {
