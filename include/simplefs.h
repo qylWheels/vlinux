@@ -65,12 +65,10 @@ public:
     File(File&&) = delete;
     File& operator=(File&&) = delete;
 
-public:
+public:  // Operations.
     virtual std::uint64_t refcount() const;
     virtual std::uint64_t flags() const;
     virtual std::int64_t offset() const;
-
-public:  // Operations.
     virtual std::int64_t lseek(std::int64_t offset);
     virtual std::int64_t iov_read(std::vector<IoVector> iov);
     virtual std::int64_t iov_write(std::vector<IoVector> iov);
