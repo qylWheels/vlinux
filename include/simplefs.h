@@ -66,11 +66,21 @@ public:
     File& operator=(File&&) = delete;
 
 public:  // Operations.
+         //
+    // References.
+    virtual std::int64_t get();
+    virtual std::int64_t put();
     virtual std::uint64_t refcount() const;
+
+    // Flags.
+    virtual void set_flags(std::uint64_t flags);
     virtual std::uint64_t flags() const;
-    virtual std::int64_t offset() const;
-    virtual std::shared_ptr<IINode> inode() const;
+
+    // Offset.
     virtual std::int64_t lseek(std::int64_t offset);
+    virtual std::int64_t offset() const;
+
+    virtual std::shared_ptr<IINode> inode() const;
     virtual std::int64_t iov_read(std::vector<IoVector> iov);
     virtual std::int64_t iov_write(std::vector<IoVector> iov);
 
