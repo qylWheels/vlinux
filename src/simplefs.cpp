@@ -1,5 +1,7 @@
 #include "simplefs.h"
 
+#include <system_error>
+
 namespace vlinux {
 namespace fs {
 namespace simplefs {
@@ -18,30 +20,43 @@ public:
 File::File() = default;
 File::~File() = default;
 
-std::int64_t File::get() { return ++this->impl_->refcount; }
+outcome::result<void> File::get() {
+    ++this->impl_->refcount;
+    return outcome::success();
+}
 
-std::int64_t File::put() { return --this->impl_->refcount; }
+outcome::result<void> File::put() {
+    --this->impl_->refcount;
+    return outcome::success();
+}
 
 std::uint64_t File::refcount() const { return this->impl_->refcount; }
 
 // Flags.
-void File::set_flags(std::uint64_t flags) { this->impl_->flags = flags; }
+outcome::result<void> File::set_flags(std::uint64_t flags) {
+    this->impl_->flags = flags;
+    return outcome::success();
+}
 
 std::uint64_t File::flags() const { return this->impl_->flags; }
 
 // Offset.
-std::int64_t File::lseek(std::int64_t offset) {
+outcome::result<void> File::set_offset(std::uint64_t offset) {
     this->impl_->offset = offset;
-    return this->impl_->offset;
+    return outcome::success();
 }
 
-std::int64_t File::offset() const { return this->impl_->offset; }
+std::uint64_t File::offset() const { return this->impl_->offset; }
 
 std::shared_ptr<IINode> File::inode() const { return this->impl_->inode; }
 
-std::int64_t File::iov_read(std::vector<IoVector> iov) { return -1; }
+outcome::result<void> File::iov_read(std::vector<IoVector> iov) {
+    return std::errc::not_supported;
+}
 
-std::int64_t File::iov_write(std::vector<IoVector> iov) { return -1; }
+outcome::result<void> File::iov_write(std::vector<IoVector> iov) {
+    return std::errc::not_supported;
+}
 
 }  // namespace simplefs
 }  // namespace fs
