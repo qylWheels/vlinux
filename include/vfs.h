@@ -7,6 +7,7 @@
 
 namespace vlinux {
 class IDEntry;
+class IINode;
 
 class ISuperBlock {
 public:
@@ -16,6 +17,10 @@ public:
     virtual std::size_t block_size() const = 0;
     virtual std::uint64_t magic() const = 0;
     virtual std::shared_ptr<IDEntry> root_dentry() const = 0;
+
+public:  // Operations.
+    virtual std::shared_ptr<IINode> alloc_inode() = 0;
+    virtual void destroy_inode(std::shared_ptr<IINode> inode) = 0;
 };
 
 class IINode {
