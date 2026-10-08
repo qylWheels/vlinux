@@ -59,6 +59,7 @@ public:  // Operations.
     virtual std::uint64_t refcount() const = 0;
     virtual std::uint64_t flags() const = 0;
     virtual std::int64_t offset() const = 0;
+    virtual std::shared_ptr<IINode> inode() const = 0;
     virtual std::int64_t lseek(std::int64_t offset) = 0;
     virtual std::int64_t iov_read(std::vector<IoVector> iov) = 0;
     virtual std::int64_t iov_write(std::vector<IoVector> iov) = 0;
