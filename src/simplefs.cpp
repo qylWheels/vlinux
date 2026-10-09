@@ -12,10 +12,11 @@ public:
     ~Impl() = default;
 
 public:
-    std::size_t block_size_;
-    std::uint64_t magic_;
+    std::size_t block_size_ = 4096;
+    std::uint64_t magic_ = 0xf8f90000;
     std::shared_ptr<DEntry> root_dentry_;
     std::set<std::shared_ptr<INode>> inodes_;
+    std::uint64_t next_inode_id_ = 0;
 };
 
 // Basic information.
