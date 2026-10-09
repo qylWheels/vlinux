@@ -30,14 +30,14 @@ private:
 
 class INode : public IINode {
 public:
-    INode();
+    INode(std::uint64_t id, std::uint64_t type);
     ~INode();
     INode(const INode&) = delete;
     INode& operator=(const INode&) = delete;
     INode(INode&&) = delete;
     INode& operator=(INode&&) = delete;
 
-public:
+public:  // VFS interfaces.
     virtual std::uint64_t id() const override;
 
     // Size.
