@@ -5,6 +5,18 @@
 namespace vlinux {
 namespace fs {
 namespace simplefs {
+class SuperBlock::Impl {
+public:
+    Impl() = default;
+    ~Impl() = default;
+
+public:
+    std::size_t block_size_;
+    std::uint64_t magic_;
+    std::shared_ptr<DEntry> root_dentry_;
+    std::vector<std::shared_ptr<INode>> inodes_;
+};
+
 class INode::Impl {
 public:
     Impl() = default;
