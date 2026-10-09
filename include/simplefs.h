@@ -4,14 +4,14 @@
 namespace vlinux {
 namespace fs {
 namespace simplefs {
-class FS : public VFS {
+class SuperBlock : public ISuperBlock {
 public:
-    FS();
-    ~FS();
-    FS(const FS&) = delete;
-    FS& operator=(const FS&) = delete;
-    FS(FS&&) = delete;
-    FS& operator=(FS&&) = delete;
+    SuperBlock();
+    ~SuperBlock();
+    SuperBlock(const SuperBlock&) = delete;
+    SuperBlock& operator=(const SuperBlock&) = delete;
+    SuperBlock(SuperBlock&&) = delete;
+    SuperBlock& operator=(SuperBlock&&) = delete;
 
 public:
     virtual std::size_t block_size() const { return 4096; }
