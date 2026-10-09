@@ -20,7 +20,7 @@ public:
     virtual std::shared_ptr<IDEntry> root_dentry() const override;
 
     // Inode operations.
-    virtual std::shared_ptr<IINode> alloc_inode() override;
+    virtual outcome::result<std::shared_ptr<IINode>> alloc_inode() override;
     virtual void destroy_inode(std::shared_ptr<IINode> inode) override;
 
 private:
