@@ -23,6 +23,49 @@ public:
     std::shared_ptr<ISuperBlock> super_block_;
 };
 
+INode::INode() = default;
+
+INode::~INode() = default;
+
+std::uint64_t INode::id() const { return this->impl_->id_; }
+
+// Size.
+std::uint64_t INode::block_count() const { return this->impl_->block_count_; }
+
+// Type and permissions.
+std::uint64_t INode::type() const { return this->impl_->type_; }
+
+outcome::result<void> INode::set_permissions(std::uint64_t permissions) {
+    this->impl_->permissions_ = permissions;
+    return outcome::success();
+}
+
+std::uint64_t INode::permissions() const { return this->impl_->permissions_; }
+
+// Timestamp.
+std::chrono::time_point<std::chrono::system_clock> INode::atime() const {
+    return this->impl_->atime_;
+}
+
+std::chrono::time_point<std::chrono::system_clock> INode::mtime() const {
+    return this->impl_->mtime_;
+}
+
+std::chrono::time_point<std::chrono::system_clock> INode::ctime() const {
+    return this->impl_->ctime_;
+}
+
+// References.
+std::uint64_t INode::mem_refcount() const { return this->impl_->mem_refcount_; }
+
+std::uint64_t INode::disk_refcount() const {
+    return this->impl_->disk_refcount_;
+}
+
+std::shared_ptr<ISuperBlock> INode::super_block() const {
+    return this->impl_->super_block_;
+}
+
 class File::Impl {
 public:
     Impl() = default;
