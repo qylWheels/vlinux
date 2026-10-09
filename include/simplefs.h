@@ -23,14 +23,14 @@ public:  // Operations.
     virtual void destroy_inode(std::shared_ptr<IINode> inode);
 };
 
-class Inode : public IINode {
+class INode : public IINode {
 public:
-    Inode();
-    ~Inode();
-    Inode(const Inode&) = delete;
-    Inode& operator=(const Inode&) = delete;
-    Inode(Inode&&) = delete;
-    Inode& operator=(Inode&&) = delete;
+    INode();
+    ~INode();
+    INode(const INode&) = delete;
+    INode& operator=(const INode&) = delete;
+    INode(INode&&) = delete;
+    INode& operator=(INode&&) = delete;
 
 public:
     virtual std::uint64_t mem_refcount() const;
@@ -58,7 +58,7 @@ public:
 
 class File : public IFile {
 public:
-    File(std::shared_ptr<Inode> inode);
+    File(std::shared_ptr<INode> inode);
     ~File();
     File(const File&) = delete;
     File& operator=(const File&) = delete;

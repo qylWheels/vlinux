@@ -14,10 +14,10 @@ public:
     std::uint64_t refcount = 0;
     std::uint64_t flags = 0;
     std::uint64_t offset = 0;
-    std::shared_ptr<Inode> inode;
+    std::shared_ptr<INode> inode;
 };
 
-File::File(std::shared_ptr<Inode> inode) { this->impl_->inode = inode; }
+File::File(std::shared_ptr<INode> inode) { this->impl_->inode = inode; }
 
 File::~File() = default;
 
