@@ -17,6 +17,22 @@ public:
     std::vector<std::shared_ptr<INode>> inodes_;
 };
 
+// Basic information.
+std::size_t SuperBlock::block_size() const { return this->impl_->block_size_; }
+
+std::uint64_t SuperBlock::magic() const { return this->impl_->magic_; }
+
+std::shared_ptr<IDEntry> SuperBlock::root_dentry() const {
+    return this->impl_->root_dentry_;
+}
+
+// Inode operations.
+outcome::result<std::shared_ptr<IINode>> SuperBlock::alloc_inode() {
+    return std::errc::not_supported;
+}
+
+void SuperBlock::destroy_inode(std::shared_ptr<IINode> inode) { return; }
+
 class INode::Impl {
 public:
     Impl() = default;
