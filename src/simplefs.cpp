@@ -5,6 +5,24 @@
 namespace vlinux {
 namespace fs {
 namespace simplefs {
+class INode::Impl {
+public:
+    Impl() = default;
+    ~Impl() = default;
+
+public:
+    std::uint64_t id_;
+    std::uint64_t block_count_;
+    std::uint64_t type_;
+    std::uint64_t permissions_;
+    std::chrono::time_point<std::chrono::system_clock> atime_;
+    std::chrono::time_point<std::chrono::system_clock> mtime_;
+    std::chrono::time_point<std::chrono::system_clock> ctime_;
+    std::uint64_t mem_refcount_;
+    std::uint64_t disk_refcount_;
+    std::shared_ptr<ISuperBlock> super_block_;
+};
+
 class File::Impl {
 public:
     Impl() = default;
