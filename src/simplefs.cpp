@@ -94,6 +94,19 @@ std::shared_ptr<ISuperBlock> INode::super_block() const {
     return this->impl_->super_block_;
 }
 
+class DEntry::Impl {
+public:
+    Impl() = default;
+    ~Impl() = default;
+
+public:
+    std::shared_ptr<DEntry> parent;
+    std::string name;
+    std::shared_ptr<INode> inode;
+    std::shared_ptr<SuperBlock> super_block;
+    std::vector<std::shared_ptr<DEntry>> subdirs;
+};
+
 class File::Impl {
 public:
     Impl() = default;
