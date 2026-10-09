@@ -1,5 +1,6 @@
 #include "simplefs.h"
 
+#include <set>
 #include <system_error>
 
 namespace vlinux {
@@ -14,7 +15,7 @@ public:
     std::size_t block_size_;
     std::uint64_t magic_;
     std::shared_ptr<DEntry> root_dentry_;
-    std::vector<std::shared_ptr<INode>> inodes_;
+    std::set<std::shared_ptr<INode>> inodes_;
 };
 
 // Basic information.
