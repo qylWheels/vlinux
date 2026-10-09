@@ -33,26 +33,30 @@ public:
     INode& operator=(INode&&) = delete;
 
 public:
-    virtual std::uint64_t id() const;
+    virtual std::uint64_t id() const override;
 
     // Size.
-    virtual std::uint64_t block_count() const;
+    virtual std::uint64_t block_count() const override;
 
     // Type and permissions.
-    virtual std::uint64_t type() const;
-    virtual outcome::result<void> set_permissions(std::uint64_t permissions);
-    virtual std::uint64_t permissions() const;
+    virtual std::uint64_t type() const override;
+    virtual outcome::result<void> set_permissions(
+        std::uint64_t permissions) override;
+    virtual std::uint64_t permissions() const override;
 
     // Timestamp.
-    virtual std::chrono::time_point<std::chrono::system_clock> atime() const;
-    virtual std::chrono::time_point<std::chrono::system_clock> mtime() const;
-    virtual std::chrono::time_point<std::chrono::system_clock> ctime() const;
+    virtual std::chrono::time_point<std::chrono::system_clock> atime()
+        const override;
+    virtual std::chrono::time_point<std::chrono::system_clock> mtime()
+        const override;
+    virtual std::chrono::time_point<std::chrono::system_clock> ctime()
+        const override;
 
     // References.
-    virtual std::uint64_t mem_refcount() const;
-    virtual std::uint64_t disk_refcount() const;
+    virtual std::uint64_t mem_refcount() const override;
+    virtual std::uint64_t disk_refcount() const override;
 
-    virtual std::shared_ptr<ISuperBlock> super_block() const;
+    virtual std::shared_ptr<ISuperBlock> super_block() const override;
 
 private:
     class Impl;
