@@ -107,6 +107,25 @@ public:
     std::vector<std::shared_ptr<DEntry>> subdirs;
 };
 
+std::shared_ptr<IDEntry> DEntry::parent() const { return this->impl_->parent; }
+
+std::string DEntry::name() const { return this->impl_->name; }
+
+bool DEntry::compare(const std::string& name) const {
+    return this->impl_->name == name;
+}
+
+std::shared_ptr<IINode> DEntry::inode() const { return this->impl_->inode; }
+
+std::shared_ptr<ISuperBlock> DEntry::super_block() const {
+    return this->impl_->super_block;
+}
+
+std::vector<std::shared_ptr<IDEntry>> DEntry::subdirs() const {
+    return std::vector<std::shared_ptr<IDEntry>>(this->impl_->subdirs.begin(),
+                                                 this->impl_->subdirs.end());
+}
+
 class File::Impl {
 public:
     Impl() = default;
