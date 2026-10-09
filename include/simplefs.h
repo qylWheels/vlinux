@@ -78,11 +78,16 @@ public:
     DEntry& operator=(DEntry&&) = delete;
 
 public:
-    virtual std::shared_ptr<IDEntry> parent() const;
-    virtual std::string name() const;
-    virtual std::shared_ptr<IINode> inode() const;
-    virtual std::shared_ptr<ISuperBlock> super_block() const;
-    virtual std::vector<std::shared_ptr<IDEntry>> subdirs() const;
+    virtual std::shared_ptr<IDEntry> parent() const override;
+    virtual std::string name() const override;
+    virtual bool compare(const std::string& name) const override;
+    virtual std::shared_ptr<IINode> inode() const override;
+    virtual std::shared_ptr<ISuperBlock> super_block() const override;
+    virtual std::vector<std::shared_ptr<IDEntry>> subdirs() const override;
+
+private:
+    class Impl;
+    std::unique_ptr<Impl> impl_;
 };
 
 class File : public IFile {
