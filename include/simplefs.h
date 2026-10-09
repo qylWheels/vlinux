@@ -33,10 +33,30 @@ public:
     INode& operator=(INode&&) = delete;
 
 public:
+    virtual std::uint64_t id() const;
+
+    // Size.
+    virtual std::uint64_t block_count() const;
+
+    // Type and permissions.
+    virtual std::uint64_t type() const;
+    virtual outcome::result<void> set_permissions(std::uint64_t permissions);
+    virtual std::uint64_t permissions() const;
+
+    // Timestamp.
+    virtual std::chrono::time_point<std::chrono::system_clock> atime() const;
+    virtual std::chrono::time_point<std::chrono::system_clock> mtime() const;
+    virtual std::chrono::time_point<std::chrono::system_clock> ctime() const;
+
+    // References.
     virtual std::uint64_t mem_refcount() const;
-    virtual std::uint64_t disk_refcount() const { return 0; }
-    virtual std::uint64_t mode() const;
+    virtual std::uint64_t disk_refcount() const;
+
     virtual std::shared_ptr<ISuperBlock> super_block() const;
+
+private:
+    class Impl;
+    std::unique_ptr<Impl> impl_;
 };
 
 class DEntry : public IDEntry {
