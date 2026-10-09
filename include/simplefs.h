@@ -14,13 +14,18 @@ public:
     SuperBlock& operator=(SuperBlock&&) = delete;
 
 public:
-    virtual std::size_t block_size() const { return 4096; }
-    virtual std::uint64_t magic() const { return 0x1919810A; }
-    virtual std::shared_ptr<IDEntry> root_dentry() const;
+    // Basic information.
+    virtual std::size_t block_size() const override;
+    virtual std::uint64_t magic() const override;
+    virtual std::shared_ptr<IDEntry> root_dentry() const override;
 
-public:  // Operations.
-    virtual std::shared_ptr<IINode> alloc_inode();
-    virtual void destroy_inode(std::shared_ptr<IINode> inode);
+    // Inode operations.
+    virtual std::shared_ptr<IINode> alloc_inode() override;
+    virtual void destroy_inode(std::shared_ptr<IINode> inode) override;
+
+private:
+    class Impl;
+    std::unique_ptr<Impl> impl_;
 };
 
 class INode : public IINode {
