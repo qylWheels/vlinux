@@ -34,29 +34,47 @@ public:
     ~IINode() = default;
 
 public:
+    // ID.
+    virtual outcome::result<void> set_id(std::uint64_t id) = 0;
     virtual std::uint64_t id() const = 0;
 
     // Size.
+    virtual outcome::result<void> set_block_count(
+        std::uint64_t block_count) = 0;
     virtual std::uint64_t block_count() const = 0;
 
     // Type and permissions.
+    virtual outcome::result<void> set_type(std::uint64_t type) = 0;
     virtual std::uint64_t type() const = 0;
     virtual outcome::result<void> set_permissions(
         std::uint64_t permissions) = 0;
     virtual std::uint64_t permissions() const = 0;
 
     // Timestamp.
+    virtual outcome::result<void> set_atime(
+        std::chrono::time_point<std::chrono::system_clock> atime) = 0;
     virtual std::chrono::time_point<std::chrono::system_clock> atime()
         const = 0;
+    virtual outcome::result<void> set_mtime(
+        std::chrono::time_point<std::chrono::system_clock> mtime) = 0;
     virtual std::chrono::time_point<std::chrono::system_clock> mtime()
         const = 0;
+    virtual outcome::result<void> set_ctime(
+        std::chrono::time_point<std::chrono::system_clock> ctime) = 0;
     virtual std::chrono::time_point<std::chrono::system_clock> ctime()
         const = 0;
 
     // References.
+    virtual outcome::result<void> set_mem_refcount(
+        std::uint64_t mem_refcount) = 0;
     virtual std::uint64_t mem_refcount() const = 0;
+    virtual outcome::result<void> set_disk_refcount(
+        std::uint64_t disk_refcount) = 0;
     virtual std::uint64_t disk_refcount() const = 0;
 
+    // Super block.
+    virtual outcome::result<void> set_super_block(
+        std::shared_ptr<ISuperBlock> super_block) = 0;
     virtual std::shared_ptr<ISuperBlock> super_block() const = 0;
 };
 

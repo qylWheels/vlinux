@@ -57,12 +57,27 @@ INode::INode() = default;
 
 INode::~INode() = default;
 
+outcome::result<void> INode::set_id(std::uint64_t id) {
+    this->impl_->id_ = id;
+    return outcome::success();
+}
+
 std::uint64_t INode::id() const { return this->impl_->id_; }
 
 // Size.
+outcome::result<void> INode::set_block_count(std::uint64_t block_count) {
+    this->impl_->block_count_ = block_count;
+    return outcome::success();
+}
+
 std::uint64_t INode::block_count() const { return this->impl_->block_count_; }
 
 // Type and permissions.
+outcome::result<void> INode::set_type(std::uint64_t type) {
+    this->impl_->type_ = type;
+    return outcome::success();
+}
+
 std::uint64_t INode::type() const { return this->impl_->type_; }
 
 outcome::result<void> INode::set_permissions(std::uint64_t permissions) {
@@ -73,12 +88,30 @@ outcome::result<void> INode::set_permissions(std::uint64_t permissions) {
 std::uint64_t INode::permissions() const { return this->impl_->permissions_; }
 
 // Timestamp.
+outcome::result<void> INode::set_atime(
+    std::chrono::time_point<std::chrono::system_clock> atime) {
+    this->impl_->atime_ = atime;
+    return outcome::success();
+}
+
 std::chrono::time_point<std::chrono::system_clock> INode::atime() const {
     return this->impl_->atime_;
 }
 
+outcome::result<void> INode::set_mtime(
+    std::chrono::time_point<std::chrono::system_clock> mtime) {
+    this->impl_->mtime_ = mtime;
+    return outcome::success();
+}
+
 std::chrono::time_point<std::chrono::system_clock> INode::mtime() const {
     return this->impl_->mtime_;
+}
+
+outcome::result<void> INode::set_ctime(
+    std::chrono::time_point<std::chrono::system_clock> ctime) {
+    this->impl_->ctime_ = ctime;
+    return outcome::success();
 }
 
 std::chrono::time_point<std::chrono::system_clock> INode::ctime() const {
@@ -86,10 +119,26 @@ std::chrono::time_point<std::chrono::system_clock> INode::ctime() const {
 }
 
 // References.
+outcome::result<void> INode::set_mem_refcount(std::uint64_t mem_refcount) {
+    this->impl_->mem_refcount_ = mem_refcount;
+    return outcome::success();
+}
+
 std::uint64_t INode::mem_refcount() const { return this->impl_->mem_refcount_; }
+
+outcome::result<void> INode::set_disk_refcount(std::uint64_t disk_refcount) {
+    this->impl_->disk_refcount_ = disk_refcount;
+    return outcome::success();
+}
 
 std::uint64_t INode::disk_refcount() const {
     return this->impl_->disk_refcount_;
+}
+
+outcome::result<void> INode::set_super_block(
+    std::shared_ptr<ISuperBlock> super_block) {
+    this->impl_->super_block_ = super_block;
+    return outcome::success();
 }
 
 std::shared_ptr<ISuperBlock> INode::super_block() const {
