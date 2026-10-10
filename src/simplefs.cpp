@@ -68,7 +68,7 @@ std::uint64_t INode::disk_refcount() const {
     return this->impl_->disk_refcount_;
 }
 
-std::shared_ptr<ISuperBlock> INode::super_block() const {
+std::weak_ptr<ISuperBlock> INode::super_block() const {
     return this->impl_->super_block_;
 }
 

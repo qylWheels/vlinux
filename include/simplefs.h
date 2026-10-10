@@ -68,7 +68,7 @@ public:
     virtual std::uint64_t disk_refcount() const override;
 
     // Super block.
-    virtual std::shared_ptr<ISuperBlock> super_block() const override;
+    virtual std::weak_ptr<ISuperBlock> super_block() const override;
 
 private:
     class Impl;
