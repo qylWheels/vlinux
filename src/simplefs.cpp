@@ -1,5 +1,8 @@
 #include "simplefs.h"
 
+#include <unicorn/unicorn.h>
+
+#include <cstddef>
 #include <memory>
 #include <set>
 #include <system_error>
@@ -201,11 +204,24 @@ std::uint64_t File::offset() const { return this->impl_->offset; }
 
 std::shared_ptr<IINode> File::inode() const { return this->impl_->inode; }
 
-outcome::result<void> File::iov_read(std::vector<IoVector> iov) {
-    return std::errc::not_supported;
+outcome::result<std::size_t> File::iov_read(std::vector<IoVector> iov) {
+    std::size_t read = 0;
+    for (auto& v : iov) {
+        auto offset = this->impl_->offset;
+        auto n = this->impl_->inode->impl_->data_.size();
+        auto len = std::min(v.len, n - offset);
+        if (::uc_mem_read(this->impl_->uc, v.base,
+                          this->impl_->inode->impl_->data_.data(),
+                          len) != UC_ERR_OK) {
+            return std::errc::io_error;
+        }
+        this->impl_->offset += len;
+        read += len;
+    }
+    return read;
 }
 
-outcome::result<void> File::iov_write(std::vector<IoVector> iov) {
+outcome::result<std::size_t> File::iov_write(std::vector<IoVector> iov) {
     return std::errc::not_supported;
 }
 }  // namespace simplefs
