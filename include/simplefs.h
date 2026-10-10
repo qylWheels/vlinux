@@ -37,9 +37,7 @@ public:
     INode(INode&&) = delete;
     INode& operator=(INode&&) = delete;
 
-public:  // VFS interfaces.
-    // ID.
-    virtual outcome::result<void> set_id(std::uint64_t id) override;
+public:
     virtual std::uint64_t id() const override;
 
     // Size.
