@@ -210,9 +210,9 @@ outcome::result<std::size_t> File::iov_read(std::vector<IoVector> iov) {
         auto offset = this->impl_->offset;
         auto n = this->impl_->inode->impl_->data_.size();
         auto len = std::min(v.len, n - offset);
-        if (::uc_mem_read(this->impl_->uc, v.base,
-                          this->impl_->inode->impl_->data_.data(),
-                          len) != UC_ERR_OK) {
+        if (::uc_mem_write(this->impl_->uc, v.base,
+                           this->impl_->inode->impl_->data_.data() + offset,
+                           len) != UC_ERR_OK) {
             return std::errc::io_error;
         }
         this->impl_->offset += len;
