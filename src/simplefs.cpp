@@ -78,12 +78,19 @@ public:
     ~Impl() = default;
 
 public:
+    uc_engine* uc_;
     std::size_t block_size_ = 4096;
     std::uint64_t magic_ = 0xf8f90000;
     std::shared_ptr<DEntry> root_dentry_;
     std::set<std::shared_ptr<INode>> inodes_;
     std::uint64_t next_inode_id_ = 0;
 };
+
+SuperBlock::SuperBlock(uc_engine* uc) : impl_(std::make_unique<Impl>()) {
+    this->impl_->uc_ = uc;
+}
+
+SuperBlock::~SuperBlock() = default;
 
 // Basic information.
 std::size_t SuperBlock::block_size() const { return this->impl_->block_size_; }

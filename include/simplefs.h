@@ -8,7 +8,7 @@ namespace fs {
 namespace simplefs {
 class SuperBlock : public ISuperBlock {
 public:
-    SuperBlock();
+    SuperBlock(uc_engine* uc);
     ~SuperBlock();
     SuperBlock(const SuperBlock&) = delete;
     SuperBlock& operator=(const SuperBlock&) = delete;
