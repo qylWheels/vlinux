@@ -31,6 +31,7 @@ private:
 
 class INode : public IINode {
     friend class SuperBlock;
+    friend class File;
 
 public:
     INode();
