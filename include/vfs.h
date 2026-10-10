@@ -25,7 +25,8 @@ public:
     virtual std::shared_ptr<IDEntry> root_dentry() const = 0;
 
     // Inode operations.
-    virtual outcome::result<std::shared_ptr<IINode>> alloc_inode() = 0;
+    virtual outcome::result<std::shared_ptr<IINode>> alloc_inode(
+        std::shared_ptr<ISuperBlock>) = 0;
     virtual void destroy_inode(std::shared_ptr<IINode> inode) = 0;
 };
 
