@@ -87,21 +87,23 @@ public:
 
 public:  // Operations.
     // References.
-    virtual outcome::result<void> get();
-    virtual outcome::result<void> put();
-    virtual std::uint64_t refcount() const;
+    virtual outcome::result<void> get() = 0;
+    virtual outcome::result<void> put() = 0;
+    virtual std::uint64_t refcount() const = 0;
 
     // Flags.
-    virtual outcome::result<void> set_flags(std::uint64_t flags);
-    virtual std::uint64_t flags() const;
+    virtual outcome::result<void> set_flags(std::uint64_t flags) = 0;
+    virtual std::uint64_t flags() const = 0;
 
     // Offset.
-    virtual outcome::result<void> set_offset(std::uint64_t offset);
-    virtual std::uint64_t offset() const;
+    virtual outcome::result<void> set_offset(std::uint64_t offset) = 0;
+    virtual std::uint64_t offset() const = 0;
 
-    virtual std::shared_ptr<IINode> inode() const;
-    virtual outcome::result<std::size_t> iov_read(std::vector<IoVector> iov);
-    virtual outcome::result<std::size_t> iov_write(std::vector<IoVector> iov);
+    virtual std::shared_ptr<IINode> inode() const = 0;
+    virtual outcome::result<std::size_t> iov_read(
+        std::vector<IoVector> iov) = 0;
+    virtual outcome::result<std::size_t> iov_write(
+        std::vector<IoVector> iov) = 0;
 };
 
 class VFS {
