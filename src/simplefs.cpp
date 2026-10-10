@@ -142,6 +142,10 @@ public:
     std::vector<std::shared_ptr<DEntry>> subdirs;
 };
 
+DEntry::DEntry() : impl_(std::make_unique<Impl>()) {}
+
+DEntry::~DEntry() = default;
+
 std::shared_ptr<IDEntry> DEntry::parent() const { return this->impl_->parent; }
 
 std::string DEntry::name() const { return this->impl_->name; }
