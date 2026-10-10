@@ -103,6 +103,10 @@ outcome::result<std::shared_ptr<IINode>> SuperBlock::alloc_inode(
     inode->impl_->mem_refcount_ = 0;
     inode->impl_->disk_refcount_ = 0;
     inode->impl_->super_block_ = sb;
+    auto ret = this->impl_->inodes_.insert(inode);
+    if (!ret.second) {
+        return std::errc::file_exists;
+    }
     return inode;
 }
 
