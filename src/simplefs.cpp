@@ -222,7 +222,22 @@ outcome::result<std::size_t> File::iov_read(std::vector<IoVector> iov) {
 }
 
 outcome::result<std::size_t> File::iov_write(std::vector<IoVector> iov) {
-    return std::errc::not_supported;
+    std::size_t write = 0;
+    for (auto& v : iov) {
+        auto offset = this->impl_->offset;
+        auto n = this->impl_->inode->impl_->data_.size();
+        if (v.len > n - offset) {
+            this->impl_->inode->impl_->data_.resize(v.len + offset);
+        }
+        if (::uc_mem_read(this->impl_->uc, v.base,
+                          this->impl_->inode->impl_->data_.data() + offset,
+                          v.len) != UC_ERR_OK) {
+            return std::errc::io_error;
+        }
+        this->impl_->offset += v.len;
+        write += v.len;
+    }
+    return write;
 }
 }  // namespace simplefs
 }  // namespace fs
