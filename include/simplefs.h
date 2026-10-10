@@ -41,42 +41,27 @@ public:
     virtual std::uint64_t id() const override;
 
     // Size.
-    virtual outcome::result<void> set_block_count(
-        std::uint64_t block_count) override;
     virtual std::uint64_t block_count() const override;
 
     // Type and permissions.
-    virtual outcome::result<void> set_type(std::uint64_t type) override;
     virtual std::uint64_t type() const override;
     virtual outcome::result<void> set_permissions(
         std::uint64_t permissions) override;
     virtual std::uint64_t permissions() const override;
 
     // Timestamp.
-    virtual outcome::result<void> set_atime(
-        std::chrono::time_point<std::chrono::system_clock> atime) override;
     virtual std::chrono::time_point<std::chrono::system_clock> atime()
         const override;
-    virtual outcome::result<void> set_mtime(
-        std::chrono::time_point<std::chrono::system_clock> mtime) override;
     virtual std::chrono::time_point<std::chrono::system_clock> mtime()
         const override;
-    virtual outcome::result<void> set_ctime(
-        std::chrono::time_point<std::chrono::system_clock> ctime) override;
     virtual std::chrono::time_point<std::chrono::system_clock> ctime()
         const override;
 
     // References.
-    virtual outcome::result<void> set_mem_refcount(
-        std::uint64_t mem_refcount) override;
     virtual std::uint64_t mem_refcount() const override;
-    virtual outcome::result<void> set_disk_refcount(
-        std::uint64_t disk_refcount) override;
     virtual std::uint64_t disk_refcount() const override;
 
     // Super block.
-    virtual outcome::result<void> set_super_block(
-        std::shared_ptr<ISuperBlock> super_block) override;
     virtual std::shared_ptr<ISuperBlock> super_block() const override;
 
 private:
