@@ -1,5 +1,6 @@
 #include "simplefs.h"
 
+#include <memory>
 #include <set>
 #include <system_error>
 
@@ -110,7 +111,11 @@ outcome::result<std::shared_ptr<IINode>> SuperBlock::alloc_inode(
     return inode;
 }
 
-void SuperBlock::destroy_inode(std::shared_ptr<IINode> inode) { return; }
+void SuperBlock::destroy_inode(std::shared_ptr<IINode> inode) {
+    auto inode2 = std::dynamic_pointer_cast<INode>(inode);
+    this->impl_->inodes_.erase(inode2);
+    return;
+}
 
 class DEntry::Impl {
 public:
