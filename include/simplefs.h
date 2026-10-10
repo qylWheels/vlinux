@@ -118,8 +118,10 @@ public:  // Operations.
     virtual std::uint64_t offset() const override;
 
     virtual std::shared_ptr<IINode> inode() const override;
-    virtual outcome::result<void> iov_read(std::vector<IoVector> iov) override;
-    virtual outcome::result<void> iov_write(std::vector<IoVector> iov) override;
+    virtual outcome::result<std::size_t> iov_read(
+        std::vector<IoVector> iov) override;
+    virtual outcome::result<std::size_t> iov_write(
+        std::vector<IoVector> iov) override;
 
 private:
     class Impl;
