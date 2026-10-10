@@ -60,7 +60,7 @@ public:
     virtual std::uint64_t disk_refcount() const = 0;
 
     // Super block.
-    virtual std::shared_ptr<ISuperBlock> super_block() const = 0;
+    virtual std::weak_ptr<ISuperBlock> super_block() const = 0;
 };
 
 class IDEntry {
