@@ -157,13 +157,17 @@ public:
     ~Impl() = default;
 
 public:
+    uc_engine* uc;
     std::uint64_t refcount = 0;
     std::uint64_t flags = 0;
     std::uint64_t offset = 0;
     std::shared_ptr<INode> inode;
 };
 
-File::File(std::shared_ptr<INode> inode) { this->impl_->inode = inode; }
+File::File(std::shared_ptr<INode> inode, uc_engine* uc) {
+    this->impl_->inode = inode;
+    this->impl_->uc = uc;
+}
 
 File::~File() = default;
 

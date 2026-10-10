@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unicorn/unicorn.h>
+
 #include "vfs.h"
 namespace vlinux {
 namespace fs {
@@ -97,7 +99,7 @@ private:
 
 class File : public IFile {
 public:
-    File(std::shared_ptr<INode> inode);
+    File(std::shared_ptr<INode> inode, uc_engine* uc);
     ~File();
     File(const File&) = delete;
     File& operator=(const File&) = delete;
