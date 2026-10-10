@@ -30,7 +30,7 @@ private:
 
 class INode : public IINode {
 public:
-    INode(std::uint64_t id, std::uint64_t type);
+    INode();
     ~INode();
     INode(const INode&) = delete;
     INode& operator=(const INode&) = delete;
