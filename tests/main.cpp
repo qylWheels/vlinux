@@ -8,6 +8,7 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <memory>
 #include <ranges>
@@ -210,6 +211,21 @@ TEST_CASE("Test VFS", "[vfs]") {
         REQUIRE(ret.has_value());
         REQUIRE(ret.value() == len);
         REQUIRE(file->offset() == len);
+
+        // Test read.
+        char data_read[4096] = {0};
+        REQUIRE(::uc_mem_map_ptr(uc, 0x8000, 4096, UC_PROT_READ, data_read) ==
+                UC_ERR_OK);
+        vlinux::IoVector iov_read{0x8000, 4096};
+        ret = file->iov_read({iov_read});
+        REQUIRE(ret.has_value());
+        REQUIRE(ret.value() == 0);
+        REQUIRE(file->set_offset(0).has_value());
+        REQUIRE(file->offset() == 0);
+        ret = file->iov_read({iov_read});
+        REQUIRE(ret.has_value());
+        REQUIRE(ret.value() == len);
+        REQUIRE(std::strcmp(data_read, data) == 0);
 
         // Release resources.
         REQUIRE(::uc_mem_unmap(uc, 0x1000, 4096) == UC_ERR_OK);
