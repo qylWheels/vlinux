@@ -16,7 +16,7 @@ class IINode;
 
 class ISuperBlock {
 public:
-    ~ISuperBlock() = default;
+    virtual ~ISuperBlock() = default;
 
 public:
     // Basic information.
@@ -32,7 +32,7 @@ public:
 
 class IINode {
 public:
-    ~IINode() = default;
+    virtual ~IINode() = default;
 
 public:
     // ID.
@@ -65,7 +65,7 @@ public:
 
 class IDEntry {
 public:
-    ~IDEntry() = default;
+    virtual ~IDEntry() = default;
 
 public:
     virtual std::shared_ptr<IDEntry> parent() const = 0;
@@ -83,7 +83,7 @@ struct IoVector {
 
 class IFile {
 public:
-    ~IFile() = default;
+    virtual ~IFile() = default;
 
 public:  // Operations.
     // References.
