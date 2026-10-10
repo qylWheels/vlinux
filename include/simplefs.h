@@ -29,6 +29,8 @@ private:
 };
 
 class INode : public IINode {
+    friend class SuperBlock;
+
 public:
     INode();
     ~INode();
