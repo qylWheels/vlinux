@@ -6,35 +6,6 @@
 namespace vlinux {
 namespace fs {
 namespace simplefs {
-class SuperBlock::Impl {
-public:
-    Impl() = default;
-    ~Impl() = default;
-
-public:
-    std::size_t block_size_ = 4096;
-    std::uint64_t magic_ = 0xf8f90000;
-    std::shared_ptr<DEntry> root_dentry_;
-    std::set<std::shared_ptr<INode>> inodes_;
-    std::uint64_t next_inode_id_ = 0;
-};
-
-// Basic information.
-std::size_t SuperBlock::block_size() const { return this->impl_->block_size_; }
-
-std::uint64_t SuperBlock::magic() const { return this->impl_->magic_; }
-
-std::shared_ptr<IDEntry> SuperBlock::root_dentry() const {
-    return this->impl_->root_dentry_;
-}
-
-// Inode operations.
-outcome::result<std::shared_ptr<IINode>> SuperBlock::alloc_inode() {
-    return std::errc::not_supported;
-}
-
-void SuperBlock::destroy_inode(std::shared_ptr<IINode> inode) { return; }
-
 class INode::Impl {
 public:
     Impl() = default;
@@ -95,6 +66,47 @@ std::uint64_t INode::disk_refcount() const {
 std::shared_ptr<ISuperBlock> INode::super_block() const {
     return this->impl_->super_block_;
 }
+
+class SuperBlock::Impl {
+public:
+    Impl() = default;
+    ~Impl() = default;
+
+public:
+    std::size_t block_size_ = 4096;
+    std::uint64_t magic_ = 0xf8f90000;
+    std::shared_ptr<DEntry> root_dentry_;
+    std::set<std::shared_ptr<INode>> inodes_;
+    std::uint64_t next_inode_id_ = 0;
+};
+
+// Basic information.
+std::size_t SuperBlock::block_size() const { return this->impl_->block_size_; }
+
+std::uint64_t SuperBlock::magic() const { return this->impl_->magic_; }
+
+std::shared_ptr<IDEntry> SuperBlock::root_dentry() const {
+    return this->impl_->root_dentry_;
+}
+
+// Inode operations.
+outcome::result<std::shared_ptr<IINode>> SuperBlock::alloc_inode(
+    std::shared_ptr<ISuperBlock> sb) {
+    auto inode = std::make_shared<INode>();
+    inode->impl_->id_ = this->impl_->next_inode_id_++;
+    inode->impl_->block_count_ = 0;
+    inode->impl_->type_ = 0;
+    inode->impl_->permissions_ = 0;
+    inode->impl_->atime_ = std::chrono::system_clock::now();
+    inode->impl_->mtime_ = std::chrono::system_clock::now();
+    inode->impl_->ctime_ = std::chrono::system_clock::now();
+    inode->impl_->mem_refcount_ = 0;
+    inode->impl_->disk_refcount_ = 0;
+    inode->impl_->super_block_ = sb;
+    return inode;
+}
+
+void SuperBlock::destroy_inode(std::shared_ptr<IINode> inode) { return; }
 
 class DEntry::Impl {
 public:
