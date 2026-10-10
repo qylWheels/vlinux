@@ -100,8 +100,8 @@ public:  // Operations.
     virtual std::uint64_t offset() const;
 
     virtual std::shared_ptr<IINode> inode() const;
-    virtual outcome::result<void> iov_read(std::vector<IoVector> iov);
-    virtual outcome::result<void> iov_write(std::vector<IoVector> iov);
+    virtual outcome::result<std::size_t> iov_read(std::vector<IoVector> iov);
+    virtual outcome::result<std::size_t> iov_write(std::vector<IoVector> iov);
 };
 
 class VFS {
