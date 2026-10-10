@@ -29,7 +29,7 @@ public:
     std::vector<std::uint8_t> data_;  // File data.
 };
 
-INode::INode() = default;
+INode::INode() : impl_(std::make_unique<Impl>()) {}
 
 INode::~INode() = default;
 
@@ -174,7 +174,8 @@ public:
     std::shared_ptr<INode> inode;
 };
 
-File::File(std::shared_ptr<INode> inode, uc_engine* uc) {
+File::File(std::shared_ptr<INode> inode, uc_engine* uc)
+    : impl_(std::make_unique<Impl>()) {
     this->impl_->inode = inode;
     this->impl_->uc = uc;
 }
