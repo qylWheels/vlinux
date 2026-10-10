@@ -14,7 +14,9 @@
 #include <thread>
 
 #include "mm.h"
+#include "simplefs.h"
 #include "task.h"
+#include "vfs.h"
 #include "vm.h"
 
 TEST_CASE("Test PhysicalPageAllocator", "[physical_page_allocator]") {
@@ -177,6 +179,40 @@ TEST_CASE("Test Scheduler", "[scheduler]") {
         REQUIRE(scheduler.status() == vlinux::Scheduler::Status::Stopped);
         REQUIRE(::uc_context_free(ctx1) == UC_ERR_OK);
         REQUIRE(::uc_context_free(ctx2) == UC_ERR_OK);
+    }
+
+    REQUIRE(::uc_close(uc) == UC_ERR_OK);
+}
+
+TEST_CASE("Test VFS", "[vfs]") {
+    uc_engine *uc = nullptr;
+    uc_err err = ::uc_open(UC_ARCH_X86, UC_MODE_64, &uc);
+    REQUIRE(err == UC_ERR_OK);
+
+    SECTION("Test SimpleFS") {
+        std::shared_ptr<vlinux::ISuperBlock> sb =
+            std::make_shared<vlinux::fs::simplefs::SuperBlock>(uc);
+        auto inode_result = sb->alloc_inode(sb);
+        REQUIRE(inode_result.has_value());
+        auto inode = inode_result.value();
+        auto inode_downcasted =
+            std::dynamic_pointer_cast<vlinux::fs::simplefs::INode>(inode);
+        std::shared_ptr<vlinux::IFile> file =
+            std::make_shared<vlinux::fs::simplefs::File>(inode_downcasted, uc);
+
+        // Test write.
+        char data[] = "Hello, world!";
+        auto len = sizeof(data);
+        REQUIRE(::uc_mem_map_ptr(uc, 0x1000, 4096, UC_PROT_READ, data) ==
+                UC_ERR_OK);
+        vlinux::IoVector iov{0x1000, len};
+        auto ret = file->iov_write({iov});
+        REQUIRE(ret.has_value());
+        REQUIRE(ret.value() == len);
+        REQUIRE(file->offset() == len);
+
+        // Release resources.
+        REQUIRE(::uc_mem_unmap(uc, 0x1000, 4096) == UC_ERR_OK);
     }
 
     REQUIRE(::uc_close(uc) == UC_ERR_OK);
