@@ -25,7 +25,7 @@ public:
     std::chrono::time_point<std::chrono::system_clock> ctime_;
     std::uint64_t mem_refcount_;
     std::uint64_t disk_refcount_;
-    std::shared_ptr<ISuperBlock> super_block_;
+    std::weak_ptr<ISuperBlock> super_block_;
     std::vector<std::uint8_t> data_;  // File data.
 };
 
