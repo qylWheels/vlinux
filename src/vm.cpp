@@ -12,14 +12,19 @@
 #include <format>
 #include <fstream>
 #include <limits>
+#include <map>
 #include <memory>
 #include <outcome.hpp>
+#include <set>
+#include <stack>
 #include <system_error>
 #include <vector>
 
 #include "error.h"
 #include "mm.h"
+#include "simplefs.h"
 #include "syscall_handler.h"
+#include "vfs.h"
 
 namespace vlinux {
 class VM::Impl {
@@ -226,6 +231,26 @@ public:
     }
 
 public:
+    outcome::result<void> init_vfs(uc_engine* uc) {
+        auto sb = std::make_shared<vlinux::fs::simplefs::SuperBlock>(uc);
+        this->super_blocks_.insert(sb);
+        OUTCOME_TRY(auto root_inode, sb->alloc_inode(sb));
+        auto root_inode_downcasted =
+            std::dynamic_pointer_cast<vlinux::fs::simplefs::INode>(root_inode);
+        if (!root_inode_downcasted) {
+            return std::errc::invalid_argument;
+        }
+        std::shared_ptr<IDEntry> null;
+        OUTCOME_TRY(auto root_dentry,
+                    sb->alloc_dentry("/", root_inode_downcasted, null, sb));
+        this->root_dentry_ = root_dentry;
+        std::stack<std::shared_ptr<ISuperBlock>> sb_stack;
+        sb_stack.push(sb);
+        this->mount_points_[root_dentry] = sb_stack;
+        return outcome::success();
+    }
+
+public:
     static void syscall_hook_callback(uc_engine* engine, void* user_data) {
         Impl* self = reinterpret_cast<Impl*>(user_data);
         std::uint64_t syscall_number;
@@ -289,6 +314,12 @@ public:
 
     // Syscall-related fields.
     syscall::SyscallHandler syscall_handler_;
+
+    // Filesystem-related fields.
+    std::shared_ptr<IDEntry> root_dentry_;
+    std::set<std::shared_ptr<ISuperBlock>> super_blocks_;
+    std::map<std::shared_ptr<IDEntry>, std::stack<std::shared_ptr<ISuperBlock>>>
+        mount_points_;
 
     uc_engine* uc_;
     uc_hook syscall_hook_;
