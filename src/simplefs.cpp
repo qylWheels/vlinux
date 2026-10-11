@@ -167,10 +167,13 @@ outcome::result<std::shared_ptr<IDEntry>> SuperBlock::alloc_dentry(
     OUTCOME_TRY(auto inode, this->alloc_inode(sb_downcasted));
     auto inode_downcasted = std::dynamic_pointer_cast<INode>(inode);
 
-    auto dentry = std::make_shared<DEntry>(parent_downcasted, name,
-                                           inode_downcasted, sb_downcasted);
+    auto dentry = std::make_shared<DEntry>();
 
     // Setup child and parent.
+    dentry->impl_->parent = parent_downcasted;
+    dentry->impl_->name = name;
+    dentry->impl_->inode = inode_downcasted;
+    dentry->impl_->super_block = sb_downcasted;
     dentry->impl_->subdirs = {};
     dentry->impl_->is_mount_point = false;
     OUTCOME_TRY(parent_downcasted->add_subdir(dentry));
