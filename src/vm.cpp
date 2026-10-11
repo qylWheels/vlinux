@@ -242,14 +242,9 @@ public:
         auto sb = std::make_shared<vlinux::fs::simplefs::SuperBlock>(uc);
         this->super_blocks_.insert(sb);
         OUTCOME_TRY(auto root_inode, sb->alloc_inode(sb));
-        auto root_inode_downcasted =
-            std::dynamic_pointer_cast<vlinux::fs::simplefs::INode>(root_inode);
-        if (!root_inode_downcasted) {
-            return std::errc::invalid_argument;
-        }
         std::shared_ptr<IDEntry> null;
         OUTCOME_TRY(auto root_dentry,
-                    sb->alloc_dentry("/", root_inode_downcasted, null, sb));
+                    sb->alloc_dentry("/", root_inode, null, sb));
         this->root_dentry_ = root_dentry;
         std::stack<std::shared_ptr<ISuperBlock>> sb_stack;
         sb_stack.push(sb);
