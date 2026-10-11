@@ -87,7 +87,7 @@ public:
     DEntry& operator=(DEntry&&) = delete;
 
 public:
-    virtual std::shared_ptr<IDEntry> parent() const override;
+    virtual std::weak_ptr<IDEntry> parent() const override;
     virtual std::string name() const override;
     virtual bool compare(const std::string& name) const override;
     virtual std::shared_ptr<IINode> inode() const override;

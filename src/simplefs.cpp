@@ -135,7 +135,7 @@ public:
     ~Impl() = default;
 
 public:
-    std::shared_ptr<DEntry> parent;
+    std::weak_ptr<DEntry> parent;
     std::string name;
     std::shared_ptr<INode> inode;
     std::shared_ptr<SuperBlock> super_block;
@@ -157,7 +157,7 @@ DEntry::DEntry(std::shared_ptr<DEntry> parent, std::string name,
 
 DEntry::~DEntry() = default;
 
-std::shared_ptr<IDEntry> DEntry::parent() const { return this->impl_->parent; }
+std::weak_ptr<IDEntry> DEntry::parent() const { return this->impl_->parent; }
 
 std::string DEntry::name() const { return this->impl_->name; }
 
