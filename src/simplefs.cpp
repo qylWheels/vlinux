@@ -4,8 +4,11 @@
 
 #include <cstddef>
 #include <memory>
+#include <outcome/outcome.hpp>
+#include <outcome/try.hpp>
 #include <set>
 #include <system_error>
+#include <vector>
 
 namespace vlinux {
 namespace fs {
@@ -27,6 +30,20 @@ public:
     std::uint64_t disk_refcount_;
     std::weak_ptr<ISuperBlock> super_block_;
     std::vector<std::uint8_t> data_;  // File data.
+};
+
+class DEntry::Impl {
+public:
+    Impl() = default;
+    ~Impl() = default;
+
+public:
+    std::weak_ptr<DEntry> parent;
+    std::string name;
+    std::shared_ptr<INode> inode;
+    std::shared_ptr<SuperBlock> super_block;
+    std::vector<std::shared_ptr<DEntry>> subdirs;
+    bool is_mount_point;
 };
 
 INode::INode() : impl_(std::make_unique<Impl>()) {}
@@ -129,19 +146,57 @@ void SuperBlock::destroy_inode(std::shared_ptr<IINode> inode) {
     return;
 }
 
-class DEntry::Impl {
-public:
-    Impl() = default;
-    ~Impl() = default;
+// Dentry operations.
+outcome::result<std::shared_ptr<IDEntry>> SuperBlock::alloc_dentry(
+    std::string name, std::weak_ptr<IDEntry> parent,
+    std::shared_ptr<ISuperBlock> sb) {
+    if (!parent.lock()) {
+        return std::errc::invalid_argument;
+    }
 
-public:
-    std::weak_ptr<DEntry> parent;
-    std::string name;
-    std::shared_ptr<INode> inode;
-    std::shared_ptr<SuperBlock> super_block;
-    std::vector<std::shared_ptr<DEntry>> subdirs;
-    bool is_mount_point;
-};
+    auto parent_downcasted = std::dynamic_pointer_cast<DEntry>(parent.lock());
+    if (!parent_downcasted) {
+        return std::errc::invalid_argument;
+    }
+
+    auto sb_downcasted = std::dynamic_pointer_cast<SuperBlock>(sb);
+    if (!sb_downcasted) {
+        return std::errc::invalid_argument;
+    }
+
+    OUTCOME_TRY(auto inode, this->alloc_inode(sb_downcasted));
+    auto inode_downcasted = std::dynamic_pointer_cast<INode>(inode);
+
+    auto dentry = std::make_shared<DEntry>(parent_downcasted, name,
+                                           inode_downcasted, sb_downcasted);
+
+    // Setup child and parent.
+    dentry->impl_->subdirs = {};
+    dentry->impl_->is_mount_point = false;
+    OUTCOME_TRY(parent_downcasted->add_subdir(dentry));
+
+    return dentry;
+}
+
+void SuperBlock::destroy_dentry(std::shared_ptr<IDEntry> dentry) {
+    if (!dentry) {
+        return;
+    }
+
+    auto parent = dentry->parent().lock();
+    if (!parent) {
+        return;
+    }
+
+    auto parent_downcasted = std::dynamic_pointer_cast<DEntry>(parent);
+    if (!parent_downcasted) {
+        return;
+    }
+
+    std::erase(parent_downcasted->impl_->subdirs, dentry);
+
+    return;
+}
 
 DEntry::DEntry(std::shared_ptr<DEntry> parent, std::string name,
                std::shared_ptr<INode> inode,

@@ -26,6 +26,12 @@ public:
         std::shared_ptr<ISuperBlock>) override;
     virtual void destroy_inode(std::shared_ptr<IINode> inode) override;
 
+    // Dentry operations.
+    virtual outcome::result<std::shared_ptr<IDEntry>> alloc_dentry(
+        std::string name, std::weak_ptr<IDEntry> parent,
+        std::shared_ptr<ISuperBlock>) override;
+    virtual void destroy_dentry(std::shared_ptr<IDEntry> dentry) override;
+
 private:
     class Impl;
     std::unique_ptr<Impl> impl_;
@@ -76,6 +82,8 @@ private:
 };
 
 class DEntry : public IDEntry {
+    friend class SuperBlock;
+
 public:
     DEntry(std::shared_ptr<DEntry> parent, std::string name,
            std::shared_ptr<INode> inode,
