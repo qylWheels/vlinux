@@ -126,6 +126,11 @@ public:
             [this](std::shared_ptr<Task> task) -> outcome::result<void> {
             return this->scheduler_->add_task(task);
         };
+
+        // Setup VFS.
+        if (this->init_vfs(this->uc_).has_error()) {
+            throw std::runtime_error("init_vfs failed");
+        }
     }
 
     ~Impl() {
