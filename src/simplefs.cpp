@@ -148,8 +148,8 @@ void SuperBlock::destroy_inode(std::shared_ptr<IINode> inode) {
 
 // Dentry operations.
 outcome::result<std::shared_ptr<IDEntry>> SuperBlock::alloc_dentry(
-    std::string name, std::weak_ptr<IDEntry> parent,
-    std::shared_ptr<ISuperBlock> sb) {
+    std::string name, std::shared_ptr<IINode> inode,
+    std::weak_ptr<IDEntry> parent, std::shared_ptr<ISuperBlock> sb) {
     if (!parent.lock()) {
         return std::errc::invalid_argument;
     }
@@ -164,7 +164,6 @@ outcome::result<std::shared_ptr<IDEntry>> SuperBlock::alloc_dentry(
         return std::errc::invalid_argument;
     }
 
-    OUTCOME_TRY(auto inode, this->alloc_inode(sb_downcasted));
     auto inode_downcasted = std::dynamic_pointer_cast<INode>(inode);
 
     auto dentry = std::make_shared<DEntry>();

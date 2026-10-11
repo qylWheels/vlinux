@@ -28,8 +28,8 @@ public:
 
     // Dentry operations.
     virtual outcome::result<std::shared_ptr<IDEntry>> alloc_dentry(
-        std::string name, std::weak_ptr<IDEntry> parent,
-        std::shared_ptr<ISuperBlock>) override;
+        std::string name, std::shared_ptr<IINode> inode,
+        std::weak_ptr<IDEntry> parent, std::shared_ptr<ISuperBlock>) override;
     virtual void destroy_dentry(std::shared_ptr<IDEntry> dentry) override;
 
 private:
