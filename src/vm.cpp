@@ -128,8 +128,10 @@ public:
         };
 
         // Setup VFS.
-        if (this->init_vfs(this->uc_).has_error()) {
-            throw std::runtime_error("init_vfs failed");
+        auto result = this->init_vfs(this->uc_);
+        if (result.has_error()) {
+            throw std::runtime_error("init_vfs failed: " +
+                                     result.error().message());
         }
     }
 
