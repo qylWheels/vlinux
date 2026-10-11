@@ -150,12 +150,8 @@ void SuperBlock::destroy_inode(std::shared_ptr<IINode> inode) {
 outcome::result<std::shared_ptr<IDEntry>> SuperBlock::alloc_dentry(
     std::string name, std::shared_ptr<IINode> inode,
     std::weak_ptr<IDEntry> parent, std::shared_ptr<ISuperBlock> sb) {
-    if (!parent.lock()) {
-        return std::errc::invalid_argument;
-    }
-
     auto parent_downcasted = std::dynamic_pointer_cast<DEntry>(parent.lock());
-    if (!parent_downcasted) {
+    if (parent.lock() && !parent_downcasted) {
         return std::errc::invalid_argument;
     }
 
@@ -175,7 +171,9 @@ outcome::result<std::shared_ptr<IDEntry>> SuperBlock::alloc_dentry(
     dentry->impl_->super_block = sb_downcasted;
     dentry->impl_->subdirs = {};
     dentry->impl_->is_mount_point = false;
-    OUTCOME_TRY(parent_downcasted->add_subdir(dentry));
+    if (parent_downcasted) {
+        OUTCOME_TRY(parent_downcasted->add_subdir(dentry));
+    }
 
     return dentry;
 }
