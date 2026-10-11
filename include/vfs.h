@@ -73,6 +73,8 @@ public:
     virtual bool compare(const std::string& name) const = 0;
     virtual std::shared_ptr<IINode> inode() const = 0;
     virtual std::shared_ptr<ISuperBlock> super_block() const = 0;
+    virtual outcome::result<void> add_subdir(
+        std::shared_ptr<IDEntry> subdir) = 0;
     virtual std::vector<std::shared_ptr<IDEntry>> subdirs() const = 0;
     virtual bool is_mount_point() const = 0;
 };
