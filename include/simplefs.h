@@ -77,7 +77,9 @@ private:
 
 class DEntry : public IDEntry {
 public:
-    DEntry();
+    DEntry(std::shared_ptr<DEntry> parent, std::string name,
+           std::shared_ptr<INode> inode,
+           std::shared_ptr<SuperBlock> super_block);
     ~DEntry();
     DEntry(const DEntry&) = delete;
     DEntry& operator=(const DEntry&) = delete;

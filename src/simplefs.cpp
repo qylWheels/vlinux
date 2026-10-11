@@ -140,10 +140,20 @@ public:
     std::shared_ptr<INode> inode;
     std::shared_ptr<SuperBlock> super_block;
     std::vector<std::shared_ptr<DEntry>> subdirs;
-    bool is_mount_point = false;
+    bool is_mount_point;
 };
 
-DEntry::DEntry() : impl_(std::make_unique<Impl>()) {}
+DEntry::DEntry(std::shared_ptr<DEntry> parent, std::string name,
+               std::shared_ptr<INode> inode,
+               std::shared_ptr<SuperBlock> super_block) {
+    this->impl_ = std::make_unique<Impl>();
+    this->impl_->parent = parent;
+    this->impl_->name = name;
+    this->impl_->inode = inode;
+    this->impl_->super_block = super_block;
+    this->impl_->subdirs = {};
+    this->impl_->is_mount_point = false;
+}
 
 DEntry::~DEntry() = default;
 
