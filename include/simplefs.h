@@ -36,7 +36,7 @@ class INode : public IINode {
     friend class File;
 
 public:
-    INode();
+    INode(std::shared_ptr<SuperBlock> sb);
     ~INode();
     INode(const INode&) = delete;
     INode& operator=(const INode&) = delete;
