@@ -29,9 +29,7 @@ public:
     std::vector<std::uint8_t> data_;  // File data.
 };
 
-INode::INode(std::shared_ptr<SuperBlock> sb) : impl_(std::make_unique<Impl>()) {
-    this->impl_->super_block_ = sb;
-}
+INode::INode() : impl_(std::make_unique<Impl>()) {}
 
 INode::~INode() = default;
 
