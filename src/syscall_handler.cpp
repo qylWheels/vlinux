@@ -619,6 +619,22 @@ public:
     }
 };
 
+class SysOpenHandler {
+public:
+    SysOpenHandler() = default;
+    ~SysOpenHandler() = default;
+    SysOpenHandler(const SysOpenHandler&) = delete;
+    SysOpenHandler& operator=(const SysOpenHandler&) = delete;
+    SysOpenHandler(SysOpenHandler&&) = delete;
+    SysOpenHandler& operator=(SysOpenHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        return -ENOSYS;
+    }
+};
+
 class SyscallHandler::Impl {
 public:
     Impl() = default;
@@ -666,6 +682,9 @@ std::uint64_t SyscallHandler::dispatch(Context context,
             break;
         case SYS_getppid:
             ret = SysGetppidHandler::handle(context, args);
+            break;
+        case SYS_open:
+            ret = SysOpenHandler::handle(context, args);
             break;
         default:
             ret = -ENOSYS;
