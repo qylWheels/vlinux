@@ -171,6 +171,15 @@ std::shared_ptr<ISuperBlock> DEntry::super_block() const {
     return this->impl_->super_block;
 }
 
+outcome::result<void> DEntry::add_subdir(std::shared_ptr<IDEntry> subdir) {
+    auto subdir_downcasted = std::dynamic_pointer_cast<DEntry>(subdir);
+    if (!subdir_downcasted) {
+        return std::errc::invalid_argument;
+    }
+    this->impl_->subdirs.push_back(subdir_downcasted);
+    return outcome::success();
+}
+
 std::vector<std::shared_ptr<IDEntry>> DEntry::subdirs() const {
     return std::vector<std::shared_ptr<IDEntry>>(this->impl_->subdirs.begin(),
                                                  this->impl_->subdirs.end());

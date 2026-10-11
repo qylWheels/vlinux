@@ -92,6 +92,8 @@ public:
     virtual bool compare(const std::string& name) const override;
     virtual std::shared_ptr<IINode> inode() const override;
     virtual std::shared_ptr<ISuperBlock> super_block() const override;
+    virtual outcome::result<void> add_subdir(
+        std::shared_ptr<IDEntry> subdir) override;
     virtual std::vector<std::shared_ptr<IDEntry>> subdirs() const override;
     virtual bool is_mount_point() const override;
 
