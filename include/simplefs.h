@@ -91,6 +91,7 @@ public:
     virtual std::shared_ptr<IINode> inode() const override;
     virtual std::shared_ptr<ISuperBlock> super_block() const override;
     virtual std::vector<std::shared_ptr<IDEntry>> subdirs() const override;
+    virtual bool is_mount_point() const override;
 
 private:
     class Impl;

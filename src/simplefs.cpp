@@ -140,6 +140,7 @@ public:
     std::shared_ptr<INode> inode;
     std::shared_ptr<SuperBlock> super_block;
     std::vector<std::shared_ptr<DEntry>> subdirs;
+    bool is_mount_point = false;
 };
 
 DEntry::DEntry() : impl_(std::make_unique<Impl>()) {}
@@ -164,6 +165,8 @@ std::vector<std::shared_ptr<IDEntry>> DEntry::subdirs() const {
     return std::vector<std::shared_ptr<IDEntry>>(this->impl_->subdirs.begin(),
                                                  this->impl_->subdirs.end());
 }
+
+bool DEntry::is_mount_point() const { return this->impl_->is_mount_point; }
 
 class File::Impl {
 public:
