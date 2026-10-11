@@ -235,15 +235,13 @@ TEST_CASE("Test VFS", "[vfs]") {
             std::dynamic_pointer_cast<vlinux::fs::simplefs::INode>(root_inode);
         auto sb_downcasted =
             std::dynamic_pointer_cast<vlinux::fs::simplefs::SuperBlock>(sb);
-        auto root = std::make_shared<vlinux::fs::simplefs::DEntry>(
-            nullptr, "/", root_inode_downcasted, sb_downcasted);
+        auto root = std::make_shared<vlinux::fs::simplefs::DEntry>();
         auto home_inode = sb->alloc_inode(sb);
         REQUIRE(home_inode.has_value());
         auto home_inode_downcasted =
             std::dynamic_pointer_cast<vlinux::fs::simplefs::INode>(
                 home_inode.value());
-        auto home = std::make_shared<vlinux::fs::simplefs::DEntry>(
-            root, "home", home_inode_downcasted, sb_downcasted);
+        auto home = std::make_shared<vlinux::fs::simplefs::DEntry>();
         REQUIRE(root->add_subdir(home).has_value());
         REQUIRE(root_inode->super_block().lock() == sb);
 
