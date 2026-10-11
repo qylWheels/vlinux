@@ -68,7 +68,7 @@ public:
     virtual ~IDEntry() = default;
 
 public:
-    virtual std::shared_ptr<IDEntry> parent() const = 0;
+    virtual std::weak_ptr<IDEntry> parent() const = 0;
     virtual std::string name() const = 0;
     virtual bool compare(const std::string& name) const = 0;
     virtual std::shared_ptr<IINode> inode() const = 0;
