@@ -74,6 +74,7 @@ public:
     virtual std::shared_ptr<IINode> inode() const = 0;
     virtual std::shared_ptr<ISuperBlock> super_block() const = 0;
     virtual std::vector<std::shared_ptr<IDEntry>> subdirs() const = 0;
+    virtual bool is_mount_point() const = 0;
 };
 
 struct IoVector {
