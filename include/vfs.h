@@ -28,6 +28,11 @@ public:
     virtual outcome::result<std::shared_ptr<IINode>> alloc_inode(
         std::shared_ptr<ISuperBlock>) = 0;
     virtual void destroy_inode(std::shared_ptr<IINode> inode) = 0;
+
+    // Dentry operations.
+    virtual outcome::result<std::shared_ptr<IDEntry>> alloc_dentry(
+        std::string name, std::shared_ptr<IDEntry> parent) = 0;
+    virtual void destroy_dentry(std::shared_ptr<IDEntry> dentry) = 0;
 };
 
 class IINode {
