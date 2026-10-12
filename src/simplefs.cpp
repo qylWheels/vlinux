@@ -1,5 +1,6 @@
 #include "simplefs.h"
 
+#include <sys/stat.h>
 #include <unicorn/unicorn.h>
 
 #include <cstddef>
@@ -19,6 +20,13 @@ public:
     ~Impl() = default;
 
 public:
+    // Subdirectory item.
+    struct SubDirItem {
+        std::string name;
+        std::shared_ptr<INode> inode;
+    };
+
+public:
     std::uint64_t id_;
     std::uint64_t block_count_;
     std::uint64_t type_;
@@ -30,6 +38,8 @@ public:
     std::uint64_t disk_refcount_;
     std::weak_ptr<ISuperBlock> super_block_;
     std::vector<std::uint8_t> data_;  // File data.
+    // Subdirectory items, only available for directory inode.
+    std::vector<SubDirItem> subdir_items_;
 };
 
 class DEntry::Impl {
@@ -87,6 +97,20 @@ std::uint64_t INode::disk_refcount() const {
 
 std::weak_ptr<ISuperBlock> INode::super_block() const {
     return this->impl_->super_block_;
+}
+
+outcome::result<std::shared_ptr<IINode>> INode::lookup(std::string name) {
+    if ((this->impl_->type_ & S_IFDIR) == 0) {
+        return std::errc::not_a_directory;
+    }
+
+    for (auto& item : this->impl_->subdir_items_) {
+        if (item.name == name) {
+            return item.inode;
+        }
+    }
+
+    return std::errc::no_such_file_or_directory;
 }
 
 class SuperBlock::Impl {

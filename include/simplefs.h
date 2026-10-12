@@ -76,6 +76,10 @@ public:
     // Super block.
     virtual std::weak_ptr<ISuperBlock> super_block() const override;
 
+    // Lookup inode of subdirectory item.
+    virtual outcome::result<std::shared_ptr<IINode>> lookup(
+        std::string name) override;
+
 private:
     class Impl;
     std::unique_ptr<Impl> impl_;
