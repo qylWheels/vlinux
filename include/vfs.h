@@ -67,6 +67,10 @@ public:
 
     // Super block.
     virtual std::weak_ptr<ISuperBlock> super_block() const = 0;
+
+    // Lookup inode of subdirectory item.
+    virtual outcome::result<std::shared_ptr<IINode>> lookup(
+        std::string name) = 0;
 };
 
 class IDEntry {
