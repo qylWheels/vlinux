@@ -34,6 +34,11 @@ public:
         std::string name, std::shared_ptr<IINode> inode,
         std::weak_ptr<IDEntry> parent, std::shared_ptr<ISuperBlock> sb) = 0;
     virtual void destroy_dentry(std::shared_ptr<IDEntry> dentry) = 0;
+
+    // File operations.
+    virtual outcome::result<std::shared_ptr<IINode>> alloc_file(
+        std::shared_ptr<ISuperBlock>) = 0;
+    virtual void destroy_file(std::shared_ptr<IINode> inode) = 0;
 };
 
 class IINode {
