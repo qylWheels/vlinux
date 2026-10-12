@@ -13,6 +13,7 @@ namespace outcome = OUTCOME_V2_NAMESPACE;
 namespace vlinux {
 class IDEntry;
 class IINode;
+class IFile;
 
 class ISuperBlock {
 public:
@@ -71,6 +72,9 @@ public:
     // Lookup inode of subdirectory item.
     virtual outcome::result<std::shared_ptr<IINode>> lookup(
         std::string name) = 0;
+
+    // File.
+    virtual outcome::result<std::shared_ptr<IFile>> open() = 0;
 };
 
 class IDEntry {
