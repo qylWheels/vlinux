@@ -135,7 +135,11 @@ public:  // Operations.
     virtual outcome::result<void> set_offset(std::uint64_t offset) override;
     virtual std::uint64_t offset() const override;
 
+    // Inode.
     virtual std::shared_ptr<IINode> inode() const override;
+    virtual outcome::result<void> set_inode(
+        std::shared_ptr<IINode> inode) override;
+
     virtual outcome::result<std::size_t> iov_read(
         std::vector<IoVector> iov) override;
     virtual outcome::result<std::size_t> iov_write(

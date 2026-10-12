@@ -305,6 +305,21 @@ outcome::result<void> File::set_offset(std::uint64_t offset) {
 
 std::uint64_t File::offset() const { return this->impl_->offset; }
 
+outcome::result<void> File::set_inode(std::shared_ptr<IINode> inode) {
+    if (!inode) {
+        return std::errc::invalid_argument;
+    }
+
+    auto inode_downcasted = std::dynamic_pointer_cast<INode>(inode);
+    if (!inode_downcasted) {
+        return std::errc::invalid_argument;
+    }
+
+    this->impl_->inode = inode_downcasted;
+
+    return outcome::success();
+}
+
 std::shared_ptr<IINode> File::inode() const { return this->impl_->inode; }
 
 outcome::result<std::size_t> File::iov_read(std::vector<IoVector> iov) {
