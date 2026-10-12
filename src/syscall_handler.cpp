@@ -635,6 +635,22 @@ public:
     }
 };
 
+class SysOpenAtHandler {
+public:
+    SysOpenAtHandler() = default;
+    ~SysOpenAtHandler() = default;
+    SysOpenAtHandler(const SysOpenAtHandler&) = delete;
+    SysOpenAtHandler& operator=(const SysOpenAtHandler&) = delete;
+    SysOpenAtHandler(SysOpenAtHandler&&) = delete;
+    SysOpenAtHandler& operator=(SysOpenAtHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        return -ENOSYS;
+    }
+};
+
 class SyscallHandler::Impl {
 public:
     Impl() = default;
@@ -685,6 +701,9 @@ std::uint64_t SyscallHandler::dispatch(Context context,
             break;
         case SYS_open:
             ret = SysOpenHandler::handle(context, args);
+            break;
+        case SYS_openat:
+            ret = SysOpenAtHandler::handle(context, args);
             break;
         default:
             ret = -ENOSYS;
