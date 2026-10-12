@@ -112,7 +112,10 @@ public:  // Operations.
     virtual outcome::result<void> set_offset(std::uint64_t offset) = 0;
     virtual std::uint64_t offset() const = 0;
 
+    // Inode.
+    virtual outcome::result<void> set_inode(std::shared_ptr<IINode> inode) = 0;
     virtual std::shared_ptr<IINode> inode() const = 0;
+
     virtual outcome::result<std::size_t> iov_read(
         std::vector<IoVector> iov) = 0;
     virtual outcome::result<std::size_t> iov_write(
