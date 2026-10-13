@@ -74,45 +74,7 @@ public:
         std::string name) override;
 
     // File.
-    virtual outcome::result<std::shared_ptr<IFile>> open() override;
-
-private:
-    class Impl;
-    std::unique_ptr<Impl> impl_;
-};
-
-class File : public IFile {
-public:
-    File(std::shared_ptr<INode> inode, uc_engine* uc);
-    ~File();
-    File(const File&) = delete;
-    File& operator=(const File&) = delete;
-    File(File&&) = delete;
-    File& operator=(File&&) = delete;
-
-public:  // Operations.
-    // References.
-    virtual outcome::result<void> get() override;
-    virtual outcome::result<void> put() override;
-    virtual std::uint64_t refcount() const override;
-
-    // Flags.
-    virtual outcome::result<void> set_flags(std::uint64_t flags) override;
-    virtual std::uint64_t flags() const override;
-
-    // Offset.
-    virtual outcome::result<void> set_offset(std::uint64_t offset) override;
-    virtual std::uint64_t offset() const override;
-
-    // Inode.
-    virtual std::shared_ptr<IINode> inode() const override;
-    virtual outcome::result<void> set_inode(
-        std::shared_ptr<IINode> inode) override;
-
-    virtual outcome::result<std::size_t> iov_read(
-        std::vector<IoVector> iov) override;
-    virtual outcome::result<std::size_t> iov_write(
-        std::vector<IoVector> iov) override;
+    virtual outcome::result<std::shared_ptr<File>> open() override;
 
 private:
     class Impl;
