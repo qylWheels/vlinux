@@ -86,37 +86,35 @@ public:
 
 public:
     // References.
-    virtual outcome::result<void> get() {
+    outcome::result<void> get() {
         this->refcount_++;
         return outcome::success();
     }
-    virtual outcome::result<void> put() {
+    outcome::result<void> put() {
         if (this->refcount_ == 0) {
             return std::errc::invalid_argument;
         }
         this->refcount_--;
         return outcome::success();
     }
-    virtual std::uint64_t refcount() const { return this->refcount_; }
+    std::uint64_t refcount() const { return this->refcount_; }
 
     // Flags.
-    virtual outcome::result<void> set_flags(std::uint64_t flags) {
+    outcome::result<void> set_flags(std::uint64_t flags) {
         this->flags_ = flags;
         return outcome::success();
     }
-    virtual std::uint64_t flags() const { return this->flags_; }
+    std::uint64_t flags() const { return this->flags_; }
 
     // Offset.
-    virtual outcome::result<void> set_offset(std::uint64_t offset) {
+    outcome::result<void> set_offset(std::uint64_t offset) {
         this->offset_ = offset;
         return outcome::success();
     }
-    virtual std::uint64_t offset() const { return this->offset_; }
+    std::uint64_t offset() const { return this->offset_; }
 
-    virtual outcome::result<std::size_t> iov_read(
-        std::vector<IoVector> iov) = 0;
-    virtual outcome::result<std::size_t> iov_write(
-        std::vector<IoVector> iov) = 0;
+    outcome::result<std::size_t> iov_read(std::vector<IoVector> iov) {}
+    outcome::result<std::size_t> iov_write(std::vector<IoVector> iov) {}
 
 private:
     std::uint64_t refcount_ = 0;
