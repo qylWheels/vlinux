@@ -99,8 +99,11 @@ public:
     virtual std::uint64_t flags() const { return this->flags_; }
 
     // Offset.
-    virtual outcome::result<void> set_offset(std::uint64_t offset) = 0;
-    virtual std::uint64_t offset() const = 0;
+    virtual outcome::result<void> set_offset(std::uint64_t offset) {
+        this->offset_ = offset;
+        return outcome::success();
+    }
+    virtual std::uint64_t offset() const { return this->offset_; }
 
     // Inode.
     virtual outcome::result<void> set_inode(std::shared_ptr<IINode> inode) = 0;
@@ -114,6 +117,7 @@ public:
 private:
     std::uint64_t refcount_ = 0;
     std::uint64_t flags_ = 0;
+    std::uint64_t offset_ = 0;
 };
 
 class VFS {
