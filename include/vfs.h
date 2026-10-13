@@ -23,7 +23,6 @@ public:
     // Basic information.
     virtual std::size_t block_size() const = 0;
     virtual std::uint64_t magic() const = 0;
-    virtual std::shared_ptr<IDEntry> root_dentry() const = 0;
 
     // Inode operations.
     virtual outcome::result<std::shared_ptr<IINode>> alloc_inode(
