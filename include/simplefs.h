@@ -19,18 +19,11 @@ public:
     // Basic information.
     virtual std::size_t block_size() const override;
     virtual std::uint64_t magic() const override;
-    virtual std::shared_ptr<IDEntry> root_dentry() const override;
 
     // Inode operations.
     virtual outcome::result<std::shared_ptr<IINode>> alloc_inode(
         std::shared_ptr<ISuperBlock>) override;
     virtual void destroy_inode(std::shared_ptr<IINode> inode) override;
-
-    // Dentry operations.
-    virtual outcome::result<std::shared_ptr<IDEntry>> alloc_dentry(
-        std::string name, std::shared_ptr<IINode> inode,
-        std::weak_ptr<IDEntry> parent, std::shared_ptr<ISuperBlock>) override;
-    virtual void destroy_dentry(std::shared_ptr<IDEntry> dentry) override;
 
 private:
     class Impl;
@@ -80,32 +73,8 @@ public:
     virtual outcome::result<std::shared_ptr<IINode>> lookup(
         std::string name) override;
 
-private:
-    class Impl;
-    std::unique_ptr<Impl> impl_;
-};
-
-class DEntry : public IDEntry {
-    friend class SuperBlock;
-
-public:
-    DEntry();
-    ~DEntry();
-    DEntry(const DEntry&) = delete;
-    DEntry& operator=(const DEntry&) = delete;
-    DEntry(DEntry&&) = delete;
-    DEntry& operator=(DEntry&&) = delete;
-
-public:
-    virtual std::weak_ptr<IDEntry> parent() const override;
-    virtual std::string name() const override;
-    virtual bool compare(const std::string& name) const override;
-    virtual std::shared_ptr<IINode> inode() const override;
-    virtual std::shared_ptr<ISuperBlock> super_block() const override;
-    virtual outcome::result<void> add_subdir(
-        std::shared_ptr<IDEntry> subdir) override;
-    virtual std::vector<std::shared_ptr<IDEntry>> subdirs() const override;
-    virtual bool is_mount_point() const override;
+    // File.
+    virtual outcome::result<std::shared_ptr<IFile>> open() override;
 
 private:
     class Impl;
