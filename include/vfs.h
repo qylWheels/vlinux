@@ -65,9 +65,6 @@ public:
     // Lookup inode of subdirectory item.
     virtual outcome::result<std::shared_ptr<IINode>> lookup(
         std::string name) = 0;
-
-    // File.
-    virtual outcome::result<std::shared_ptr<File>> open() = 0;
 };
 
 struct IoVector {
