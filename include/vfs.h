@@ -13,7 +13,7 @@ namespace outcome = OUTCOME_V2_NAMESPACE;
 namespace vlinux {
 class IDEntry;
 class IINode;
-class IFile;
+class File;
 
 class ISuperBlock {
 public:
@@ -67,7 +67,7 @@ public:
         std::string name) = 0;
 
     // File.
-    virtual outcome::result<std::shared_ptr<IFile>> open() = 0;
+    virtual outcome::result<std::shared_ptr<File>> open() = 0;
 };
 
 struct IoVector {
@@ -75,15 +75,21 @@ struct IoVector {
     std::uint64_t len;
 };
 
-class IFile {
+class File {
 public:
-    virtual ~IFile() = default;
-
-public:  // Operations.
     // References.
-    virtual outcome::result<void> get() = 0;
-    virtual outcome::result<void> put() = 0;
-    virtual std::uint64_t refcount() const = 0;
+    virtual outcome::result<void> get() {
+        this->refcount_++;
+        return outcome::success();
+    }
+    virtual outcome::result<void> put() {
+        if (this->refcount_ == 0) {
+            return std::errc::invalid_argument;
+        }
+        this->refcount_--;
+        return outcome::success();
+    }
+    virtual std::uint64_t refcount() const { return this->refcount_; }
 
     // Flags.
     virtual outcome::result<void> set_flags(std::uint64_t flags) = 0;
@@ -101,6 +107,9 @@ public:  // Operations.
         std::vector<IoVector> iov) = 0;
     virtual outcome::result<std::size_t> iov_write(
         std::vector<IoVector> iov) = 0;
+
+private:
+    std::uint64_t refcount_ = 0;
 };
 
 class VFS {
