@@ -73,9 +73,6 @@ public:
     virtual outcome::result<std::shared_ptr<IINode>> lookup(
         std::string name) override;
 
-    // File.
-    virtual outcome::result<std::shared_ptr<File>> open() override;
-
 private:
     class Impl;
     std::unique_ptr<Impl> impl_;
