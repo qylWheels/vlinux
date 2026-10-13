@@ -77,6 +77,14 @@ struct IoVector {
 
 class File {
 public:
+    File(std::shared_ptr<IINode> inode) : inode_(inode) {}
+    ~File() = default;
+    File(const File&) = delete;
+    File& operator=(const File&) = delete;
+    File(File&&) = delete;
+    File& operator=(File&&) = delete;
+
+public:
     // References.
     virtual outcome::result<void> get() {
         this->refcount_++;
@@ -114,6 +122,7 @@ private:
     std::uint64_t refcount_ = 0;
     std::uint64_t flags_ = 0;
     std::uint64_t offset_ = 0;
+    std::shared_ptr<IINode> inode_;
 };
 
 class VFS {
