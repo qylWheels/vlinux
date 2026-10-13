@@ -113,6 +113,9 @@ public:
     }
     std::uint64_t offset() const { return this->offset_; }
 
+    // Inode.
+    std::shared_ptr<IINode> inode() const { return this->inode_; }
+
     outcome::result<std::size_t> iov_read(std::vector<IoVector> iov) {}
     outcome::result<std::size_t> iov_write(std::vector<IoVector> iov) {}
 
