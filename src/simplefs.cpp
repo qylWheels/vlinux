@@ -138,6 +138,7 @@ outcome::result<std::shared_ptr<IINode>> SuperBlock::alloc_inode(
     inode->impl_->disk_refcount_ = 0;
     inode->impl_->super_block_ = sb;
     inode->impl_->data_ = {};
+    inode->impl_->subdir_items_ = {};
     auto ret = this->impl_->inodes_.insert(inode);
     if (!ret.second) {
         return std::errc::file_exists;
