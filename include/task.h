@@ -104,7 +104,7 @@ public:
     std::shared_ptr<mm::PageTable> page_table;
 
     // File system related fields.
-    std::vector<std::shared_ptr<IFile>> files;
+    std::vector<std::shared_ptr<File>> files;
 
     // Context saved when scheduled.
     uc_context* ctx;
