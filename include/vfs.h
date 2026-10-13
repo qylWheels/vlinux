@@ -92,8 +92,11 @@ public:
     virtual std::uint64_t refcount() const { return this->refcount_; }
 
     // Flags.
-    virtual outcome::result<void> set_flags(std::uint64_t flags) = 0;
-    virtual std::uint64_t flags() const = 0;
+    virtual outcome::result<void> set_flags(std::uint64_t flags) {
+        this->flags_ = flags;
+        return outcome::success();
+    }
+    virtual std::uint64_t flags() const { return this->flags_; }
 
     // Offset.
     virtual outcome::result<void> set_offset(std::uint64_t offset) = 0;
@@ -110,6 +113,7 @@ public:
 
 private:
     std::uint64_t refcount_ = 0;
+    std::uint64_t flags_ = 0;
 };
 
 class VFS {
