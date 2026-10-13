@@ -42,20 +42,6 @@ public:
     std::vector<SubDirItem> subdir_items_;
 };
 
-class DEntry::Impl {
-public:
-    Impl() = default;
-    ~Impl() = default;
-
-public:
-    std::weak_ptr<DEntry> parent;
-    std::string name;
-    std::shared_ptr<INode> inode;
-    std::shared_ptr<SuperBlock> super_block;
-    std::vector<std::shared_ptr<DEntry>> subdirs;
-    bool is_mount_point;
-};
-
 INode::INode() : impl_(std::make_unique<Impl>()) {}
 
 INode::~INode() = default;
@@ -122,7 +108,6 @@ public:
     uc_engine* uc_;
     std::size_t block_size_ = 4096;
     std::uint64_t magic_ = 0xf8f90000;
-    std::shared_ptr<DEntry> root_dentry_;
     std::set<std::shared_ptr<INode>> inodes_;
     std::uint64_t next_inode_id_ = 0;
 };
@@ -137,10 +122,6 @@ SuperBlock::~SuperBlock() = default;
 std::size_t SuperBlock::block_size() const { return this->impl_->block_size_; }
 
 std::uint64_t SuperBlock::magic() const { return this->impl_->magic_; }
-
-std::shared_ptr<IDEntry> SuperBlock::root_dentry() const {
-    return this->impl_->root_dentry_;
-}
 
 // Inode operations.
 outcome::result<std::shared_ptr<IINode>> SuperBlock::alloc_inode(
@@ -169,92 +150,6 @@ void SuperBlock::destroy_inode(std::shared_ptr<IINode> inode) {
     this->impl_->inodes_.erase(inode2);
     return;
 }
-
-// Dentry operations.
-outcome::result<std::shared_ptr<IDEntry>> SuperBlock::alloc_dentry(
-    std::string name, std::shared_ptr<IINode> inode,
-    std::weak_ptr<IDEntry> parent, std::shared_ptr<ISuperBlock> sb) {
-    auto parent_downcasted = std::dynamic_pointer_cast<DEntry>(parent.lock());
-    if (parent.lock() && !parent_downcasted) {
-        return std::errc::invalid_argument;
-    }
-
-    auto sb_downcasted = std::dynamic_pointer_cast<SuperBlock>(sb);
-    if (!sb_downcasted) {
-        return std::errc::invalid_argument;
-    }
-
-    auto inode_downcasted = std::dynamic_pointer_cast<INode>(inode);
-
-    auto dentry = std::make_shared<DEntry>();
-
-    // Setup child and parent.
-    dentry->impl_->parent = parent_downcasted;
-    dentry->impl_->name = name;
-    dentry->impl_->inode = inode_downcasted;
-    dentry->impl_->super_block = sb_downcasted;
-    dentry->impl_->subdirs = {};
-    dentry->impl_->is_mount_point = false;
-    if (parent_downcasted) {
-        OUTCOME_TRY(parent_downcasted->add_subdir(dentry));
-    }
-
-    return dentry;
-}
-
-void SuperBlock::destroy_dentry(std::shared_ptr<IDEntry> dentry) {
-    if (!dentry) {
-        return;
-    }
-
-    auto parent = dentry->parent().lock();
-    if (!parent) {
-        return;
-    }
-
-    auto parent_downcasted = std::dynamic_pointer_cast<DEntry>(parent);
-    if (!parent_downcasted) {
-        return;
-    }
-
-    std::erase(parent_downcasted->impl_->subdirs, dentry);
-
-    return;
-}
-
-DEntry::DEntry() : impl_(std::make_unique<Impl>()) {}
-
-DEntry::~DEntry() = default;
-
-std::weak_ptr<IDEntry> DEntry::parent() const { return this->impl_->parent; }
-
-std::string DEntry::name() const { return this->impl_->name; }
-
-bool DEntry::compare(const std::string& name) const {
-    return this->impl_->name == name;
-}
-
-std::shared_ptr<IINode> DEntry::inode() const { return this->impl_->inode; }
-
-std::shared_ptr<ISuperBlock> DEntry::super_block() const {
-    return this->impl_->super_block;
-}
-
-outcome::result<void> DEntry::add_subdir(std::shared_ptr<IDEntry> subdir) {
-    auto subdir_downcasted = std::dynamic_pointer_cast<DEntry>(subdir);
-    if (!subdir_downcasted) {
-        return std::errc::invalid_argument;
-    }
-    this->impl_->subdirs.push_back(subdir_downcasted);
-    return outcome::success();
-}
-
-std::vector<std::shared_ptr<IDEntry>> DEntry::subdirs() const {
-    return std::vector<std::shared_ptr<IDEntry>>(this->impl_->subdirs.begin(),
-                                                 this->impl_->subdirs.end());
-}
-
-bool DEntry::is_mount_point() const { return this->impl_->is_mount_point; }
 
 class File::Impl {
 public:
