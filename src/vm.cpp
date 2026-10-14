@@ -243,12 +243,8 @@ public:
         this->super_blocks_.insert(sb);
         OUTCOME_TRY(auto root_inode, sb->alloc_inode(sb));
         std::shared_ptr<IDEntry> null;
-        OUTCOME_TRY(auto root_dentry,
-                    sb->alloc_dentry("/", root_inode, null, sb));
-        this->root_dentry_ = root_dentry;
         std::stack<std::shared_ptr<ISuperBlock>> sb_stack;
         sb_stack.push(sb);
-        this->mount_points_[root_dentry] = sb_stack;
         return outcome::success();
     }
 
