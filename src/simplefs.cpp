@@ -20,13 +20,6 @@ public:
     ~Impl() = default;
 
 public:
-    // Subdirectory item.
-    struct SubDirItem {
-        std::string name;
-        std::shared_ptr<INode> inode;
-    };
-
-public:
     std::uint64_t id_;
     std::uint64_t block_count_;
     Type type_;
@@ -39,7 +32,7 @@ public:
     std::weak_ptr<ISuperBlock> super_block_;
     std::vector<std::uint8_t> data_;  // File data.
     // Subdirectory items, only available for directory inode.
-    std::vector<SubDirItem> subdir_items_;
+    std::vector<DirItem> subdir_items_;
 };
 
 INode::INode() : impl_(std::make_unique<Impl>()) {}

@@ -28,6 +28,12 @@ public:
         Device,
     };
 
+    // Directory item for directory inode.
+    struct DirItem {
+        std::string name;
+        std::shared_ptr<IINode> inode;
+    };
+
 public:
     // ID.
     virtual std::uint64_t id() const = 0;
