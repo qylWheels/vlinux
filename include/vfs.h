@@ -13,7 +13,6 @@
 namespace outcome = OUTCOME_V2_NAMESPACE;
 
 namespace vlinux {
-class IDEntry;
 class IINode;
 class File;
 
