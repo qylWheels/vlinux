@@ -13,23 +13,8 @@
 namespace outcome = OUTCOME_V2_NAMESPACE;
 
 namespace vlinux {
-class IINode;
+class ISuperBlock;
 class File;
-
-class ISuperBlock {
-public:
-    virtual ~ISuperBlock() = default;
-
-public:
-    // Basic information.
-    virtual std::size_t block_size() const = 0;
-    virtual std::uint64_t magic() const = 0;
-
-    // Inode operations.
-    virtual outcome::result<std::shared_ptr<IINode>> alloc_inode(
-        std::shared_ptr<ISuperBlock> sb, IINode::Type type) = 0;
-    virtual void destroy_inode(std::shared_ptr<IINode> inode) = 0;
-};
 
 class IINode {
 public:
@@ -77,6 +62,21 @@ public:
 
     // File data.
     virtual outcome::result<std::vector<std::uint8_t>*> data() = 0;
+};
+
+class ISuperBlock {
+public:
+    virtual ~ISuperBlock() = default;
+
+public:
+    // Basic information.
+    virtual std::size_t block_size() const = 0;
+    virtual std::uint64_t magic() const = 0;
+
+    // Inode operations.
+    virtual outcome::result<std::shared_ptr<IINode>> alloc_inode(
+        std::shared_ptr<ISuperBlock> sb, IINode::Type type) = 0;
+    virtual void destroy_inode(std::shared_ptr<IINode> inode) = 0;
 };
 
 struct IoVector {
