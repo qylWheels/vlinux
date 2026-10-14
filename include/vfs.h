@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unicorn/unicorn.h>
+
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -120,6 +122,7 @@ public:
     outcome::result<std::size_t> iov_write(std::vector<IoVector> iov);
 
 private:
+    uc_engine* uc_;
     std::uint64_t refcount_ = 0;
     std::uint64_t flags_ = 0;
     std::uint64_t offset_ = 0;
