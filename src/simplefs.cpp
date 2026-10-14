@@ -29,7 +29,7 @@ public:
 public:
     std::uint64_t id_;
     std::uint64_t block_count_;
-    std::uint64_t type_;
+    Type type_;
     std::uint64_t permissions_;
     std::chrono::time_point<std::chrono::system_clock> atime_;
     std::chrono::time_point<std::chrono::system_clock> mtime_;
@@ -52,7 +52,7 @@ std::uint64_t INode::id() const { return this->impl_->id_; }
 std::uint64_t INode::block_count() const { return this->impl_->block_count_; }
 
 // Type and permissions.
-std::uint64_t INode::type() const { return this->impl_->type_; }
+IINode::Type INode::type() const { return this->impl_->type_; }
 
 outcome::result<void> INode::set_permissions(std::uint64_t permissions) {
     this->impl_->permissions_ = permissions;
@@ -90,7 +90,7 @@ std::weak_ptr<ISuperBlock> INode::super_block() const {
 }
 
 outcome::result<std::shared_ptr<IINode>> INode::lookup(std::string name) {
-    if ((this->impl_->type_ & S_IFDIR) == 0) {
+    if (this->impl_->type_ != Type::Directory) {
         return std::errc::not_a_directory;
     }
 
@@ -133,7 +133,7 @@ outcome::result<std::shared_ptr<IINode>> SuperBlock::alloc_inode(
     auto inode = std::make_shared<INode>();
     inode->impl_->id_ = this->impl_->next_inode_id_++;
     inode->impl_->block_count_ = 0;
-    inode->impl_->type_ = 0;
+    inode->impl_->type_ = IINode::Type::File;
     inode->impl_->permissions_ = 0;
     inode->impl_->atime_ = std::chrono::system_clock::now();
     inode->impl_->mtime_ = std::chrono::system_clock::now();

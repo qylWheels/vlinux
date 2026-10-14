@@ -49,7 +49,7 @@ public:
     virtual std::uint64_t block_count() const override;
 
     // Type and permissions.
-    virtual std::uint64_t type() const override;
+    virtual Type type() const override;
     virtual outcome::result<void> set_permissions(
         std::uint64_t permissions) override;
     virtual std::uint64_t permissions() const override;
