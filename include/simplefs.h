@@ -22,7 +22,7 @@ public:
 
     // Inode operations.
     virtual outcome::result<std::shared_ptr<IINode>> alloc_inode(
-        std::shared_ptr<ISuperBlock>) override;
+        std::shared_ptr<ISuperBlock> sb, IINode::Type type) override;
     virtual void destroy_inode(std::shared_ptr<IINode> inode) override;
 
 private:
