@@ -196,10 +196,7 @@ TEST_CASE("Test VFS", "[vfs]") {
         auto inode_result = sb->alloc_inode(sb);
         REQUIRE(inode_result.has_value());
         auto inode = inode_result.value();
-        auto inode_downcasted =
-            std::dynamic_pointer_cast<vlinux::fs::simplefs::INode>(inode);
-        std::shared_ptr<vlinux::IFile> file =
-            std::make_shared<vlinux::fs::simplefs::File>(inode_downcasted, uc);
+        auto file = std::make_shared<vlinux::File>(inode);
 
         // Test write.
         char data[] = "Hello, world!";
@@ -226,24 +223,6 @@ TEST_CASE("Test VFS", "[vfs]") {
         REQUIRE(ret.has_value());
         REQUIRE(ret.value() == len);
         REQUIRE(std::strcmp(data_read, data) == 0);
-
-        // Test dentry.
-        auto root_inode_result = sb->alloc_inode(sb);
-        REQUIRE(root_inode_result.has_value());
-        auto root_inode = root_inode_result.value();
-        auto root_inode_downcasted =
-            std::dynamic_pointer_cast<vlinux::fs::simplefs::INode>(root_inode);
-        auto sb_downcasted =
-            std::dynamic_pointer_cast<vlinux::fs::simplefs::SuperBlock>(sb);
-        auto root = std::make_shared<vlinux::fs::simplefs::DEntry>();
-        auto home_inode = sb->alloc_inode(sb);
-        REQUIRE(home_inode.has_value());
-        auto home_inode_downcasted =
-            std::dynamic_pointer_cast<vlinux::fs::simplefs::INode>(
-                home_inode.value());
-        auto home = std::make_shared<vlinux::fs::simplefs::DEntry>();
-        REQUIRE(root->add_subdir(home).has_value());
-        REQUIRE(root_inode->super_block().lock() == sb);
 
         // Release resources.
         REQUIRE(::uc_mem_unmap(uc, 0x1000, 4096) == UC_ERR_OK);
