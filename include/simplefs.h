@@ -73,6 +73,9 @@ public:
     virtual outcome::result<std::shared_ptr<IINode>> lookup(
         std::string name) override;
 
+    // File data.
+    virtual outcome::result<std::vector<std::uint8_t>*> data() override;
+
 private:
     class Impl;
     std::unique_ptr<Impl> impl_;

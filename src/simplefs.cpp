@@ -81,6 +81,10 @@ std::uint64_t INode::disk_refcount() const {
     return this->impl_->disk_refcount_;
 }
 
+outcome::result<std::vector<std::uint8_t>*> INode::data() {
+    return &this->impl_->data_;
+}
+
 std::weak_ptr<ISuperBlock> INode::super_block() const {
     return this->impl_->super_block_;
 }
