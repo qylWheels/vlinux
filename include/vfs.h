@@ -36,6 +36,14 @@ public:
     virtual ~IINode() = default;
 
 public:
+    enum class Type {
+        File,
+        Directory,
+        Link,
+        Device,
+    };
+
+public:
     // ID.
     virtual std::uint64_t id() const = 0;
 
@@ -43,7 +51,7 @@ public:
     virtual std::uint64_t block_count() const = 0;
 
     // Type and permissions.
-    virtual std::uint64_t type() const = 0;
+    virtual Type type() const = 0;
     virtual outcome::result<void> set_permissions(
         std::uint64_t permissions) = 0;
     virtual std::uint64_t permissions() const = 0;
