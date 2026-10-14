@@ -74,7 +74,7 @@ public:
         std::string name) = 0;
 
     // File data.
-    virtual outcome::result<std::vector<std::uint8_t>*> data() = 0;
+    virtual outcome::result<Content*> data() = 0;
 };
 
 class ISuperBlock {
