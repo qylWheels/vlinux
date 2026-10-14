@@ -196,7 +196,7 @@ TEST_CASE("Test VFS", "[vfs]") {
         auto inode_result = sb->alloc_inode(sb);
         REQUIRE(inode_result.has_value());
         auto inode = inode_result.value();
-        auto file = std::make_shared<vlinux::File>(inode);
+        auto file = std::make_shared<vlinux::File>(inode, uc);
 
         // Test write.
         char data[] = "Hello, world!";
