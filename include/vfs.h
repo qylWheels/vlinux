@@ -8,6 +8,7 @@
 #include <memory>
 #include <outcome/config.hpp>
 #include <outcome/outcome.hpp>
+#include <variant>
 #include <vector>
 
 namespace outcome = OUTCOME_V2_NAMESPACE;
@@ -28,11 +29,17 @@ public:
         Device,
     };
 
+    // Normal file inode.
+    using NormalFileContent = std::vector<std::uint8_t>;
+
     // Directory item for directory inode.
     struct DirItem {
         std::string name;
         std::shared_ptr<IINode> inode;
     };
+    using DirectoryFileContent = std::vector<DirItem>;
+
+    using Content = std::variant<NormalFileContent, DirectoryFileContent>;
 
 public:
     // ID.
