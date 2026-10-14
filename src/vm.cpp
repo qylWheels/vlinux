@@ -241,7 +241,8 @@ public:
     outcome::result<void> init_vfs(uc_engine* uc) {
         auto sb = std::make_shared<vlinux::fs::simplefs::SuperBlock>(uc);
         this->super_blocks_.insert(sb);
-        OUTCOME_TRY(auto root_inode, sb->alloc_inode(sb));
+        OUTCOME_TRY(auto root_inode,
+                    sb->alloc_inode(sb, IINode::Type::Directory));
         std::stack<std::shared_ptr<ISuperBlock>> sb_stack;
         sb_stack.push(sb);
         return outcome::success();
