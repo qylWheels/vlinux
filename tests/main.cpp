@@ -193,7 +193,7 @@ TEST_CASE("Test VFS", "[vfs]") {
     SECTION("Test SimpleFS") {
         std::shared_ptr<vlinux::ISuperBlock> sb =
             std::make_shared<vlinux::fs::simplefs::SuperBlock>(uc);
-        auto inode_result = sb->alloc_inode(sb);
+        auto inode_result = sb->alloc_inode(sb, vlinux::IINode::Type::File);
         REQUIRE(inode_result.has_value());
         auto inode = inode_result.value();
         auto file = std::make_shared<vlinux::File>(inode, uc);
