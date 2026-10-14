@@ -2,13 +2,20 @@
 
 #include <unicorn/unicorn.h>
 
+#include <cassert>
 #include <cstdint>
 #include <outcome/try.hpp>
 #include <system_error>
 
 namespace vlinux {
 outcome::result<std::size_t> File::iov_read(std::vector<IoVector> iov) {
-    OUTCOME_TRY(auto data, this->inode_->data());
+    if (this->inode_->type() != IINode::Type::File) {
+        return std::errc::is_a_directory;
+    }
+
+    OUTCOME_TRY(auto data_result, this->inode_->data());
+    auto data = std::get_if<IINode::NormalFileContent>(data_result);
+    assert(data);
 
     std::uint64_t read_len = 0;
     for (const auto& v : iov) {
@@ -25,7 +32,13 @@ outcome::result<std::size_t> File::iov_read(std::vector<IoVector> iov) {
 }
 
 outcome::result<std::size_t> File::iov_write(std::vector<IoVector> iov) {
-    OUTCOME_TRY(auto data, this->inode_->data());
+    if (this->inode_->type() != IINode::Type::File) {
+        return std::errc::is_a_directory;
+    }
+
+    OUTCOME_TRY(auto data_result, this->inode_->data());
+    auto data = std::get_if<IINode::NormalFileContent>(data_result);
+    assert(data);
 
     std::uint64_t write_len = 0;
     for (const auto& v : iov) {
