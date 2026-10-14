@@ -78,7 +78,8 @@ struct IoVector {
 
 class File {
 public:
-    File(std::shared_ptr<IINode> inode) : inode_(inode) {}
+    File(std::shared_ptr<IINode> inode, uc_engine* uc)
+        : inode_(inode), uc_(uc) {}
     ~File() = default;
     File(const File&) = delete;
     File& operator=(const File&) = delete;
