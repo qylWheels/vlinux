@@ -242,7 +242,6 @@ public:
         auto sb = std::make_shared<vlinux::fs::simplefs::SuperBlock>(uc);
         this->super_blocks_.insert(sb);
         OUTCOME_TRY(auto root_inode, sb->alloc_inode(sb));
-        std::shared_ptr<IDEntry> null;
         std::stack<std::shared_ptr<ISuperBlock>> sb_stack;
         sb_stack.push(sb);
         return outcome::success();
@@ -314,10 +313,7 @@ public:
     syscall::SyscallHandler syscall_handler_;
 
     // Filesystem-related fields.
-    std::shared_ptr<IDEntry> root_dentry_;
     std::set<std::shared_ptr<ISuperBlock>> super_blocks_;
-    std::map<std::shared_ptr<IDEntry>, std::stack<std::shared_ptr<ISuperBlock>>>
-        mount_points_;
 
     uc_engine* uc_;
     uc_hook syscall_hook_;
