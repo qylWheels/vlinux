@@ -1,5 +1,7 @@
 #include "syscall_handler.h"
 
+#include <fcntl.h>
+#include <linux/limits.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #include <unicorn/unicorn.h>
@@ -11,6 +13,12 @@
 #include <cstdlib>
 #include <functional>
 #include <memory>
+#include <outcome/result.hpp>
+#include <outcome/try.hpp>
+#include <ranges>
+#include <sstream>
+#include <string>
+#include <variant>
 
 #include "mm.h"
 
@@ -647,7 +655,111 @@ public:
 public:
     static std::uint64_t handle(SyscallHandler::Context context,
                                 std::array<std::uint64_t, 6> args) {
-        return -ENOSYS;
+        int dirfd = args[0];
+        auto pathname_addr = args[1];
+        int flags = args[2];
+        auto mode = args[3];
+
+        // Check dirfd.
+        auto task = context.scheduler->current_task();
+        if (dirfd < 0 || dirfd > task->files.size()) return -EINVAL;
+
+        // Read pathname.
+        std::string pathname(PATH_MAX, '\0');
+        for (int i = 0; i < PATH_MAX; ++i) {
+            if (::uc_mem_read(context.uc, pathname_addr + i,
+                              pathname.data() + i, 1) != UC_ERR_OK) {
+                return -EFAULT;
+            }
+        }
+
+        // Check flags.
+        // None of required flags is set.
+        if ((flags & (O_RDONLY | O_WRONLY | O_RDWR)) == 0) {
+            return -EINVAL;
+        }
+
+        // TODO: Check mode (only for O_CREAT flag).
+
+        // Get file referred by dirfd.
+        auto curr_file_opt = task->files[dirfd];
+        if (!curr_file_opt.has_value()) {
+            return -EBADF;
+        }
+        auto curr_inode = curr_file_opt.value()->inode();
+
+        // Split pathname into components.
+        std::vector<std::string> components;
+        std::string component;
+        std::stringstream pathname_stream(pathname);
+        while (std::getline(pathname_stream, component, '/')) {
+            if (!component.empty()) {
+                components.push_back(component);
+            }
+        }
+        if (components.empty()) {
+            return -ENOENT;
+        }
+
+        // Lookup parent inode of target file.
+        for (auto component :
+             components | std::views::take(components.size() - 1)) {
+            auto inode_result = curr_inode->lookup(component);
+            if (!inode_result.has_value()) {
+                return -ENOENT;
+            }
+            curr_inode = inode_result.value();
+        }
+
+        // Create and open file.
+        auto create_and_open =
+            []() -> std::variant<int, std::shared_ptr<File>> {
+            return -ENOSYS;
+        };
+
+        // Plain open.
+        auto plain_open = [&]() -> std::variant<int, std::shared_ptr<File>> {
+            auto inode_result = curr_inode->lookup(components.back());
+            if (!inode_result.has_value()) {
+                return -ENOENT;
+            }
+            auto inode = inode_result.value();
+            auto file = std::make_shared<File>(inode, context.uc);
+            auto result = file->get();
+            if (!result.has_value()) {
+                return -EIO;
+            }
+            result = file->set_flags(flags);
+            if (!result.has_value()) {
+                return -EIO;
+            }
+            result = file->set_offset(0);
+            if (!result.has_value()) {
+                return -EIO;
+            }
+            result = inode->inc_mem_refcount();
+            if (!result.has_value()) {
+                return -EIO;
+            }
+            return file;
+        };
+
+        auto file_result = (flags & O_CREAT) ? create_and_open() : plain_open();
+        if (std::holds_alternative<int>(file_result)) {
+            return std::get<int>(file_result);
+        }
+        auto file = std::get<std::shared_ptr<File>>(file_result);
+
+        // Find smallest unused file descriptor.
+        int fd = 0;
+        for (const auto& file_opt : task->files) {
+            if (file_opt.has_value()) {
+                ++fd;
+            }
+        }
+        task->files[fd] = file;
+
+        return fd;
     }
 };
 
