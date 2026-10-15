@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <deque>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <system_error>
@@ -104,7 +105,7 @@ public:
     std::shared_ptr<mm::PageTable> page_table;
 
     // File system related fields.
-    std::vector<std::shared_ptr<File>> files;
+    std::vector<std::optional<std::shared_ptr<File>>> files;
 
     // Context saved when scheduled.
     uc_context* ctx;
