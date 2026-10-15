@@ -66,6 +66,19 @@ std::chrono::time_point<std::chrono::system_clock> INode::ctime() const {
 }
 
 // References.
+outcome::result<void> INode::inc_mem_refcount() {
+    this->impl_->mem_refcount_++;
+    return outcome::success();
+}
+
+outcome::result<void> INode::dec_mem_refcount() {
+    if (this->impl_->mem_refcount_ == 0) {
+        return std::errc::no_such_file_or_directory;
+    }
+    this->impl_->mem_refcount_--;
+    return outcome::success();
+}
+
 std::uint64_t INode::mem_refcount() const { return this->impl_->mem_refcount_; }
 
 std::uint64_t INode::disk_refcount() const {
