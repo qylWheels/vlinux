@@ -74,7 +74,7 @@ public:
         std::string name) override;
 
     // File data.
-    virtual outcome::result<std::vector<std::uint8_t>*> data() override;
+    virtual outcome::result<Content*> data() override;
 
 private:
     class Impl;

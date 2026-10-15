@@ -9,7 +9,7 @@
 #include <outcome/try.hpp>
 #include <set>
 #include <system_error>
-#include <vector>
+#include <variant>
 
 namespace vlinux {
 namespace fs {
@@ -30,9 +30,7 @@ public:
     std::uint64_t mem_refcount_;
     std::uint64_t disk_refcount_;
     std::weak_ptr<ISuperBlock> super_block_;
-    std::vector<std::uint8_t> data_;  // File data.
-    // Subdirectory items, only available for directory inode.
-    std::vector<DirItem> subdir_items_;
+    Content data_;
 };
 
 INode::INode() : impl_(std::make_unique<Impl>()) {}
@@ -74,9 +72,7 @@ std::uint64_t INode::disk_refcount() const {
     return this->impl_->disk_refcount_;
 }
 
-outcome::result<std::vector<std::uint8_t>*> INode::data() {
-    return &this->impl_->data_;
-}
+outcome::result<IINode::Content*> INode::data() { return &this->impl_->data_; }
 
 std::weak_ptr<ISuperBlock> INode::super_block() const {
     return this->impl_->super_block_;
@@ -87,7 +83,11 @@ outcome::result<std::shared_ptr<IINode>> INode::lookup(std::string name) {
         return std::errc::not_a_directory;
     }
 
-    for (auto& item : this->impl_->subdir_items_) {
+    auto dirents =
+        std::get_if<IINode::DirectoryFileContent>(&this->impl_->data_);
+    assert(dirents != nullptr);
+
+    for (const auto& item : *dirents) {
         if (item.name == name) {
             return item.inode;
         }
@@ -134,8 +134,9 @@ outcome::result<std::shared_ptr<IINode>> SuperBlock::alloc_inode(
     inode->impl_->mem_refcount_ = 0;
     inode->impl_->disk_refcount_ = 0;
     inode->impl_->super_block_ = sb;
-    inode->impl_->data_ = {};
-    inode->impl_->subdir_items_ = {};
+    inode->impl_->data_ = type == IINode::Type::File
+                              ? IINode::Content(IINode::NormalFileContent{})
+                              : IINode::Content(IINode::DirectoryFileContent{});
     auto ret = this->impl_->inodes_.insert(inode);
     if (!ret.second) {
         return std::errc::file_exists;
