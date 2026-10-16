@@ -656,6 +656,9 @@ public:
                               pathname.data() + i, 1) != UC_ERR_OK) {
                 return -EFAULT;
             }
+            if (pathname[i] == '\0') {
+                break;
+            }
         }
 
         // Check flags.
