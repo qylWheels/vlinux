@@ -2,8 +2,8 @@
 
 void _start(void) {
     const int sys_openat = 257;
-    const int O_CREAT = 01;
-    const int O_WRONLY = 0100;
+    const int O_CREAT = 0100;
+    const int O_WRONLY = 01;
 
     const char *root = "/";
     const char *path = "hello";
