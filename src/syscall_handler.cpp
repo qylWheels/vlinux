@@ -650,15 +650,17 @@ public:
         if (dirfd < 0 || dirfd > task->files.size()) return -EINVAL;
 
         // Read pathname.
-        std::string pathname(PATH_MAX, '\0');
+        std::string pathname;
         for (int i = 0; i < PATH_MAX; ++i) {
-            if (::uc_mem_read(context.uc, pathname_addr + i,
-                              pathname.data() + i, 1) != UC_ERR_OK) {
+            char c;
+            if (::uc_mem_read(context.uc, pathname_addr + i, &c, 1) !=
+                UC_ERR_OK) {
                 return -EFAULT;
             }
-            if (pathname[i] == '\0') {
+            if (c == '\0') {
                 break;
             }
+            pathname += c;
         }
 
         // Check flags.
