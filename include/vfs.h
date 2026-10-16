@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <map>
 #include <memory>
+#include <optional>
 #include <outcome/config.hpp>
 #include <outcome/outcome.hpp>
 #include <stack>
@@ -134,6 +135,18 @@ public:
         }
 
         return outcome::success();
+    }
+
+    std::optional<std::shared_ptr<IINode>> curr_mount_of(
+        std::filesystem::path path) {
+        auto it = this->mount_maps_.find(path);
+        if (it == this->mount_maps_.end()) {
+            return std::nullopt;
+        }
+        if (it->second.empty()) {
+            return std::nullopt;
+        }
+        return it->second.top();
     }
 
 private:
