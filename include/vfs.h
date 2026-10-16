@@ -105,8 +105,8 @@ struct IoVector {
 
 class MountInfo {
 public:
-    MountInfo();
-    ~MountInfo();
+    MountInfo() = default;
+    ~MountInfo() = default;
     MountInfo(const MountInfo&) = delete;
     MountInfo& operator=(const MountInfo&) = delete;
     MountInfo(MountInfo&&) = delete;
