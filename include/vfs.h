@@ -196,6 +196,13 @@ public:
     // Inode.
     std::shared_ptr<IINode> inode() const { return this->inode_; }
 
+    // Path.
+    outcome::result<void> set_path(std::filesystem::path path) {
+        this->path_ = path;
+        return outcome::success();
+    }
+    std::filesystem::path path() const { return this->path_; }
+
     outcome::result<std::size_t> iov_read(std::vector<IoVector> iov);
     outcome::result<std::size_t> iov_write(std::vector<IoVector> iov);
 
@@ -205,6 +212,7 @@ private:
     std::uint64_t flags_ = 0;
     std::uint64_t offset_ = 0;
     std::shared_ptr<IINode> inode_;
+    std::filesystem::path path_;
 };
 
 class VFS {
