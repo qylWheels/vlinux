@@ -702,13 +702,21 @@ public:
         }
 
         // Lookup parent inode of target file.
+        std::filesystem::path curr_path = cwd_file_opt.value()->path();
+        auto curr_inode = cwd_inode;
         for (auto component :
              components | std::views::take(components.size() - 1)) {
-            auto inode_result = curr_inode->lookup(component);
-            if (!inode_result.has_value()) {
-                return -ENOENT;
+            curr_path /= component;
+            auto mount_inode = context.mount_info->curr_mount_of(curr_path);
+            if (mount_inode.has_value()) {
+                curr_inode = mount_inode.value();
+            } else {
+                auto inode_result = curr_inode->lookup(component);
+                if (!inode_result.has_value()) {
+                    return -ENOENT;
+                }
+                curr_inode = inode_result.value();
             }
-            curr_inode = inode_result.value();
         }
 
         // Create and open file.
