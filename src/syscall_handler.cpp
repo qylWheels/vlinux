@@ -682,11 +682,11 @@ public:
         // TODO: Check mode (only for O_CREAT flag).
 
         // Get file referred by dirfd.
-        auto curr_file_opt = task->files[dirfd];
-        if (!curr_file_opt.has_value()) {
+        auto cwd_file_opt = task->files[dirfd];
+        if (!cwd_file_opt.has_value()) {
             return -EBADF;
         }
-        auto curr_inode = curr_file_opt.value()->inode();
+        auto curr_inode = cwd_file_opt.value()->inode();
 
         // Split pathname into components.
         std::vector<std::string> components;
