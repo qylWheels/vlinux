@@ -628,22 +628,6 @@ public:
     }
 };
 
-class SysOpenHandler {
-public:
-    SysOpenHandler() = default;
-    ~SysOpenHandler() = default;
-    SysOpenHandler(const SysOpenHandler&) = delete;
-    SysOpenHandler& operator=(const SysOpenHandler&) = delete;
-    SysOpenHandler(SysOpenHandler&&) = delete;
-    SysOpenHandler& operator=(SysOpenHandler&&) = delete;
-
-public:
-    static std::uint64_t handle(SyscallHandler::Context context,
-                                std::array<std::uint64_t, 6> args) {
-        return -ENOSYS;
-    }
-};
-
 class SysOpenAtHandler {
 public:
     SysOpenAtHandler() = default;
@@ -776,6 +760,23 @@ public:
         task->files[fd] = file;
 
         return fd;
+    }
+};
+
+class SysOpenHandler {
+public:
+    SysOpenHandler() = default;
+    ~SysOpenHandler() = default;
+    SysOpenHandler(const SysOpenHandler&) = delete;
+    SysOpenHandler& operator=(const SysOpenHandler&) = delete;
+    SysOpenHandler(SysOpenHandler&&) = delete;
+    SysOpenHandler& operator=(SysOpenHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        std::array<std::uint64_t, 6> new_args{0, args[0], args[1], args[2]};
+        return SysOpenAtHandler::handle(context, new_args);
     }
 };
 
