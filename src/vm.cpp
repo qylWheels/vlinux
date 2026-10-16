@@ -279,7 +279,8 @@ public:
              &self->tasks_,
              [self](uc_context* ctx) -> outcome::result<void> {
                  return self->register_context(ctx);
-             }},
+             },
+             &self->mount_info_},
             syscall_number, std::to_array(args));
 
         // Write return value back to RAX.
