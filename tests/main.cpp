@@ -631,6 +631,7 @@ TEST_CASE("Test VM", "[vm]") {
         auto task =
             vm.load(build_path / "tests/syscall_tests/test_openat").value();
 
+        std::optional<int> rootfd = std::nullopt, pathfd = std::nullopt;
         auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
                                               std::array<std::uint64_t, 6> args,
                                               std::uint64_t ret) {
@@ -638,12 +639,24 @@ TEST_CASE("Test VM", "[vm]") {
                 return;
             }
 
-            REQUIRE(ret >= 0);
+            REQUIRE(static_cast<int>(ret) >= 0);
+
+            if (!rootfd.has_value()) {
+                rootfd = static_cast<int>(ret);
+            } else if (!pathfd.has_value()) {
+                pathfd = static_cast<int>(ret);
+            } else {
+                // Ignore.
+            }
         });
         REQUIRE(result.has_value());
 
         REQUIRE(vm.run(std::chrono::milliseconds(100),
                        std::chrono::milliseconds(10))
                     .has_value());
+
+        REQUIRE(rootfd.has_value());
+        REQUIRE(pathfd.has_value());
+        REQUIRE(rootfd.value() < pathfd.value());
     }
 }
