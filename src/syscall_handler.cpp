@@ -653,8 +653,8 @@ public:
         std::string pathname;
         for (int i = 0; i < PATH_MAX; ++i) {
             char c;
-            if (::uc_mem_read(context.uc, pathname_addr + i, &c, 1) !=
-                UC_ERR_OK) {
+            if (::uc_vmem_read(context.uc, pathname_addr + i, UC_PROT_READ, &c,
+                               1) != UC_ERR_OK) {
                 return -EFAULT;
             }
             if (c == '\0') {
