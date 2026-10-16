@@ -315,6 +315,7 @@ public:
 
     // Filesystem-related fields.
     std::set<std::shared_ptr<ISuperBlock>> super_blocks_;
+    MountInfo mount_info_;
 
     uc_engine* uc_;
     uc_hook syscall_hook_;
