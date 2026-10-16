@@ -25,6 +25,7 @@ public:
         std::set<std::shared_ptr<Task>>* tasks;
         // Transfer ownership of a context to the VM.
         std::function<outcome::result<void>(uc_context*)> reg_ctx_in_vm;
+        MountInfo* mount_info;
     };
 
 public:
