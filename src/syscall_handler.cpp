@@ -647,7 +647,7 @@ public:
 
         // Check dirfd.
         auto task = context.scheduler->current_task();
-        if (dirfd < 0 || dirfd > task->files.size()) return -EINVAL;
+        if (dirfd < 0 || dirfd >= task->files.size()) return -EINVAL;
 
         // Read pathname.
         std::string pathname;
