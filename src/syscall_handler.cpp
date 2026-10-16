@@ -11,6 +11,7 @@
 #include <cerrno>
 #include <cstddef>
 #include <cstdlib>
+#include <filesystem>
 #include <functional>
 #include <memory>
 #include <outcome/result.hpp>
@@ -719,12 +720,6 @@ public:
             }
         }
 
-        // Create and open file.
-        auto create_and_open =
-            []() -> std::variant<int, std::shared_ptr<File>> {
-            return -ENOSYS;
-        };
-
         // Plain open.
         auto plain_open = [&]() -> std::variant<int, std::shared_ptr<File>> {
             auto inode_result = curr_inode->lookup(components.back());
@@ -750,6 +745,19 @@ public:
                 return -EIO;
             }
             return file;
+        };
+
+        // Create and open file.
+        auto create_and_open =
+            [&]() -> std::variant<int, std::shared_ptr<File>> {
+            auto sb = curr_inode->super_block();
+            auto inode_result =
+                sb.lock()->alloc_inode(sb.lock(), IINode::Type::File);
+            if (!inode_result.has_value()) return -ENOMEM;
+            auto inode = inode_result.value();
+            auto curr_inode_data_result = curr_inode->data();
+            if (curr_inode_data_result.has_error()) return -EIO;
+            return plain_open();
         };
 
         auto file_result = (flags & O_CREAT) ? create_and_open() : plain_open();
