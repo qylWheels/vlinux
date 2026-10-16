@@ -5,9 +5,12 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
+#include <map>
 #include <memory>
 #include <outcome/config.hpp>
 #include <outcome/outcome.hpp>
+#include <stack>
 #include <variant>
 #include <vector>
 
@@ -97,6 +100,45 @@ public:
 struct IoVector {
     std::uint64_t base;
     std::uint64_t len;
+};
+
+class MountInfo {
+public:
+    MountInfo();
+    ~MountInfo();
+    MountInfo(const MountInfo&) = delete;
+    MountInfo& operator=(const MountInfo&) = delete;
+    MountInfo(MountInfo&&) = delete;
+    MountInfo& operator=(MountInfo&&) = delete;
+
+public:
+    outcome::result<void> mount(std::filesystem::path path,
+                                std::shared_ptr<IINode> fs_root_inode) {
+        this->mount_maps_[path].push(fs_root_inode);
+        return outcome::success();
+    }
+
+    outcome::result<void> unmount(std::filesystem::path path) {
+        auto it = this->mount_maps_.find(path);
+        if (it == this->mount_maps_.end()) {
+            return outcome::success();
+        }
+
+        if (it->second.empty()) {
+            return outcome::success();
+        }
+
+        it->second.pop();
+        if (it->second.empty()) {
+            this->mount_maps_.erase(it);
+        }
+
+        return outcome::success();
+    }
+
+private:
+    std::map<std::filesystem::path, std::stack<std::shared_ptr<IINode>>>
+        mount_maps_;
 };
 
 class File {
