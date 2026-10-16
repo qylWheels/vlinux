@@ -727,7 +727,7 @@ public:
 
         // Plain open.
         auto plain_open = [&]() -> std::variant<int, std::shared_ptr<File>> {
-            auto inode_result = cwd_inode->lookup(components.back());
+            auto inode_result = curr_inode->lookup(components.back());
             if (!inode_result.has_value()) {
                 return -ENOENT;
             }
