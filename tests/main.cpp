@@ -626,4 +626,24 @@ TEST_CASE("Test VM", "[vm]") {
         REQUIRE(child_ppid != -1);
         REQUIRE(parent_pid == child_ppid);
     }
+
+    SECTION("Test openat()") {
+        auto task =
+            vm.load(build_path / "tests/syscall_tests/test_openat").value();
+
+        auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                              std::array<std::uint64_t, 6> args,
+                                              std::uint64_t ret) {
+            if (syscall_id != SYS_openat) {
+                return;
+            }
+
+            REQUIRE(ret >= 0);
+        });
+        REQUIRE(result.has_value());
+
+        REQUIRE(vm.run(std::chrono::milliseconds(100),
+                       std::chrono::milliseconds(10))
+                    .has_value());
+    }
 }
