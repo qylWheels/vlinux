@@ -16,7 +16,6 @@
 #include <memory>
 #include <outcome.hpp>
 #include <set>
-#include <stack>
 #include <system_error>
 #include <vector>
 
@@ -243,8 +242,7 @@ public:
         this->super_blocks_.insert(sb);
         OUTCOME_TRY(auto root_inode,
                     sb->alloc_inode(sb, IINode::Type::Directory));
-        std::stack<std::shared_ptr<ISuperBlock>> sb_stack;
-        sb_stack.push(sb);
+        OUTCOME_TRY(this->mount_info_.mount("/", root_inode));
         return outcome::success();
     }
 
