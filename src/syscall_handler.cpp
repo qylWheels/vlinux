@@ -18,6 +18,7 @@
 #include <outcome/result.hpp>
 #include <outcome/try.hpp>
 #include <string>
+#include <system_error>
 #include <variant>
 
 #include "mm.h"
@@ -717,10 +718,20 @@ public:
 
         // Plain open.
         auto plain_open = [&]() -> std::variant<int, std::shared_ptr<File>> {
-            auto inode_result = curr_inode->lookup(path.filename());
+            outcome::result<std::shared_ptr<IINode>> inode_result =
+                std::errc::io_error;
+
+            // path.filename() is empty when pathname is "/", which is
+            // already opened and stored in curr_inode.
+            if (path.filename().empty()) {
+                inode_result = curr_inode;
+            } else {
+                inode_result = curr_inode->lookup(path.filename());
+            }
             if (!inode_result.has_value()) {
                 return -ENOENT;
             }
+
             auto inode = inode_result.value();
             auto file = std::make_shared<File>(inode, context.uc);
             auto result = file->get();
