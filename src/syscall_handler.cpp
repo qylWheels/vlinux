@@ -668,13 +668,7 @@ public:
             if (dirfd < 0 || dirfd >= task->files.size()) return -EBADF;
         }
 
-        // Check flags.
-        // None of required flags is set.
-        // Note that O_RDONLY is also required but it is 0,
-        // so it always set in flags.
-        if (!(flags & O_WRONLY) && !(flags & O_RDWR)) {
-            return -EINVAL;
-        }
+        // We DON'T need to check flags for now.
 
         // TODO: Check mode (only for O_CREAT flag).
 
