@@ -755,8 +755,19 @@ public:
                 sb.lock()->alloc_inode(sb.lock(), IINode::Type::File);
             if (!inode_result.has_value()) return -ENOMEM;
             auto inode = inode_result.value();
-            auto curr_inode_data_result = curr_inode->data();
-            if (curr_inode_data_result.has_error()) return -EIO;
+
+            auto curr_inode_data = curr_inode->data().value();
+
+            // curr_inode must be a directory. link the new file into it
+            // so that the lookup() in plain_open() can find it below.
+            if (!std::holds_alternative<IINode::DirectoryFileContent>(
+                    *curr_inode_data)) {
+                return -ENOTDIR;
+            }
+            auto& dir_entries =
+                std::get<IINode::DirectoryFileContent>(*curr_inode_data);
+            dir_entries.push_back({path.filename(), inode});
+
             return plain_open();
         };
 
