@@ -316,6 +316,11 @@ public:
     std::set<std::shared_ptr<ISuperBlock>> super_blocks_;
     MountInfo mount_info_;
 
+    // Instruction hook fields.
+    std::vector<std::function<void(std::uint64_t addr,
+                                   std::vector<std::uint8_t> instr)>>
+        instr_hooks_;
+
     uc_engine* uc_;
     uc_hook syscall_hook_;
     std::shared_ptr<Task> curr_task_;
@@ -502,6 +507,21 @@ outcome::result<void> VM::add_syscall_hook(
                        std::array<std::uint64_t, 6> args, std::uint64_t ret)>
         hook) {
     OUTCOME_TRY(this->impl_->syscall_handler_.add_syscall_hook(hook));
+    return outcome::success();
+}
+
+outcome::result<void> VM::add_instr_hook(
+    std::function<void(std::uint64_t addr, std::vector<std::uint8_t> instr)>
+        hook) {
+    uc_err err;
+    this->impl_->instr_hooks_.push_back(hook);
+    err = uc_hook_add(
+        this->impl_->uc_, &this->impl_->syscall_hook_, UC_HOOK_INSN,
+        reinterpret_cast<void*>(Impl::syscall_hook_callback), this->impl_.get(),
+        0, std::numeric_limits<std::uint64_t>::max(), UC_X86_INS_SYSCALL);
+    if (err != UC_ERR_OK) {
+        return make_error_code(err);
+    }
     return outcome::success();
 }
 
