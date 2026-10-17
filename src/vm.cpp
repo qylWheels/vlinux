@@ -12,14 +12,18 @@
 #include <format>
 #include <fstream>
 #include <limits>
+#include <map>
 #include <memory>
 #include <outcome.hpp>
+#include <set>
 #include <system_error>
 #include <vector>
 
 #include "error.h"
 #include "mm.h"
+#include "simplefs.h"
 #include "syscall_handler.h"
+#include "vfs.h"
 
 namespace vlinux {
 class VM::Impl {
@@ -121,6 +125,13 @@ public:
             [this](std::shared_ptr<Task> task) -> outcome::result<void> {
             return this->scheduler_->add_task(task);
         };
+
+        // Setup VFS.
+        auto result = this->init_vfs(this->uc_);
+        if (result.has_error()) {
+            throw std::runtime_error("init_vfs failed: " +
+                                     result.error().message());
+        }
     }
 
     ~Impl() {
@@ -226,6 +237,16 @@ public:
     }
 
 public:
+    outcome::result<void> init_vfs(uc_engine* uc) {
+        auto sb = std::make_shared<vlinux::fs::simplefs::SuperBlock>(uc);
+        this->super_blocks_.insert(sb);
+        OUTCOME_TRY(auto root_inode,
+                    sb->alloc_inode(sb, IINode::Type::Directory));
+        OUTCOME_TRY(this->mount_info_.mount("/", root_inode));
+        return outcome::success();
+    }
+
+public:
     static void syscall_hook_callback(uc_engine* engine, void* user_data) {
         Impl* self = reinterpret_cast<Impl*>(user_data);
         std::uint64_t syscall_number;
@@ -258,7 +279,8 @@ public:
              &self->tasks_,
              [self](uc_context* ctx) -> outcome::result<void> {
                  return self->register_context(ctx);
-             }},
+             },
+             &self->mount_info_},
             syscall_number, std::to_array(args));
 
         // Write return value back to RAX.
@@ -289,6 +311,10 @@ public:
 
     // Syscall-related fields.
     syscall::SyscallHandler syscall_handler_;
+
+    // Filesystem-related fields.
+    std::set<std::shared_ptr<ISuperBlock>> super_blocks_;
+    MountInfo mount_info_;
 
     uc_engine* uc_;
     uc_hook syscall_hook_;

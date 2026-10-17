@@ -1,5 +1,7 @@
 #include "syscall_handler.h"
 
+#include <fcntl.h>
+#include <linux/limits.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #include <unicorn/unicorn.h>
@@ -9,10 +11,18 @@
 #include <cerrno>
 #include <cstddef>
 #include <cstdlib>
+#include <filesystem>
 #include <functional>
 #include <memory>
+#include <optional>
+#include <outcome/result.hpp>
+#include <outcome/try.hpp>
+#include <string>
+#include <system_error>
+#include <variant>
 
 #include "mm.h"
+#include "vfs.h"
 
 namespace vlinux {
 namespace syscall {
@@ -619,6 +629,191 @@ public:
     }
 };
 
+class SysOpenAtHandler {
+public:
+    SysOpenAtHandler() = default;
+    ~SysOpenAtHandler() = default;
+    SysOpenAtHandler(const SysOpenAtHandler&) = delete;
+    SysOpenAtHandler& operator=(const SysOpenAtHandler&) = delete;
+    SysOpenAtHandler(SysOpenAtHandler&&) = delete;
+    SysOpenAtHandler& operator=(SysOpenAtHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        int dirfd = args[0];
+        auto pathname_addr = args[1];
+        int flags = args[2];
+        auto mode = args[3];
+
+        auto task = context.scheduler->current_task();
+
+        // Read pathname.
+        std::string pathname;
+        for (int i = 0; i < PATH_MAX; ++i) {
+            char c;
+            if (::uc_vmem_read(context.uc, pathname_addr + i, UC_PROT_READ, &c,
+                               1) != UC_ERR_OK) {
+                return -EFAULT;
+            }
+            if (c == '\0') {
+                break;
+            }
+            pathname += c;
+        }
+
+        // Only check dirfd when pathname is relative.
+        if (pathname[0] != '/') {
+            // Check dirfd.
+            if (dirfd < 0 || dirfd >= task->files.size()) return -EBADF;
+        }
+
+        // We DON'T need to check flags for now.
+
+        // TODO: Check mode (only for O_CREAT flag).
+
+        // Get inode:
+        // 1. referred by dirfd if pathname is relative.
+        // 2. referred by "/" if pathname is absolute.
+        std::optional<std::shared_ptr<File>> cwd_file_opt = std::nullopt;
+        std::optional<std::shared_ptr<IINode>> cwd_inode_opt = std::nullopt;
+        if (pathname[0] != '/') {
+            cwd_file_opt = task->files[dirfd];
+            if (!cwd_file_opt.has_value()) {
+                return -EBADF;
+            }
+            cwd_inode_opt = cwd_file_opt.value()->inode();
+        } else {
+            auto root_inode = context.mount_info->curr_mount_of("/");
+            assert(root_inode.has_value());
+            cwd_inode_opt = root_inode.value();
+        }
+        assert(cwd_inode_opt.has_value());
+        auto cwd_inode = cwd_inode_opt.value();
+
+        // Lookup parent inode of target file.
+        std::filesystem::path path(pathname);
+        std::filesystem::path curr_path =
+            pathname[0] == '/' ? "" : cwd_file_opt.value()->path();
+        auto curr_inode = cwd_inode;
+        for (auto component : path.parent_path()) {
+            curr_path /= component;
+            auto mount_inode = context.mount_info->curr_mount_of(curr_path);
+            if (mount_inode.has_value()) {
+                curr_inode = mount_inode.value();
+            } else {
+                auto inode_result = curr_inode->lookup(component);
+                if (!inode_result.has_value()) {
+                    return -ENOENT;
+                }
+                curr_inode = inode_result.value();
+            }
+        }
+
+        // Plain open.
+        auto plain_open = [&]() -> std::variant<int, std::shared_ptr<File>> {
+            outcome::result<std::shared_ptr<IINode>> inode_result =
+                std::errc::io_error;
+
+            // path.filename() is empty when pathname is "/", which is
+            // already opened and stored in curr_inode.
+            if (path.filename().empty()) {
+                inode_result = curr_inode;
+            } else {
+                inode_result = curr_inode->lookup(path.filename());
+            }
+            if (!inode_result.has_value()) {
+                return -ENOENT;
+            }
+
+            auto inode = inode_result.value();
+            auto file = std::make_shared<File>(inode, context.uc);
+            auto result = file->get();
+            if (!result.has_value()) {
+                return -EIO;
+            }
+            result = file->set_flags(flags);
+            if (!result.has_value()) {
+                return -EIO;
+            }
+            result = file->set_offset(0);
+            if (!result.has_value()) {
+                return -EIO;
+            }
+            result = inode->inc_mem_refcount();
+            if (!result.has_value()) {
+                return -EIO;
+            }
+            return file;
+        };
+
+        // Create and open file.
+        auto create_and_open =
+            [&]() -> std::variant<int, std::shared_ptr<File>> {
+            auto sb = curr_inode->super_block();
+            auto inode_result =
+                sb.lock()->alloc_inode(sb.lock(), IINode::Type::File);
+            if (!inode_result.has_value()) return -ENOMEM;
+            auto inode = inode_result.value();
+
+            auto curr_inode_data = curr_inode->data().value();
+
+            // curr_inode must be a directory. link the new file into it
+            // so that the lookup() in plain_open() can find it below.
+            if (!std::holds_alternative<IINode::DirectoryFileContent>(
+                    *curr_inode_data)) {
+                return -ENOTDIR;
+            }
+            auto& dir_entries =
+                std::get<IINode::DirectoryFileContent>(*curr_inode_data);
+            dir_entries.push_back({path.filename(), inode});
+
+            return plain_open();
+        };
+
+        auto file_result = (flags & O_CREAT) ? create_and_open() : plain_open();
+        if (std::holds_alternative<int>(file_result)) {
+            return std::get<int>(file_result);
+        }
+        auto file = std::get<std::shared_ptr<File>>(file_result);
+
+        // Find smallest unused file descriptor.
+        int fd = 0;
+        if (std::all_of(
+                task->files.begin(), task->files.end(),
+                [](const auto& file_opt) { return file_opt.has_value(); })) {
+            task->files.push_back(file);
+            fd = task->files.size() - 1;
+        } else {
+            for (const auto& file_opt : task->files) {
+                if (file_opt.has_value()) {
+                    ++fd;
+                }
+            }
+            task->files[fd] = file;
+        }
+
+        return fd;
+    }
+};
+
+class SysOpenHandler {
+public:
+    SysOpenHandler() = default;
+    ~SysOpenHandler() = default;
+    SysOpenHandler(const SysOpenHandler&) = delete;
+    SysOpenHandler& operator=(const SysOpenHandler&) = delete;
+    SysOpenHandler(SysOpenHandler&&) = delete;
+    SysOpenHandler& operator=(SysOpenHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        std::array<std::uint64_t, 6> new_args{0, args[0], args[1], args[2]};
+        return SysOpenAtHandler::handle(context, new_args);
+    }
+};
+
 class SyscallHandler::Impl {
 public:
     Impl() = default;
@@ -666,6 +861,12 @@ std::uint64_t SyscallHandler::dispatch(Context context,
             break;
         case SYS_getppid:
             ret = SysGetppidHandler::handle(context, args);
+            break;
+        case SYS_open:
+            ret = SysOpenHandler::handle(context, args);
+            break;
+        case SYS_openat:
+            ret = SysOpenAtHandler::handle(context, args);
             break;
         default:
             ret = -ENOSYS;

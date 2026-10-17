@@ -8,13 +8,16 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <memory>
 #include <ranges>
 #include <thread>
 
 #include "mm.h"
+#include "simplefs.h"
 #include "task.h"
+#include "vfs.h"
 #include "vm.h"
 
 TEST_CASE("Test PhysicalPageAllocator", "[physical_page_allocator]") {
@@ -177,6 +180,52 @@ TEST_CASE("Test Scheduler", "[scheduler]") {
         REQUIRE(scheduler.status() == vlinux::Scheduler::Status::Stopped);
         REQUIRE(::uc_context_free(ctx1) == UC_ERR_OK);
         REQUIRE(::uc_context_free(ctx2) == UC_ERR_OK);
+    }
+
+    REQUIRE(::uc_close(uc) == UC_ERR_OK);
+}
+
+TEST_CASE("Test VFS", "[vfs]") {
+    uc_engine *uc = nullptr;
+    uc_err err = ::uc_open(UC_ARCH_X86, UC_MODE_64, &uc);
+    REQUIRE(err == UC_ERR_OK);
+
+    SECTION("Test SimpleFS") {
+        std::shared_ptr<vlinux::ISuperBlock> sb =
+            std::make_shared<vlinux::fs::simplefs::SuperBlock>(uc);
+        auto inode_result = sb->alloc_inode(sb, vlinux::IINode::Type::File);
+        REQUIRE(inode_result.has_value());
+        auto inode = inode_result.value();
+        auto file = std::make_shared<vlinux::File>(inode, uc);
+
+        // Test write.
+        char data[] = "Hello, world!";
+        auto len = sizeof(data);
+        REQUIRE(::uc_mem_map_ptr(uc, 0x1000, 4096, UC_PROT_READ, data) ==
+                UC_ERR_OK);
+        vlinux::IoVector iov{0x1000, len};
+        auto ret = file->iov_write({iov});
+        REQUIRE(ret.has_value());
+        REQUIRE(ret.value() == len);
+        REQUIRE(file->offset() == len);
+
+        // Test read.
+        char data_read[4096] = {0};
+        REQUIRE(::uc_mem_map_ptr(uc, 0x8000, 4096, UC_PROT_READ, data_read) ==
+                UC_ERR_OK);
+        vlinux::IoVector iov_read{0x8000, 4096};
+        ret = file->iov_read({iov_read});
+        REQUIRE(ret.has_value());
+        REQUIRE(ret.value() == 0);
+        REQUIRE(file->set_offset(0).has_value());
+        REQUIRE(file->offset() == 0);
+        ret = file->iov_read({iov_read});
+        REQUIRE(ret.has_value());
+        REQUIRE(ret.value() == len);
+        REQUIRE(std::strcmp(data_read, data) == 0);
+
+        // Release resources.
+        REQUIRE(::uc_mem_unmap(uc, 0x1000, 4096) == UC_ERR_OK);
     }
 
     REQUIRE(::uc_close(uc) == UC_ERR_OK);
@@ -576,5 +625,38 @@ TEST_CASE("Test VM", "[vm]") {
         REQUIRE(parent_pid != -1);
         REQUIRE(child_ppid != -1);
         REQUIRE(parent_pid == child_ppid);
+    }
+
+    SECTION("Test openat()") {
+        auto task =
+            vm.load(build_path / "tests/syscall_tests/test_openat").value();
+
+        std::optional<int> rootfd = std::nullopt, pathfd = std::nullopt;
+        auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                              std::array<std::uint64_t, 6> args,
+                                              std::uint64_t ret) {
+            if (syscall_id != SYS_openat) {
+                return;
+            }
+
+            REQUIRE(static_cast<int>(ret) >= 0);
+
+            if (!rootfd.has_value()) {
+                rootfd = static_cast<int>(ret);
+            } else if (!pathfd.has_value()) {
+                pathfd = static_cast<int>(ret);
+            } else {
+                // Ignore.
+            }
+        });
+        REQUIRE(result.has_value());
+
+        REQUIRE(vm.run(std::chrono::milliseconds(100),
+                       std::chrono::milliseconds(10))
+                    .has_value());
+
+        REQUIRE(rootfd.has_value());
+        REQUIRE(pathfd.has_value());
+        REQUIRE(rootfd.value() < pathfd.value());
     }
 }
