@@ -691,10 +691,8 @@ public:
         assert(cwd_inode_opt.has_value());
         auto cwd_inode = cwd_inode_opt.value();
 
-        // Split pathname into components.
-        std::filesystem::path path(pathname);
-
         // Lookup parent inode of target file.
+        std::filesystem::path path(pathname);
         std::filesystem::path curr_path =
             pathname[0] == '/' ? "" : cwd_file_opt.value()->path();
         auto curr_inode = cwd_inode;
