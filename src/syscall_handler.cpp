@@ -645,9 +645,7 @@ public:
         int flags = args[2];
         auto mode = args[3];
 
-        // Check dirfd.
         auto task = context.scheduler->current_task();
-        if (dirfd < 0 || dirfd >= task->files.size()) return -EINVAL;
 
         // Read pathname.
         std::string pathname;
@@ -661,6 +659,12 @@ public:
                 break;
             }
             pathname += c;
+        }
+
+        // Only check dirfd when pathname is relative.
+        if (pathname[0] != '/') {
+            // Check dirfd.
+            if (dirfd < 0 || dirfd >= task->files.size()) return -EINVAL;
         }
 
         // Check flags.
