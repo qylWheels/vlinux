@@ -1,0 +1,11 @@
+find_package(CLI11 CONFIG REQUIRED)
+find_package(fmt CONFIG REQUIRED)
+
+add_executable(vdbg main.cpp)
+target_link_libraries(vdbg PRIVATE vlinux)
+target_link_libraries(
+    vdbg
+    PRIVATE
+    CLI11::CLI11 fmt::fmt outcome::hl
+)
+target_include_directories(vdbg PRIVATE ${CMAKE_SOURCE_DIR}/include)
