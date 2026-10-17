@@ -57,3 +57,5 @@ target_include_directories(vlinux PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(vlinux PUBLIC PkgConfig::UNICORN)
 target_link_libraries(vlinux PUBLIC elfio::elfio)
 target_link_libraries(vlinux PUBLIC outcome::hl)
+
+add_subdirectory(app/vdbg)
