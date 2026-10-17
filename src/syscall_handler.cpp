@@ -670,7 +670,9 @@ public:
 
         // Check flags.
         // None of required flags is set.
-        if ((flags & (O_RDONLY | O_WRONLY | O_RDWR)) == 0) {
+        // Note that O_RDONLY is also required but it is 0,
+        // so it always set in flags.
+        if (!(flags & O_WRONLY) && !(flags & O_RDWR)) {
             return -EINVAL;
         }
 
