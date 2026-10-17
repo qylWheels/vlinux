@@ -1,8 +1,10 @@
 {
   "dependencies": [
+    "cpptrace",
     "elfio",
     "outcome",
     "unicorn",
-    "cpptrace"
+    "cli11",
+    "fmt"
   ]
 }
