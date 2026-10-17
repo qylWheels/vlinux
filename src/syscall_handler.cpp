@@ -676,7 +676,7 @@ public:
 
         // TODO: Check mode (only for O_CREAT flag).
 
-        // Get file:
+        // Get inode:
         // 1. referred by dirfd if pathname is relative.
         // 2. referred by "/" if pathname is absolute.
         std::optional<std::shared_ptr<File>> cwd_file_opt = std::nullopt;
