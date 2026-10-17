@@ -710,7 +710,8 @@ public:
         }
 
         // Lookup parent inode of target file.
-        std::filesystem::path curr_path = cwd_file_opt.value()->path();
+        std::filesystem::path curr_path =
+            pathname[0] == '/' ? "/" : cwd_file_opt.value()->path();
         auto curr_inode = cwd_inode;
         for (auto component :
              components | std::views::take(components.size() - 1)) {
