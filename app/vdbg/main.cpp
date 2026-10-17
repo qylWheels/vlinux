@@ -1,3 +1,5 @@
+#include <fmt/base.h>
+#include <fmt/color.h>
 #include <fmt/core.h>
 #include <sys/syscall.h>
 
@@ -27,16 +29,20 @@ int main(int argc, char* argv[]) {
             {SYS_mmap,
              [](std::uint64_t syscall_id, std::array<std::uint64_t, 6> args,
                 std::uint64_t ret) {
-                 fmt::print("{} ({:#x}, {:#x}, {:#x}, {:#x}, {}, {}) = {:#x}\n",
-                            "mmap", args[0], args[1], args[2], args[3],
+                 fmt::print(fg(fmt::color::gold) | fmt::emphasis::bold, "{} ",
+                            "mmap");
+                 fmt::print("({:#x}, {:#x}, {:#x}, {:#x}, {}, {}) = {:#x}\n",
+                            args[0], args[1], args[2], args[3],
                             static_cast<int>(args[4]),
                             static_cast<int>(args[5]), ret);
              }},
             {SYS_munmap,
              [](std::uint64_t syscall_id, std::array<std::uint64_t, 6> args,
                 std::uint64_t ret) {
-                 fmt::print("{} ({:#x}, {:#x}) = {}\n", "munmap", args[0],
-                            args[1], static_cast<int>(ret));
+                 fmt::print(fg(fmt::color::gold) | fmt::emphasis::bold, "{} ",
+                            "munmap");
+                 fmt::print("({:#x}, {:#x}) = {}\n", args[0], args[1],
+                            static_cast<int>(ret));
              }}};
 
     // Emulate the program.
