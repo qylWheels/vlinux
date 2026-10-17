@@ -14,6 +14,7 @@
 #include <filesystem>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <outcome/result.hpp>
 #include <outcome/try.hpp>
 #include <ranges>
@@ -22,6 +23,7 @@
 #include <variant>
 
 #include "mm.h"
+#include "vfs.h"
 
 namespace vlinux {
 namespace syscall {
@@ -675,12 +677,24 @@ public:
 
         // TODO: Check mode (only for O_CREAT flag).
 
-        // Get file referred by dirfd.
-        auto cwd_file_opt = task->files[dirfd];
-        if (!cwd_file_opt.has_value()) {
-            return -EBADF;
+        // Get file:
+        // 1. referred by dirfd if pathname is relative.
+        // 2. referred by "/" if pathname is absolute.
+        std::optional<std::shared_ptr<File>> cwd_file_opt = std::nullopt;
+        std::optional<std::shared_ptr<IINode>> cwd_inode_opt = std::nullopt;
+        if (pathname[0] != '/') {
+            cwd_file_opt = task->files[dirfd];
+            if (!cwd_file_opt.has_value()) {
+                return -EBADF;
+            }
+            cwd_inode_opt = cwd_file_opt.value()->inode();
+        } else {
+            auto root_inode = context.mount_info->curr_mount_of("/");
+            assert(root_inode.has_value());
+            cwd_inode_opt = root_inode.value();
         }
-        auto cwd_inode = cwd_file_opt.value()->inode();
+        assert(cwd_inode_opt.has_value());
+        auto cwd_inode = cwd_inode_opt.value();
 
         // Split pathname into components.
         std::vector<std::string> components;
