@@ -17,8 +17,6 @@
 #include <optional>
 #include <outcome/result.hpp>
 #include <outcome/try.hpp>
-#include <ranges>
-#include <sstream>
 #include <string>
 #include <variant>
 
@@ -697,24 +695,13 @@ public:
         auto cwd_inode = cwd_inode_opt.value();
 
         // Split pathname into components.
-        std::vector<std::string> components;
-        std::string component;
-        std::stringstream pathname_stream(pathname);
-        while (std::getline(pathname_stream, component, '/')) {
-            if (!component.empty()) {
-                components.push_back(component);
-            }
-        }
-        if (components.empty()) {
-            return -ENOENT;
-        }
+        std::filesystem::path path(pathname);
 
         // Lookup parent inode of target file.
         std::filesystem::path curr_path =
             pathname[0] == '/' ? "" : cwd_file_opt.value()->path();
         auto curr_inode = cwd_inode;
-        for (auto component :
-             components | std::views::take(components.size() - 1)) {
+        for (auto component : path.parent_path()) {
             curr_path /= component;
             auto mount_inode = context.mount_info->curr_mount_of(curr_path);
             if (mount_inode.has_value()) {
@@ -730,7 +717,7 @@ public:
 
         // Plain open.
         auto plain_open = [&]() -> std::variant<int, std::shared_ptr<File>> {
-            auto inode_result = curr_inode->lookup(components.back());
+            auto inode_result = curr_inode->lookup(path.filename());
             if (!inode_result.has_value()) {
                 return -ENOENT;
             }
