@@ -776,12 +776,19 @@ public:
 
         // Find smallest unused file descriptor.
         int fd = 0;
-        for (const auto& file_opt : task->files) {
-            if (file_opt.has_value()) {
-                ++fd;
+        if (std::all_of(
+                task->files.begin(), task->files.end(),
+                [](const auto& file_opt) { return file_opt.has_value(); })) {
+            task->files.push_back(file);
+            fd = task->files.size() - 1;
+        } else {
+            for (const auto& file_opt : task->files) {
+                if (file_opt.has_value()) {
+                    ++fd;
+                }
             }
+            task->files[fd] = file;
         }
-        task->files[fd] = file;
 
         return fd;
     }
