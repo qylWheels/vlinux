@@ -3,6 +3,7 @@
 void _start(void) {
     const int sys_openat = 257;
     const int O_CREAT = 0100;
+    const int O_RDONLY = 00;
     const int O_WRONLY = 01;
 
     const char *root = "/";
