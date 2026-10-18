@@ -565,4 +565,12 @@ outcome::result<std::uint64_t> VM::read_reg(Register reg) const {
     if (err != UC_ERR_OK) return make_error_code(err);
     return value;
 }
+
+outcome::result<std::vector<std::uint8_t>> VM::read_mem(
+    std::uint64_t addr, std::size_t size) const {
+    std::vector<std::uint8_t> mem(size);
+    uc_err err = ::uc_mem_read(this->impl_->uc_, addr, mem.data(), size);
+    if (err != UC_ERR_OK) return make_error_code(err);
+    return mem;
+}
 }  // namespace vlinux
