@@ -70,7 +70,15 @@ void TUI::show() {
             this->impl_->memory_area,
         });
     });
+    layout |= ftxui::CatchEvent([&](ftxui::Event e) {
+        if (e == ftxui::Event::Character('q')) {
+            this->impl_->screen.ExitLoopClosure()();
+            return true;
+        }
+        return false;
+    });
     this->impl_->screen.Loop(layout);
+
     return;
 }
 
