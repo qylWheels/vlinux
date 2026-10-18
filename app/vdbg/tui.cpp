@@ -2,6 +2,7 @@
 
 #include <ftxui/component/app.hpp>
 #include <ftxui/component/component.hpp>
+#include <ftxui/component/component_options.hpp>
 #include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/dom/elements.hpp>
 #include <ftxui/dom/node.hpp>
@@ -9,6 +10,7 @@
 #include <ftxui/screen/screen.hpp>
 #include <functional>
 #include <memory>
+#include <vector>
 
 namespace vdbg {
 namespace tui {
@@ -23,6 +25,7 @@ public:
 
 public:
     ftxui::ScreenInteractive screen;
+    ftxui::Component disassembler_area_content = ftxui::Menu({});
     ftxui::Element disassembler_area;
     ftxui::Element register_area;
     ftxui::Element syscall_area;
@@ -40,7 +43,8 @@ void TUI::show() {
 
         this->impl_->disassembler_area =
             ftxui::window(ftxui::text("Disassembler"),
-                          ftxui::text("Disassembler"), ftxui::LIGHT) |
+                          this->impl_->disassembler_area_content->Render(),
+                          ftxui::LIGHT) |
             ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 2 * screen_width / 3) |
             ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 2 * screen_height / 3);
         this->impl_->register_area =
@@ -71,16 +75,9 @@ void TUI::show() {
 }
 
 void TUI::set_disassembler_content(const std::vector<std::string>& content) {
-    // int selected = 0;
-
-    // ftxui::MenuOption option;
-    // option.on_enter = this->impl_->screen.ExitLoopClosure();
-    // auto menu = ftxui::Menu(&content, &selected, option);
-
-    // this->impl_->screen.Loop(menu);
-
-    // std::cout << "Selected element = " << selected << std::endl;
-    // return;
+    int selected = 0;
+    this->impl_->disassembler_area_content = ftxui::Menu(content, &selected);
+    return;
 }
 }  // namespace tui
 }  // namespace vdbg
