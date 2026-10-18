@@ -11,6 +11,7 @@
 #include <elfio/elfio.hpp>
 #include <format>
 #include <fstream>
+#include <functional>
 #include <limits>
 #include <map>
 #include <memory>
@@ -293,6 +294,18 @@ public:
         // Record syscall.
         task->syscalls.push_back(
             {static_cast<uint32_t>(syscall_number), std::to_array(args), ret});
+    }
+
+    static void instr_hook_callback(uc_engine* uc, uint64_t address,
+                                    uint32_t size, void* user_data) {
+        Impl* self = reinterpret_cast<Impl*>(user_data);
+        uc_err err;
+
+        // Dispatch.
+        auto task = self->scheduler_->current_task();
+        for (auto& hook : self->instr_hooks_) {
+            hook(address);
+        }
     }
 
 public:
