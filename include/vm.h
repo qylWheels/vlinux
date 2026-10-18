@@ -91,8 +91,7 @@ public:
                            std::uint64_t ret)>
             hook);
     outcome::result<void> add_instr_hook(
-        std::function<void(std::uint64_t addr, std::vector<std::uint8_t> instr)>
-            hook);
+        std::function<void(std::uint64_t addr)> hook);
 
     // Observability.
     Scheduler& get_scheduler();
