@@ -29,7 +29,9 @@ public:
     ftxui::Element disassembler_area;
     ftxui::Component register_area_content = ftxui::Menu({});
     ftxui::Element register_area;
+    ftxui::Component syscall_area_content = ftxui::Menu({});
     ftxui::Element syscall_area;
+    ftxui::Component memory_area_content = ftxui::Menu({});
     ftxui::Element memory_area;
     ftxui::Element help_area;
 };
@@ -56,12 +58,14 @@ void TUI::show() {
             ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width / 3) |
             ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, screen_height / 3);
         this->impl_->syscall_area =
-            ftxui::window(ftxui::text("Syscall"), ftxui::text("Syscall"),
+            ftxui::window(ftxui::text("Syscall"),
+                          this->impl_->syscall_area_content->Render(),
                           ftxui::LIGHT) |
             ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width / 3) |
             ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, screen_height / 3);
         this->impl_->memory_area =
-            ftxui::window(ftxui::text("Memory"), ftxui::text("Memory"),
+            ftxui::window(ftxui::text("Memory"),
+                          this->impl_->memory_area_content->Render(),
                           ftxui::LIGHT) |
             ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width) |
             ftxui::yflex;
