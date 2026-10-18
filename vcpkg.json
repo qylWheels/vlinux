@@ -1,5 +1,6 @@
 {
   "dependencies": [
+    "capstone",
     "cli11",
     "cpptrace",
     "elfio",
@@ -7,6 +8,6 @@
     "ftxui",
     "outcome",
     "unicorn",
-    "capstone"
+    "capstonex86"
   ]
 }
