@@ -107,28 +107,6 @@ int main(int argc, char* argv[]) {
         // Initialize TUI.
         vdbg::tui::TUI tui(vm, handle);
 
-        // Add instruction hook.
-        auto result = vm.add_instr_hook([&](std::uint64_t addr) {
-            ::cs_insn* insn;
-            std::string insn_str;
-            // 16 is maximum instruction size in x86-64.
-            auto code_result = vm.read_mem(addr, 16);
-            if (code_result.has_error()) {
-                insn_str = "<Invalid Instruction>";
-            } else {
-                auto code = code_result.value();
-                int count = ::cs_disasm(handle, code.data(), code.size(), addr,
-                                        1, &insn);
-                if (count == 0)
-                    insn_str = "<Invalid Instruction>";
-                else
-                    insn_str =
-                        fmt::format("{} {}", insn->mnemonic, insn->op_str);
-                ::cs_free(insn, 1);
-            }
-            fmt::println("{:#x} {}", addr, insn_str);
-        });
-
         // Show TUI.
         tui.show();
     }

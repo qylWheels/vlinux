@@ -1,5 +1,8 @@
 #include "tui.h"
 
+#include <fmt/core.h>
+#include <fmt/format.h>
+
 #include <ftxui/component/app.hpp>
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/component_options.hpp>
@@ -44,7 +47,29 @@ public:
 };
 
 TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
-    : impl_(std::make_unique<Impl>(vm, cshandle)) {}
+    : impl_(std::make_unique<Impl>(vm, cshandle)) {
+    // Add instruction hook.
+    auto result = vm.add_instr_hook([&](std::uint64_t addr) {
+        ::cs_insn* insn;
+        std::string insn_str;
+        // 16 is maximum instruction size in x86-64.
+        auto code_result = vm.read_mem(addr, 16);
+        if (code_result.has_error()) {
+            insn_str = "<Invalid Instruction>";
+        } else {
+            auto code = code_result.value();
+            int count = ::cs_disasm(*this->impl_->cshandle, code.data(),
+                                    code.size(), addr, 1, &insn);
+            if (count == 0)
+                insn_str = "<Invalid Instruction>";
+            else
+                insn_str = fmt::format("{} {}", insn->mnemonic, insn->op_str);
+            ::cs_free(insn, 1);
+        }
+        this->set_disassembler_content(std::vector<std::string>{insn_str});
+    });
+    if (!result) throw std::runtime_error("Failed to add instruction hook");
+}
 
 TUI::~TUI() = default;
 
