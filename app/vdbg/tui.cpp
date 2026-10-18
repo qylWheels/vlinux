@@ -80,10 +80,10 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
             if (count == 0)
                 insn_str = "<Invalid Instruction>";
             else
-                insn_str = fmt::format("{:#x}: {} {}", addr, insn->mnemonic,
-                                       insn->op_str);
+                insn_str = fmt::format("{} {}", insn->mnemonic, insn->op_str);
             ::cs_free(insn, 1);
         }
+        insn_str = fmt::format("{:#x}: {}", addr, insn_str);
         this->set_disassembler_content(std::vector<std::string>{insn_str});
     });
     if (!result) throw std::runtime_error("Failed to add instruction hook");
