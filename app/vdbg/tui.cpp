@@ -65,10 +65,11 @@ void TUI::show() {
             ftxui::yflex;
         auto help_style = ftxui::color(ftxui::Color::Gold1) | ftxui::inverted;
         this->impl_->help_area =
-            ftxui::hbox({ftxui::text("q: Exit") | help_style,
-                         ftxui::text("s: Step Into") | help_style,
-                         ftxui::text("n: Step Over") | help_style,
-                         ftxui::text("c: Continue") | help_style}) |
+            ftxui::hbox(
+                {ftxui::text("q: Exit") | help_style, ftxui::filler(),
+                 ftxui::text("s: Step Into") | help_style, ftxui::filler(),
+                 ftxui::text("n: Step Over") | help_style, ftxui::filler(),
+                 ftxui::text("c: Continue") | help_style}) |
             ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 1);
 
         return ftxui::vbox({
