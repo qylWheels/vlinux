@@ -317,12 +317,11 @@ public:
     MountInfo mount_info_;
 
     // Instruction hook fields.
-    std::vector<std::function<void(std::uint64_t addr,
-                                   std::vector<std::uint8_t> instr)>>
-        instr_hooks_;
+    std::vector<std::function<void(std::uint64_t addr)>> instr_hooks_;
 
     uc_engine* uc_;
     uc_hook syscall_hook_;
+    uc_hook instr_hook_;
     std::shared_ptr<Task> curr_task_;
 };
 
@@ -511,17 +510,15 @@ outcome::result<void> VM::add_syscall_hook(
 }
 
 outcome::result<void> VM::add_instr_hook(
-    std::function<void(std::uint64_t addr, std::vector<std::uint8_t> instr)>
-        hook) {
+    std::function<void(std::uint64_t addr)> hook) {
     uc_err err;
-    this->impl_->instr_hooks_.push_back(hook);
-    err = uc_hook_add(
-        this->impl_->uc_, &this->impl_->syscall_hook_, UC_HOOK_INSN,
-        reinterpret_cast<void*>(Impl::syscall_hook_callback), this->impl_.get(),
-        0, std::numeric_limits<std::uint64_t>::max(), UC_X86_INS_SYSCALL);
+    err = uc_hook_add(this->impl_->uc_, &this->impl_->instr_hook_, UC_HOOK_CODE,
+                      reinterpret_cast<void*>(Impl::instr_hook_callback),
+                      this->impl_.get(), 1, 0);
     if (err != UC_ERR_OK) {
         return make_error_code(err);
     }
+    this->impl_->instr_hooks_.push_back(hook);
     return outcome::success();
 }
 
