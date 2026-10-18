@@ -1,5 +1,7 @@
 #pragma once
 
+#include <capstone/capstone.h>
+
 #include <memory>
 #include <vector>
 
@@ -9,7 +11,7 @@ namespace vdbg {
 namespace tui {
 class TUI {
 public:
-    TUI(vlinux::VM& vm);
+    TUI(vlinux::VM& vm, ::csh& cshandle);
     ~TUI();
     TUI(const TUI&) = delete;
     TUI& operator=(const TUI&) = delete;
