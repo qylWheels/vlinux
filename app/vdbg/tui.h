@@ -3,11 +3,13 @@
 #include <memory>
 #include <vector>
 
+#include "vm.h"
+
 namespace vdbg {
 namespace tui {
 class TUI {
 public:
-    TUI();
+    TUI(vlinux::VM& vm);
     ~TUI();
     TUI(const TUI&) = delete;
     TUI& operator=(const TUI&) = delete;

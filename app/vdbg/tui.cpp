@@ -16,12 +16,16 @@ namespace vdbg {
 namespace tui {
 class TUI::Impl {
 public:
-    Impl() : screen(ftxui::ScreenInteractive::Fullscreen()) {}
+    Impl(vlinux::VM& vm)
+        : screen(ftxui::ScreenInteractive::Fullscreen()), vm(&vm) {}
     ~Impl() = default;
     Impl(const Impl&) = delete;
     Impl& operator=(const Impl&) = delete;
     Impl(Impl&&) = delete;
     Impl& operator=(Impl&&) = delete;
+
+public:
+    vlinux::VM* vm;
 
 public:
     ftxui::ScreenInteractive screen;
@@ -36,7 +40,7 @@ public:
     ftxui::Element help_area;
 };
 
-TUI::TUI() : impl_(std::make_unique<Impl>()) {}
+TUI::TUI(vlinux::VM& vm) : impl_(std::make_unique<Impl>(vm)) {}
 
 TUI::~TUI() = default;
 
