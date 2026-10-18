@@ -130,7 +130,7 @@ int main(int argc, char* argv[]) {
         });
 
         // Show TUI.
-        // tui.show();
+        tui.show();
     }
 
     // Emulate the program.
