@@ -30,6 +30,7 @@ public:
     ftxui::Element register_area;
     ftxui::Element syscall_area;
     ftxui::Element memory_area;
+    ftxui::Element help_area;
 };
 
 TUI::TUI() : impl_(std::make_unique<Impl>()) {}
@@ -61,13 +62,20 @@ void TUI::show() {
             ftxui::window(ftxui::text("Memory"), ftxui::text("Memory"),
                           ftxui::LIGHT) |
             ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width) |
-            ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, screen_height / 3);
+            ftxui::yflex;
+        this->impl_->help_area =
+            ftxui::hbox({ftxui::hbox({ftxui::text("q") |
+                                      ftxui::color(ftxui::Color::Gold1) |
+                                      ftxui::inverted}),
+                         ftxui::hbox({ftxui::text(" Exit")})}) |
+            ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 1);
 
         return ftxui::vbox({
             ftxui::hbox({this->impl_->disassembler_area,
                          ftxui::vbox({this->impl_->register_area,
                                       this->impl_->syscall_area})}),
             this->impl_->memory_area,
+            this->impl_->help_area,
         });
     });
     layout |= ftxui::CatchEvent([&](ftxui::Event e) {
