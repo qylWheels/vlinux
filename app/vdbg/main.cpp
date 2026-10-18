@@ -16,9 +16,12 @@ int main(int argc, char* argv[]) {
     // Parse command line arguments.
     std::filesystem::path filepath;
     bool list_syscall = false;
+    bool show_summary = false;
     app.add_option("file", filepath, "Path to the file to debug");
     app.add_flag("-s,--syscall", list_syscall,
                  "List all syscall during emulating");
+    app.add_flag("-S,--summary", show_summary,
+                 "Show summary of syscall during emulating");
     CLI11_PARSE(app, argc, argv);
 
     // Parse methods.
@@ -45,10 +48,12 @@ int main(int argc, char* argv[]) {
                             static_cast<int>(ret));
              }}};
 
-    // Emulate the program.
+    // Load the program.
     vlinux::VM vm;
     vm.reset();
     (void)vm.load(filepath);
+
+    // Add syscall hooks.
     if (list_syscall) {
         (void)vm.add_syscall_hook([&](std::uint64_t syscall_id,
                                       std::array<std::uint64_t, 6> args,
@@ -67,7 +72,34 @@ int main(int argc, char* argv[]) {
             }
         });
     }
+    std::uint64_t syscall_count = 0;
+    if (show_summary) {
+        (void)vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                      std::array<std::uint64_t, 6> args,
+                                      std::uint64_t ret) { ++syscall_count; });
+    }
+
+    // Add instruction hooks.
+    std::uint64_t instr_count = 0;
+    if (show_summary) {
+        (void)vm.add_instr_hook([&](std::uint64_t addr) { ++instr_count; });
+    }
+
+    // Emulate the program.
     (void)vm.run(std::chrono::milliseconds(5000),
                  std::chrono::milliseconds(100));
+
+    // Show summary if requested.
+    if (show_summary) {
+        fmt::println("");
+        fmt::println("===== Summary =====");
+        fmt::println("Total syscall count: {}",
+                     fmt::styled(syscall_count,
+                                 fmt::emphasis::bold | fg(fmt::color::gold)));
+        fmt::println("Total instruction count: {}",
+                     fmt::styled(instr_count,
+                                 fmt::emphasis::bold | fg(fmt::color::gold)));
+    }
+
     return 0;
 }
