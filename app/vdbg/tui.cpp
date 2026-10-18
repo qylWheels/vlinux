@@ -3,6 +3,7 @@
 #include <fmt/core.h>
 #include <fmt/format.h>
 
+#include <atomic>
 #include <ftxui/component/app.hpp>
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/component_options.hpp>
@@ -13,6 +14,9 @@
 #include <ftxui/screen/screen.hpp>
 #include <functional>
 #include <memory>
+#include <mutex>
+#include <string>
+#include <thread>
 #include <vector>
 
 namespace vdbg {
@@ -22,8 +26,12 @@ public:
     Impl(vlinux::VM& vm, ::csh& cshandle)
         : screen(ftxui::ScreenInteractive::Fullscreen()),
           vm(&vm),
-          cshandle(&cshandle) {}
-    ~Impl() = default;
+          cshandle(&cshandle),
+          disassembler_area_content(
+              ftxui::Menu(&disasm_entries, &disasm_selected)) {}
+    ~Impl() {
+        if (this->worker_thread.joinable()) this->worker_thread.join();
+    }
     Impl(const Impl&) = delete;
     Impl& operator=(const Impl&) = delete;
     Impl(Impl&&) = delete;
@@ -32,10 +40,19 @@ public:
 public:
     vlinux::VM* vm;
     ::csh* cshandle;
+    std::jthread worker_thread;
+    std::atomic_bool worker_thread_running{false};
+
+public:
+    // Guard the shared state between the worker thread (which fills it) and
+    // the TUI render thread (which reads it).
+    mutable std::mutex content_mutex;
+    std::vector<std::string> disasm_entries;
+    int disasm_selected = 0;
 
 public:
     ftxui::ScreenInteractive screen;
-    ftxui::Component disassembler_area_content = ftxui::Menu({});
+    ftxui::Component disassembler_area_content;
     ftxui::Element disassembler_area;
     ftxui::Component register_area_content = ftxui::Menu({});
     ftxui::Element register_area;
@@ -78,12 +95,15 @@ void TUI::show() {
         auto screen_width = this->impl_->screen.dimx();
         auto screen_height = this->impl_->screen.dimy();
 
-        this->impl_->disassembler_area =
-            ftxui::window(ftxui::text("Disassembler"),
-                          this->impl_->disassembler_area_content->Render(),
-                          ftxui::LIGHT) |
-            ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 2 * screen_width / 3) |
-            ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 2 * screen_height / 3);
+        {
+            std::lock_guard<std::mutex> lock(this->impl_->content_mutex);
+            this->impl_->disassembler_area =
+                ftxui::window(ftxui::text("Disassembler"),
+                              this->impl_->disassembler_area_content->Render(),
+                              ftxui::LIGHT) |
+                ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 2 * screen_width / 3) |
+                ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 2 * screen_height / 3);
+        }
         this->impl_->register_area =
             ftxui::window(ftxui::text("Register"),
                           this->impl_->register_area_content->Render(),
@@ -124,6 +144,17 @@ void TUI::show() {
             this->impl_->screen.ExitLoopClosure()();
             return true;
         }
+        if (e == ftxui::Event::Character('c')) {
+            if (!this->impl_->worker_thread_running) {
+                this->impl_->worker_thread = std::jthread([this] {
+                    auto result =
+                        this->impl_->vm->run(std::chrono::milliseconds(100000),
+                                             std::chrono::milliseconds(100));
+                });
+                this->impl_->worker_thread_running = true;
+            }
+            return true;
+        }
         return false;
     });
     this->impl_->screen.Loop(layout);
@@ -132,8 +163,9 @@ void TUI::show() {
 }
 
 void TUI::set_disassembler_content(const std::vector<std::string>& content) {
-    int selected = 0;
-    this->impl_->disassembler_area_content = ftxui::Menu(content, &selected);
+    std::lock_guard<std::mutex> lock(this->impl_->content_mutex);
+    this->impl_->disasm_entries = content;
+    this->impl_->disasm_selected = 0;
     return;
 }
 }  // namespace tui
