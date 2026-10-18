@@ -4,8 +4,9 @@
     "cpptrace",
     "elfio",
     "fmt",
+    "ftxui",
     "outcome",
     "unicorn",
-    "ftxui"
+    "capstone"
   ]
 }
