@@ -1,3 +1,4 @@
+#include <capstone/capstone.h>
 #include <fmt/base.h>
 #include <fmt/color.h>
 #include <fmt/core.h>
@@ -8,6 +9,7 @@
 #include <functional>
 #include <map>
 
+#include "tui.h"
 #include "vm.h"
 
 int main(int argc, char* argv[]) {
@@ -89,6 +91,48 @@ int main(int argc, char* argv[]) {
         (void)vm.add_instr_hook([&](std::uint64_t addr) { ++instr_count; });
     }
 
+    // Show TUI if requested.
+    ::cs_err err;
+    ::csh handle;
+    if (show_tui) {
+        // Initialize Capstone engine.
+        err = ::cs_open(CS_ARCH_X86, CS_MODE_64, &handle);
+        if (err != CS_ERR_OK) {
+            fmt::println(stderr,
+                         "Failed to initialize Capstone engine: {} ({})",
+                         ::cs_strerror(err), static_cast<int>(err));
+            return err;
+        }
+
+        // Initialize TUI.
+        vdbg::tui::TUI tui;
+
+        // Add instruction hook.
+        auto result = vm.add_instr_hook([&](std::uint64_t addr) {
+            ::cs_insn* insn;
+            std::string insn_str;
+            // 16 is maximum instruction size in x86-64.
+            auto code_result = vm.read_mem(addr, 16);
+            if (code_result.has_error()) {
+                insn_str = "<Invalid Instruction>";
+            } else {
+                auto code = code_result.value();
+                int count = ::cs_disasm(handle, code.data(), code.size(), addr,
+                                        1, &insn);
+                if (count == 0)
+                    insn_str = "<Invalid Instruction>";
+                else
+                    insn_str =
+                        fmt::format("{} {}", insn->mnemonic, insn->op_str);
+                ::cs_free(insn, 1);
+            }
+            fmt::println("{:#x} {}", addr, insn_str);
+        });
+
+        // Show TUI.
+        // tui.show();
+    }
+
     // Emulate the program.
     (void)vm.run(std::chrono::milliseconds(5000),
                  std::chrono::milliseconds(100));
@@ -103,6 +147,11 @@ int main(int argc, char* argv[]) {
         fmt::println("Total instruction count: {}",
                      fmt::styled(instr_count,
                                  fmt::emphasis::bold | fg(fmt::color::gold)));
+    }
+
+    // Free Capstone engine if TUI enabled.
+    if (show_tui) {
+        ::cs_close(&handle);
     }
 
     return 0;
