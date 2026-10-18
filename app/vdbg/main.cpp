@@ -105,7 +105,7 @@ int main(int argc, char* argv[]) {
         }
 
         // Initialize TUI.
-        vdbg::tui::TUI tui(vm);
+        vdbg::tui::TUI tui(vm, handle);
 
         // Add instruction hook.
         auto result = vm.add_instr_hook([&](std::uint64_t addr) {
