@@ -111,9 +111,11 @@ int main(int argc, char* argv[]) {
         tui.show();
     }
 
-    // Emulate the program.
-    (void)vm.run(std::chrono::milliseconds(5000),
-                 std::chrono::milliseconds(100));
+    // Emulate the program straight forward if TUI not enabled.
+    if (!show_tui) {
+        (void)vm.run(std::chrono::milliseconds(5000),
+                     std::chrono::milliseconds(100));
+    }
 
     // Show summary if requested.
     if (show_summary) {
