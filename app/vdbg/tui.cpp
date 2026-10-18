@@ -1,0 +1,86 @@
+#include "tui.h"
+
+#include <ftxui/component/app.hpp>
+#include <ftxui/component/component.hpp>
+#include <ftxui/component/screen_interactive.hpp>
+#include <ftxui/dom/elements.hpp>
+#include <ftxui/dom/node.hpp>
+#include <ftxui/ftxui.hpp>
+#include <ftxui/screen/screen.hpp>
+#include <functional>
+#include <memory>
+
+namespace vdbg {
+namespace tui {
+class TUI::Impl {
+public:
+    Impl() : screen(ftxui::ScreenInteractive::Fullscreen()) {}
+    ~Impl() = default;
+    Impl(const Impl&) = delete;
+    Impl& operator=(const Impl&) = delete;
+    Impl(Impl&&) = delete;
+    Impl& operator=(Impl&&) = delete;
+
+public:
+    ftxui::ScreenInteractive screen;
+    ftxui::Element disassembler_area;
+    ftxui::Element register_area;
+    ftxui::Element syscall_area;
+    ftxui::Element memory_area;
+};
+
+TUI::TUI() : impl_(std::make_unique<Impl>()) {}
+
+TUI::~TUI() = default;
+
+void TUI::show() {
+    auto layout = ftxui::Renderer([this] {
+        auto screen_width = this->impl_->screen.dimx();
+        auto screen_height = this->impl_->screen.dimy();
+
+        this->impl_->disassembler_area =
+            ftxui::window(ftxui::text("Disassembler"),
+                          ftxui::text("Disassembler"), ftxui::LIGHT) |
+            ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 2 * screen_width / 3) |
+            ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 2 * screen_height / 3);
+        this->impl_->register_area =
+            ftxui::window(ftxui::text("Register"), ftxui::text("Register"),
+                          ftxui::LIGHT) |
+            ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width / 3) |
+            ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, screen_height / 3);
+        this->impl_->syscall_area =
+            ftxui::window(ftxui::text("Syscall"), ftxui::text("Syscall"),
+                          ftxui::LIGHT) |
+            ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width / 3) |
+            ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, screen_height / 3);
+        this->impl_->memory_area =
+            ftxui::window(ftxui::text("Memory"), ftxui::text("Memory"),
+                          ftxui::LIGHT) |
+            ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width) |
+            ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, screen_height / 3);
+
+        return ftxui::vbox({
+            ftxui::hbox({this->impl_->disassembler_area,
+                         ftxui::vbox({this->impl_->register_area,
+                                      this->impl_->syscall_area})}),
+            this->impl_->memory_area,
+        });
+    });
+    this->impl_->screen.Loop(layout);
+    return;
+}
+
+void TUI::set_disassembler_content(const std::vector<std::string>& content) {
+    // int selected = 0;
+
+    // ftxui::MenuOption option;
+    // option.on_enter = this->impl_->screen.ExitLoopClosure();
+    // auto menu = ftxui::Menu(&content, &selected, option);
+
+    // this->impl_->screen.Loop(menu);
+
+    // std::cout << "Selected element = " << selected << std::endl;
+    // return;
+}
+}  // namespace tui
+}  // namespace vdbg
