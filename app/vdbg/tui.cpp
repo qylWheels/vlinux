@@ -27,6 +27,7 @@ public:
     ftxui::ScreenInteractive screen;
     ftxui::Component disassembler_area_content = ftxui::Menu({});
     ftxui::Element disassembler_area;
+    ftxui::Component register_area_content = ftxui::Menu({});
     ftxui::Element register_area;
     ftxui::Element syscall_area;
     ftxui::Element memory_area;
@@ -49,7 +50,8 @@ void TUI::show() {
             ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 2 * screen_width / 3) |
             ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 2 * screen_height / 3);
         this->impl_->register_area =
-            ftxui::window(ftxui::text("Register"), ftxui::text("Register"),
+            ftxui::window(ftxui::text("Register"),
+                          this->impl_->register_area_content->Render(),
                           ftxui::LIGHT) |
             ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width / 3) |
             ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, screen_height / 3);
