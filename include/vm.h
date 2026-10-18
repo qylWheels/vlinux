@@ -77,6 +77,27 @@ public:
             behav_of_tasks_;
     };
 
+    enum class Register {
+        RAX,
+        RBX,
+        RCX,
+        RDX,
+        R8,
+        R9,
+        R10,
+        R11,
+        R12,
+        R13,
+        R14,
+        R15,
+        RSI,
+        RDI,
+        RBP,
+        RSP,
+        RFLAGS,
+        RIP,
+    };
+
 public:
     void reset();
     outcome::result<std::shared_ptr<Task>> load(
@@ -95,6 +116,7 @@ public:
 
     // Observability.
     Scheduler& get_scheduler();
+    outcome::result<std::uint64_t> read_reg(Register reg) const;
 
 private:
     class Impl;

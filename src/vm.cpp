@@ -537,4 +537,32 @@ outcome::result<void> VM::add_instr_hook(
 
 // Observability.
 Scheduler& VM::get_scheduler() { return *this->impl_->scheduler_; }
+
+outcome::result<std::uint64_t> VM::read_reg(Register reg) const {
+    uc_err err;
+    std::uint64_t value;
+    int uc_reg = reg == Register::RAX      ? UC_X86_REG_RAX
+                 : reg == Register::RBX    ? UC_X86_REG_RBX
+                 : reg == Register::RCX    ? UC_X86_REG_RCX
+                 : reg == Register::RDX    ? UC_X86_REG_RDX
+                 : reg == Register::R8     ? UC_X86_REG_R8
+                 : reg == Register::R9     ? UC_X86_REG_R9
+                 : reg == Register::R10    ? UC_X86_REG_R10
+                 : reg == Register::R11    ? UC_X86_REG_R11
+                 : reg == Register::R12    ? UC_X86_REG_R12
+                 : reg == Register::R13    ? UC_X86_REG_R13
+                 : reg == Register::R14    ? UC_X86_REG_R14
+                 : reg == Register::R15    ? UC_X86_REG_R15
+                 : reg == Register::RSI    ? UC_X86_REG_RSI
+                 : reg == Register::RDI    ? UC_X86_REG_RDI
+                 : reg == Register::RBP    ? UC_X86_REG_RBP
+                 : reg == Register::RSP    ? UC_X86_REG_RSP
+                 : reg == Register::RFLAGS ? UC_X86_REG_RFLAGS
+                 : reg == Register::RIP    ? UC_X86_REG_RIP
+                                           : -1;
+    if (uc_reg == -1) return std::errc::invalid_argument;
+    err = ::uc_reg_read(this->impl_->uc_, uc_reg, &value);
+    if (err != UC_ERR_OK) return make_error_code(err);
+    return value;
+}
 }  // namespace vlinux
