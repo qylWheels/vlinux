@@ -64,10 +64,9 @@ void TUI::show() {
             ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width) |
             ftxui::yflex;
         this->impl_->help_area =
-            ftxui::hbox({ftxui::hbox({ftxui::text("q") |
+            ftxui::hbox({ftxui::hbox({ftxui::text("q: Exit") |
                                       ftxui::color(ftxui::Color::Gold1) |
-                                      ftxui::inverted}),
-                         ftxui::hbox({ftxui::text(" Exit")})}) |
+                                      ftxui::inverted})}) |
             ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 1);
 
         return ftxui::vbox({
