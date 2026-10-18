@@ -17,11 +17,13 @@ int main(int argc, char* argv[]) {
     std::filesystem::path filepath;
     bool list_syscall = false;
     bool show_summary = false;
+    bool show_tui = false;
     app.add_option("file", filepath, "Path to the file to debug");
     app.add_flag("-s,--syscall", list_syscall,
                  "List all syscall during emulating");
     app.add_flag("-S,--summary", show_summary,
                  "Show summary of syscall during emulating");
+    app.add_flag("-t,--tui", show_tui, "Show TUI for debugging");
     CLI11_PARSE(app, argc, argv);
 
     // Parse methods.
