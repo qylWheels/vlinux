@@ -26,6 +26,8 @@ int main(int argc, char* argv[]) {
     app.add_flag("-t,--tui", show_tui, "Show TUI for debugging");
     CLI11_PARSE(app, argc, argv);
 
+    // TODO: Check arguments.
+
     // Parse methods.
     std::map<int, std::function<void(std::uint64_t syscall_id,
                                      std::array<std::uint64_t, 6> args,
