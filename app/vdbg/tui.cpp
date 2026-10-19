@@ -63,6 +63,7 @@ public:
 public:
     ftxui::ScreenInteractive screen;
     ftxui::Component container;
+    ftxui::Component disassembler_list;
     ftxui::Component disassembler_area;
     ftxui::Component register_area;
     ftxui::Component syscall_list;
@@ -125,22 +126,24 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
     if (!result) throw std::runtime_error("Failed to add syscall hook");
 
     // Create components.
-    this->impl_->disassembler_area = ftxui::Renderer([=, this](bool focused) {
-        std::lock_guard<std::mutex> lock(this->impl_->content_mutex);
-        auto screen_width = this->impl_->screen.dimx();
-        auto screen_height = this->impl_->screen.dimy();
-        auto window =
-            ftxui::window(
-                ftxui::text(focused ? "Disassembler [*]" : "Disassembler"),
-                ftxui::Menu(this->impl_->disasm_entries,
-                            &this->impl_->disasm_selected)
-                    ->Render(),
-                focused ? ftxui::HEAVY : ftxui::LIGHT) |
-            ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 2 * screen_width / 3) |
-            ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 2 * screen_height / 3);
-        if (focused) window |= ftxui::color(ftxui::Color::CyanLight);
-        return window;
-    });
+    this->impl_->disassembler_list = ftxui::Menu(&this->impl_->disasm_entries,
+                                                 &this->impl_->disasm_selected);
+    this->impl_->disassembler_area =
+        ftxui::Renderer(this->impl_->disassembler_list, [=, this]() {
+            std::lock_guard<std::mutex> lock(this->impl_->content_mutex);
+            auto screen_width = this->impl_->screen.dimx();
+            auto screen_height = this->impl_->screen.dimy();
+            auto focused = this->impl_->disassembler_list->Focused();
+            auto window =
+                ftxui::window(
+                    ftxui::text(focused ? "Disassembler [*]" : "Disassembler"),
+                    this->impl_->disassembler_list->Render(),
+                    focused ? ftxui::HEAVY : ftxui::LIGHT) |
+                ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 2 * screen_width / 3) |
+                ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 2 * screen_height / 3);
+            if (focused) window |= ftxui::color(ftxui::Color::CyanLight);
+            return window;
+        });
 
     this->impl_->register_area = ftxui::Renderer([=, this](bool focused) {
         auto screen_width = this->impl_->screen.dimx();
