@@ -191,9 +191,6 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
     });
 
     this->impl_->container |= ftxui::CatchEvent([&](ftxui::Event e) {
-        // No mouse.
-        if (e.is_mouse()) return true;
-
         if (e == ftxui::Event::Character('q')) {
             this->impl_->screen.ExitLoopClosure()();
             return true;
