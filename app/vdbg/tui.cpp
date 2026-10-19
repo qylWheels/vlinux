@@ -118,11 +118,8 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
             args[2], args[3], args[4], args[5], ret));
     });
     if (!result) throw std::runtime_error("Failed to add syscall hook");
-}
 
-TUI::~TUI() = default;
-
-void TUI::show() {
+    // Create components.
     auto screen_width = this->impl_->screen.dimx();
     auto screen_height = this->impl_->screen.dimy();
 
@@ -212,6 +209,11 @@ void TUI::show() {
         }
         return false;
     });
+}
+
+TUI::~TUI() = default;
+
+void TUI::show() {
     this->impl_->screen.Loop(this->impl_->container);
 
     return;
