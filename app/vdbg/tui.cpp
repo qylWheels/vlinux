@@ -79,6 +79,9 @@ public:
 
 TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
     : impl_(std::make_unique<Impl>(vm, cshandle)) {
+    // Add breakpoint at entry point.
+    this->impl_->breakpoints.insert(vm.get_entry_point());
+
     // Add instruction hook.
     auto result = vm.add_instr_hook([&](std::uint64_t addr) {
         if (this->impl_->breakpoints.find(addr) ==
