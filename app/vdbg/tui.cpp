@@ -87,7 +87,7 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
 
         for (int i = 0; i < disasm_area_height + 5; i++) {
             // 16 is maximum instruction size in x86-64.
-            auto code_result = vm.read_mem(addr, 16);
+            auto code_result = vm.read_mem(addr + i * 16, 16);
             bool valid = true;
             if (code_result.has_error()) {
                 insn_str = "<Invalid Read>";
