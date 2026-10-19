@@ -75,11 +75,10 @@ public:
     ftxui::Component help_area;
 
 public:
-    std::map<int, ftxui::Component> id_to_component{
-        {0, disassembler_area_content},
-        {1, register_area_content},
-        {2, syscall_area_content},
-        {3, memory_area_content}};
+    std::map<int, ftxui::Component> id_to_component{{0, disassembler_area},
+                                                    {1, register_area},
+                                                    {2, syscall_area},
+                                                    {3, memory_area}};
     int current_component_id = 0;
 };
 
