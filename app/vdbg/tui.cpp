@@ -106,8 +106,6 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
                 ::cs_free(insn, count);
             }
         }
-
-        vm.pause();
     });
     if (!result) throw std::runtime_error("Failed to add instruction hook");
 
