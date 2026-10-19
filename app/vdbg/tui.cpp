@@ -38,6 +38,14 @@ public:
     Impl& operator=(Impl&&) = delete;
 
 public:
+    void set_disassembler_content(const std::vector<std::string>& content) {
+        std::lock_guard<std::mutex> lock(this->content_mutex);
+        this->disasm_entries = content;
+        this->disasm_selected = 0;
+        return;
+    }
+
+public:
     vlinux::VM* vm;
     ::csh* cshandle;
     std::jthread worker_thread;
@@ -84,7 +92,8 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
             ::cs_free(insn, 1);
         }
         insn_str = fmt::format("{:#x}: {}", addr, insn_str);
-        this->set_disassembler_content(std::vector<std::string>{insn_str});
+        this->impl_->set_disassembler_content(
+            std::vector<std::string>{insn_str});
     });
     if (!result) throw std::runtime_error("Failed to add instruction hook");
 }
@@ -160,13 +169,6 @@ void TUI::show() {
     });
     this->impl_->screen.Loop(layout);
 
-    return;
-}
-
-void TUI::set_disassembler_content(const std::vector<std::string>& content) {
-    std::lock_guard<std::mutex> lock(this->impl_->content_mutex);
-    this->impl_->disasm_entries = content;
-    this->impl_->disasm_selected = 0;
     return;
 }
 }  // namespace tui

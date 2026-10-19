@@ -3,7 +3,6 @@
 #include <capstone/capstone.h>
 
 #include <memory>
-#include <vector>
 
 #include "vm.h"
 
@@ -20,7 +19,6 @@ public:
 
 public:
     void show();
-    void set_disassembler_content(const std::vector<std::string>& content);
 
 private:
     class Impl;
