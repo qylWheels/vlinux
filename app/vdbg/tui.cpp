@@ -58,6 +58,7 @@ public:
     std::vector<std::string> disasm_entries;
     int disasm_selected = 0;
     std::vector<std::string> syscall_entries;
+    int syscall_selected = 0;
 
 public:
     ftxui::ScreenInteractive screen;
@@ -118,6 +119,7 @@ void TUI::show() {
         auto screen_height = this->impl_->screen.dimy();
 
         std::lock_guard<std::mutex> lock(this->impl_->content_mutex);
+
         this->impl_->disassembler_area =
             ftxui::window(ftxui::text("Disassembler"),
                           this->impl_->disassembler_area_content->Render(),
@@ -132,7 +134,9 @@ void TUI::show() {
             ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, screen_height / 3);
         this->impl_->syscall_area =
             ftxui::window(ftxui::text("Syscall"),
-                          this->impl_->syscall_area_content->Render(),
+                          ftxui::Menu(this->impl_->syscall_entries,
+                                      &this->impl_->syscall_selected)
+                              ->Render(),
                           ftxui::LIGHT) |
             ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width / 3) |
             ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, screen_height / 3);
