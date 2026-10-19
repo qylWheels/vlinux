@@ -120,12 +120,11 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
     if (!result) throw std::runtime_error("Failed to add syscall hook");
 
     // Create components.
-    auto screen_width = this->impl_->screen.dimx();
-    auto screen_height = this->impl_->screen.dimy();
-
     std::lock_guard<std::mutex> lock(this->impl_->content_mutex);
 
     this->impl_->disassembler_area = ftxui::Renderer([=, this](bool focused) {
+        auto screen_width = this->impl_->screen.dimx();
+        auto screen_height = this->impl_->screen.dimy();
         return ftxui::window(ftxui::text("Disassembler"),
                              ftxui::Menu(this->impl_->disasm_entries,
                                          &this->impl_->disasm_selected)
@@ -136,6 +135,8 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
     });
 
     this->impl_->register_area = ftxui::Renderer([=, this](bool focused) {
+        auto screen_width = this->impl_->screen.dimx();
+        auto screen_height = this->impl_->screen.dimy();
         return ftxui::window(ftxui::text("Register"),
                              this->impl_->register_area_content->Render(),
                              focused ? ftxui::HEAVY : ftxui::LIGHT) |
@@ -144,6 +145,8 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
     });
 
     this->impl_->syscall_area = ftxui::Renderer([=, this](bool focused) {
+        auto screen_width = this->impl_->screen.dimx();
+        auto screen_height = this->impl_->screen.dimy();
         return ftxui::window(ftxui::text("Syscall"),
                              ftxui::Menu(this->impl_->syscall_entries,
                                          &this->impl_->syscall_selected)
@@ -154,6 +157,8 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
     });
 
     this->impl_->memory_area = ftxui::Renderer([=, this](bool focused) {
+        auto screen_width = this->impl_->screen.dimx();
+        auto screen_height = this->impl_->screen.dimy();
         return ftxui::window(ftxui::text("Memory"),
                              this->impl_->memory_area_content->Render(),
                              focused ? ftxui::HEAVY : ftxui::LIGHT) |
