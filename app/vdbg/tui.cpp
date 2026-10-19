@@ -107,9 +107,8 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
     if (!result) throw std::runtime_error("Failed to add syscall hook");
 
     // Create components.
-    std::lock_guard<std::mutex> lock(this->impl_->content_mutex);
-
     this->impl_->disassembler_area = ftxui::Renderer([=, this](bool focused) {
+        std::lock_guard<std::mutex> lock(this->impl_->content_mutex);
         auto screen_width = this->impl_->screen.dimx();
         auto screen_height = this->impl_->screen.dimy();
         auto window =
