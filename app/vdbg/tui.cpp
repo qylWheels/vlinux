@@ -27,9 +27,7 @@ public:
     Impl(vlinux::VM& vm, ::csh& cshandle)
         : screen(ftxui::ScreenInteractive::Fullscreen()),
           vm(&vm),
-          cshandle(&cshandle),
-          disassembler_area_content(
-              ftxui::Menu(&disasm_entries, &disasm_selected)) {}
+          cshandle(&cshandle) {}
     ~Impl() {
         if (this->worker_thread.joinable()) this->worker_thread.join();
     }
@@ -64,13 +62,9 @@ public:
 public:
     ftxui::ScreenInteractive screen;
     ftxui::Component container;
-    ftxui::Component disassembler_area_content;
     ftxui::Component disassembler_area;
-    ftxui::Component register_area_content = ftxui::Menu({});
     ftxui::Component register_area;
-    ftxui::Component syscall_area_content = ftxui::Menu({});
     ftxui::Component syscall_area;
-    ftxui::Component memory_area_content = ftxui::Menu({});
     ftxui::Component memory_area;
     ftxui::Component help_area;
 
@@ -137,9 +131,10 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
     this->impl_->register_area = ftxui::Renderer([=, this](bool focused) {
         auto screen_width = this->impl_->screen.dimx();
         auto screen_height = this->impl_->screen.dimy();
-        return ftxui::window(ftxui::text("Register"),
-                             this->impl_->register_area_content->Render(),
-                             focused ? ftxui::HEAVY : ftxui::LIGHT) |
+        return ftxui::window(
+                   ftxui::text("Register"),
+                   ftxui::text("<Not Implemented Yet>") | ftxui::center,
+                   focused ? ftxui::HEAVY : ftxui::LIGHT) |
                ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width / 3) |
                ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, screen_height / 3);
     });
@@ -159,9 +154,10 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
     this->impl_->memory_area = ftxui::Renderer([=, this](bool focused) {
         auto screen_width = this->impl_->screen.dimx();
         auto screen_height = this->impl_->screen.dimy();
-        return ftxui::window(ftxui::text("Memory"),
-                             this->impl_->memory_area_content->Render(),
-                             focused ? ftxui::HEAVY : ftxui::LIGHT) |
+        return ftxui::window(
+                   ftxui::text("Memory"),
+                   ftxui::text("<Not Implemented Yet>") | ftxui::center,
+                   focused ? ftxui::HEAVY : ftxui::LIGHT) |
                ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width) |
                ftxui::yflex;
     });
