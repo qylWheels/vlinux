@@ -76,6 +76,8 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
     : impl_(std::make_unique<Impl>(vm, cshandle)) {
     // Add instruction hook.
     auto result = vm.add_instr_hook([&](std::uint64_t addr) {
+        std::lock_guard<std::mutex> lock(this->impl_->content_mutex);
+
         ::cs_insn* insn;
         std::string insn_str;
 
@@ -105,7 +107,6 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
                 ::cs_free(insn, 1);
             }
             insn_str = fmt::format("{:#x}: {}", addr, insn_str);
-            std::lock_guard<std::mutex> lock(this->impl_->content_mutex);
             this->impl_->disasm_entries[i] = insn_str;
 
             if (!valid) break;
