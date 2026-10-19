@@ -112,11 +112,12 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
     this->impl_->disassembler_area = ftxui::Renderer([=, this](bool focused) {
         auto screen_width = this->impl_->screen.dimx();
         auto screen_height = this->impl_->screen.dimy();
-        return ftxui::window(ftxui::text("Disassembler"),
-                             ftxui::Menu(this->impl_->disasm_entries,
-                                         &this->impl_->disasm_selected)
-                                 ->Render(),
-                             focused ? ftxui::HEAVY : ftxui::LIGHT) |
+        return ftxui::window(
+                   ftxui::text(focused ? "Disassembler [*]" : "Disassembler"),
+                   ftxui::Menu(this->impl_->disasm_entries,
+                               &this->impl_->disasm_selected)
+                       ->Render(),
+                   focused ? ftxui::HEAVY : ftxui::LIGHT) |
                ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 2 * screen_width / 3) |
                ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 2 * screen_height / 3);
     });
@@ -125,7 +126,7 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
         auto screen_width = this->impl_->screen.dimx();
         auto screen_height = this->impl_->screen.dimy();
         return ftxui::window(
-                   ftxui::text("Register"),
+                   ftxui::text(focused ? "Register [*]" : "Register"),
                    ftxui::text("<Not Implemented Yet>") | ftxui::center,
                    focused ? ftxui::HEAVY : ftxui::LIGHT) |
                ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width / 3) |
@@ -135,7 +136,7 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
     this->impl_->syscall_area = ftxui::Renderer([=, this](bool focused) {
         auto screen_width = this->impl_->screen.dimx();
         auto screen_height = this->impl_->screen.dimy();
-        return ftxui::window(ftxui::text("Syscall"),
+        return ftxui::window(ftxui::text(focused ? "Syscall [*]" : "Syscall"),
                              ftxui::Menu(this->impl_->syscall_entries,
                                          &this->impl_->syscall_selected)
                                  ->Render(),
@@ -148,7 +149,7 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
         auto screen_width = this->impl_->screen.dimx();
         auto screen_height = this->impl_->screen.dimy();
         return ftxui::window(
-                   ftxui::text("Memory"),
+                   ftxui::text(focused ? "Memory [*]" : "Memory"),
                    ftxui::text("<Not Implemented Yet>") | ftxui::center,
                    focused ? ftxui::HEAVY : ftxui::LIGHT) |
                ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width) |
