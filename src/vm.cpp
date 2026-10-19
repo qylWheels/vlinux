@@ -47,6 +47,25 @@ public:
                 std::format("uc_ctl_tlb_mode failed: {}", uc_strerror(err)));
         }
 
+        // Add instruction hook.
+        err = ::uc_hook_add(this->uc_, &this->instr_hook_, UC_HOOK_CODE,
+                            reinterpret_cast<void*>(instr_hook_callback), this,
+                            1, 0);
+        if (err != UC_ERR_OK) {
+            throw std::runtime_error(std::format(
+                "Add instruction hook failed: {}", uc_strerror(err)));
+        }
+
+        // Add syscall hook.
+        err = uc_hook_add(this->uc_, &this->syscall_hook_, UC_HOOK_INSN,
+                          reinterpret_cast<void*>(syscall_hook_callback), this,
+                          0, std::numeric_limits<std::uint64_t>::max(),
+                          UC_X86_INS_SYSCALL);
+        if (err != UC_ERR_OK) {
+            throw std::runtime_error(
+                std::format("Add syscall hook failed: {}", uc_strerror(err)));
+        }
+
         this->scheduler_ = std::make_shared<Scheduler>(this->uc_);
         this->ppa_ = std::make_shared<mm::PhysicalPageAllocator>(this->uc_);
         this->infinite_loop_code_ = static_cast<std::uint8_t*>(
@@ -488,26 +507,6 @@ outcome::result<std::shared_ptr<Task>> VM::load(
 
 outcome::result<VM::Result> VM::run(std::chrono::milliseconds timeout,
                                     std::chrono::milliseconds sched_interval) {
-    uc_err err;
-
-    // Add instruction hook.
-    err =
-        ::uc_hook_add(this->impl_->uc_, &this->impl_->instr_hook_, UC_HOOK_CODE,
-                      reinterpret_cast<void*>(Impl::instr_hook_callback),
-                      this->impl_.get(), 1, 0);
-    if (err != UC_ERR_OK) {
-        return make_error_code(err);
-    }
-
-    // Add syscall hook.
-    err = uc_hook_add(
-        this->impl_->uc_, &this->impl_->syscall_hook_, UC_HOOK_INSN,
-        reinterpret_cast<void*>(Impl::syscall_hook_callback), this->impl_.get(),
-        0, std::numeric_limits<std::uint64_t>::max(), UC_X86_INS_SYSCALL);
-    if (err != UC_ERR_OK) {
-        return make_error_code(err);
-    }
-
     // Set state to ready.
     this->impl_->curr_task_->state = Task::State::Ready;
 
