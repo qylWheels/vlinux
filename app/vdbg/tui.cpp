@@ -67,13 +67,6 @@ public:
     ftxui::Component syscall_area;
     ftxui::Component memory_area;
     ftxui::Component help_area;
-
-public:
-    std::map<int, ftxui::Component> id_to_component{{0, disassembler_area},
-                                                    {1, register_area},
-                                                    {2, syscall_area},
-                                                    {3, memory_area}};
-    int current_component_id = 0;
 };
 
 TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
@@ -185,16 +178,6 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
     this->impl_->container |= ftxui::CatchEvent([&](ftxui::Event e) {
         if (e == ftxui::Event::Character('q')) {
             this->impl_->screen.ExitLoopClosure()();
-            return true;
-        }
-        if (e == ftxui::Event::Tab) {
-            this->impl_->current_component_id =
-                (this->impl_->current_component_id + 1) % 4;
-            auto component =
-                this->impl_->id_to_component[this->impl_->current_component_id];
-            if (component->Focusable()) {
-                component->TakeFocus();
-            }
             return true;
         }
         if (e == ftxui::Event::Character('c')) {
