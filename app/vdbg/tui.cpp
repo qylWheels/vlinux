@@ -112,48 +112,58 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
     this->impl_->disassembler_area = ftxui::Renderer([=, this](bool focused) {
         auto screen_width = this->impl_->screen.dimx();
         auto screen_height = this->impl_->screen.dimy();
-        return ftxui::window(
-                   ftxui::text(focused ? "Disassembler [*]" : "Disassembler"),
-                   ftxui::Menu(this->impl_->disasm_entries,
-                               &this->impl_->disasm_selected)
-                       ->Render(),
-                   focused ? ftxui::HEAVY : ftxui::LIGHT) |
-               ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 2 * screen_width / 3) |
-               ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 2 * screen_height / 3);
+        auto window =
+            ftxui::window(
+                ftxui::text(focused ? "Disassembler [*]" : "Disassembler"),
+                ftxui::Menu(this->impl_->disasm_entries,
+                            &this->impl_->disasm_selected)
+                    ->Render(),
+                focused ? ftxui::HEAVY : ftxui::LIGHT) |
+            ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 2 * screen_width / 3) |
+            ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 2 * screen_height / 3);
+        if (focused) window |= ftxui::color(ftxui::Color::CyanLight);
+        return window;
     });
 
     this->impl_->register_area = ftxui::Renderer([=, this](bool focused) {
         auto screen_width = this->impl_->screen.dimx();
         auto screen_height = this->impl_->screen.dimy();
-        return ftxui::window(
-                   ftxui::text(focused ? "Register [*]" : "Register"),
-                   ftxui::text("<Not Implemented Yet>") | ftxui::center,
-                   focused ? ftxui::HEAVY : ftxui::LIGHT) |
-               ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width / 3) |
-               ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, screen_height / 3);
+        auto window =
+            ftxui::window(ftxui::text(focused ? "Register [*]" : "Register"),
+                          ftxui::text("<Not Implemented Yet>") | ftxui::center,
+                          focused ? ftxui::HEAVY : ftxui::LIGHT) |
+            ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width / 3) |
+            ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, screen_height / 3);
+        if (focused) window |= ftxui::color(ftxui::Color::CyanLight);
+        return window;
     });
 
     this->impl_->syscall_area = ftxui::Renderer([=, this](bool focused) {
         auto screen_width = this->impl_->screen.dimx();
         auto screen_height = this->impl_->screen.dimy();
-        return ftxui::window(ftxui::text(focused ? "Syscall [*]" : "Syscall"),
-                             ftxui::Menu(this->impl_->syscall_entries,
-                                         &this->impl_->syscall_selected)
-                                 ->Render(),
-                             focused ? ftxui::HEAVY : ftxui::LIGHT) |
-               ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width / 3) |
-               ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, screen_height / 3);
+        auto window =
+            ftxui::window(ftxui::text(focused ? "Syscall [*]" : "Syscall"),
+                          ftxui::Menu(this->impl_->syscall_entries,
+                                      &this->impl_->syscall_selected)
+                              ->Render(),
+                          focused ? ftxui::HEAVY : ftxui::LIGHT) |
+            ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width / 3) |
+            ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, screen_height / 3);
+        if (focused) window |= ftxui::color(ftxui::Color::CyanLight);
+        return window;
     });
 
     this->impl_->memory_area = ftxui::Renderer([=, this](bool focused) {
         auto screen_width = this->impl_->screen.dimx();
         auto screen_height = this->impl_->screen.dimy();
-        return ftxui::window(
-                   ftxui::text(focused ? "Memory [*]" : "Memory"),
-                   ftxui::text("<Not Implemented Yet>") | ftxui::center,
-                   focused ? ftxui::HEAVY : ftxui::LIGHT) |
-               ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width) |
-               ftxui::yflex;
+        auto window =
+            ftxui::window(ftxui::text(focused ? "Memory [*]" : "Memory"),
+                          ftxui::text("<Not Implemented Yet>") | ftxui::center,
+                          focused ? ftxui::HEAVY : ftxui::LIGHT) |
+            ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width) |
+            ftxui::yflex;
+        if (focused) window |= ftxui::color(ftxui::Color::CyanLight);
+        return window;
     });
 
     auto help_style = ftxui::color(ftxui::Color::Gold1) | ftxui::inverted;
