@@ -117,15 +117,13 @@ void TUI::show() {
         auto screen_width = this->impl_->screen.dimx();
         auto screen_height = this->impl_->screen.dimy();
 
-        {
-            std::lock_guard<std::mutex> lock(this->impl_->content_mutex);
-            this->impl_->disassembler_area =
-                ftxui::window(ftxui::text("Disassembler"),
-                              this->impl_->disassembler_area_content->Render(),
-                              ftxui::LIGHT) |
-                ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 2 * screen_width / 3) |
-                ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 2 * screen_height / 3);
-        }
+        std::lock_guard<std::mutex> lock(this->impl_->content_mutex);
+        this->impl_->disassembler_area =
+            ftxui::window(ftxui::text("Disassembler"),
+                          this->impl_->disassembler_area_content->Render(),
+                          ftxui::LIGHT) |
+            ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 2 * screen_width / 3) |
+            ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 2 * screen_height / 3);
         this->impl_->register_area =
             ftxui::window(ftxui::text("Register"),
                           this->impl_->register_area_content->Render(),
