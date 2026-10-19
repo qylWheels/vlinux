@@ -84,33 +84,30 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
         // Get disassembler area height.
         auto disasm_max_lines = 100;
         this->impl_->disasm_entries.clear();
-        this->impl_->disasm_entries.resize(disasm_max_lines);
 
-        for (int i = 0; i < disasm_max_lines; i++) {
-            // 16 is maximum instruction size in x86-64.
-            auto code_result = vm.read_mem(addr + i * 16, 16);
-            bool valid = true;
-            if (code_result.has_error()) {
-                insn_str = "<Invalid Read>";
-                valid = false;
+        // 16 is maximum instruction size in x86-64.
+        auto code_result = vm.read_mem(addr, 16 * disasm_max_lines);
+        if (code_result.has_error()) {
+            this->impl_->disasm_entries.assign(disasm_max_lines,
+                                               "<Invalid Read>");
+        } else {
+            auto code = code_result.value();
+            int count = ::cs_disasm(*this->impl_->cshandle, code.data(),
+                                    code.size(), addr, disasm_max_lines, &insn);
+            if (count == 0) {
+                this->impl_->disasm_entries.assign(disasm_max_lines,
+                                                   "<Invalid Instruction>");
             } else {
-                auto code = code_result.value();
-                int count = ::cs_disasm(*this->impl_->cshandle, code.data(),
-                                        code.size(), addr, 1, &insn);
-                if (count == 0) {
-                    insn_str = "<Invalid Instruction>";
-                    valid = false;
-                } else {
-                    insn_str =
-                        fmt::format("{} {}", insn->mnemonic, insn->op_str);
+                for (int i = 0; i < count; i++) {
+                    this->impl_->disasm_entries.push_back(
+                        fmt::format("{:#x}: {} {}", insn[i].address,
+                                    insn[i].mnemonic, insn[i].op_str));
                 }
-                ::cs_free(insn, 1);
+                ::cs_free(insn, count);
             }
-            insn_str = fmt::format("{:#x}: {}", addr, insn_str);
-            this->impl_->disasm_entries[i] = insn_str;
-
-            if (!valid) break;
         }
+
+        vm.pause();
     });
     if (!result) throw std::runtime_error("Failed to add instruction hook");
 
