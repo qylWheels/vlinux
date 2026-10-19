@@ -80,13 +80,9 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
         std::string insn_str;
 
         // Get disassembler area height.
-        ftxui::Box box;
-        auto disasm_area_reflected =
-            this->impl_->disassembler_area | ftxui::reflect(box);
-        auto disasm_area_height = box.y_max - box.y_min + 1;
-        auto disasm_max_lines = disasm_area_height + 5;
-        this->impl_->disasm_entries.resize(disasm_max_lines);
+        auto disasm_max_lines = 100;
         this->impl_->disasm_entries.clear();
+        this->impl_->disasm_entries.resize(disasm_max_lines);
 
         for (int i = 0; i < disasm_max_lines; i++) {
             // 16 is maximum instruction size in x86-64.
