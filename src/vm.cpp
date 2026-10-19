@@ -516,14 +516,6 @@ outcome::result<VM::Result> VM::run(std::chrono::milliseconds timeout,
 
 void VM::pause() { this->impl_->scheduler_->stop_schedule(); }
 
-outcome::result<VM::Result> VM::get_result() {
-    Result result;
-    for (auto task : this->impl_->tasks_) {
-        result.behav_of_tasks_[task] = task->syscalls;
-    }
-    return result;
-}
-
 outcome::result<void> VM::add_syscall_hook(
     std::function<void(std::uint64_t syscall_id,
                        std::array<std::uint64_t, 6> args, std::uint64_t ret)>
@@ -547,6 +539,14 @@ outcome::result<void> VM::add_instr_hook(
 
 // Observability.
 Scheduler& VM::get_scheduler() { return *this->impl_->scheduler_; }
+
+outcome::result<VM::Result> VM::get_result() const {
+    Result result;
+    for (auto task : this->impl_->tasks_) {
+        result.behav_of_tasks_[task] = task->syscalls;
+    }
+    return result;
+}
 
 outcome::result<std::uint64_t> VM::read_reg(Register reg) const {
     uc_err err;

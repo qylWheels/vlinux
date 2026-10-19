@@ -105,7 +105,6 @@ public:
     outcome::result<Result> run(std::chrono::milliseconds timeout,
                                 std::chrono::milliseconds sched_interval);
     void pause();
-    outcome::result<Result> get_result();
 
     // Hooks.
     outcome::result<void> add_syscall_hook(
@@ -118,6 +117,7 @@ public:
 
     // Observability.
     Scheduler& get_scheduler();
+    outcome::result<Result> get_result() const;
     outcome::result<std::uint64_t> read_reg(Register reg) const;
     outcome::result<std::vector<std::uint8_t>> read_mem(std::uint64_t addr,
                                                         std::size_t size) const;
