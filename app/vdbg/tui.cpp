@@ -4,6 +4,7 @@
 #include <fmt/format.h>
 
 #include <atomic>
+#include <cstdint>
 #include <ftxui/component/app.hpp>
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/component_options.hpp>
@@ -17,6 +18,7 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <string>
 #include <thread>
 #include <vector>
@@ -52,6 +54,9 @@ public:
     std::atomic_bool worker_thread_running{false};
 
 public:
+    std::set<std::uint64_t> breakpoints;
+
+public:
     // Guard the shared state between the worker thread (which fills it) and
     // the TUI render thread (which reads it).
     mutable std::mutex content_mutex;
@@ -76,6 +81,11 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
     : impl_(std::make_unique<Impl>(vm, cshandle)) {
     // Add instruction hook.
     auto result = vm.add_instr_hook([&](std::uint64_t addr) {
+        if (this->impl_->breakpoints.find(addr) ==
+            this->impl_->breakpoints.end()) {
+            return;
+        }
+
         std::lock_guard<std::mutex> lock(this->impl_->content_mutex);
 
         ::cs_insn* insn;
