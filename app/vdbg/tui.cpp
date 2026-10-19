@@ -64,7 +64,7 @@ public:
 public:
     ftxui::ScreenInteractive screen;
     ftxui::Component disassembler_area_content;
-    ftxui::Element disassembler_area;
+    ftxui::Component disassembler_area;
     ftxui::Component register_area_content = ftxui::Menu({});
     ftxui::Element register_area;
     ftxui::Component syscall_area_content = ftxui::Menu({});
@@ -130,11 +130,17 @@ void TUI::show() {
         std::lock_guard<std::mutex> lock(this->impl_->content_mutex);
 
         this->impl_->disassembler_area =
-            ftxui::window(ftxui::text("Disassembler"),
-                          this->impl_->disassembler_area_content->Render(),
-                          ftxui::LIGHT) |
-            ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 2 * screen_width / 3) |
-            ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 2 * screen_height / 3);
+            ftxui::Renderer([=, this](bool focused) {
+                return ftxui::window(
+                           ftxui::text("Disassembler"),
+                           this->impl_->disassembler_area_content->Render(),
+                           focused ? ftxui::HEAVY : ftxui::LIGHT) |
+                       ftxui::size(ftxui::WIDTH, ftxui::EQUAL,
+                                   2 * screen_width / 3) |
+                       ftxui::size(ftxui::HEIGHT, ftxui::EQUAL,
+                                   2 * screen_height / 3);
+            });
+
         this->impl_->register_area =
             ftxui::window(ftxui::text("Register"),
                           this->impl_->register_area_content->Render(),
@@ -166,7 +172,7 @@ void TUI::show() {
             ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 1);
 
         return ftxui::vbox({
-            ftxui::hbox({this->impl_->disassembler_area,
+            ftxui::hbox({this->impl_->disassembler_area->Render(),
                          ftxui::vbox({this->impl_->register_area,
                                       this->impl_->syscall_area})}),
             this->impl_->memory_area,
