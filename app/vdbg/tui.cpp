@@ -147,7 +147,9 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
             auto window =
                 ftxui::window(
                     ftxui::text(focused ? "Disassembler [*]" : "Disassembler"),
-                    this->impl_->disassembler_list->Render(),
+                    this->impl_->disassembler_list->Render() |
+                        ftxui::vscroll_indicator | ftxui::hscroll_indicator |
+                        ftxui::frame,
                     focused ? ftxui::HEAVY : ftxui::LIGHT) |
                 ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 2 * screen_width / 3) |
                 ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 2 * screen_height / 3);
