@@ -149,7 +149,8 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
             auto window =
                 ftxui::window(ftxui::text(focused ? "Syscall [*]" : "Syscall"),
                               this->impl_->syscall_list->Render() |
-                                  ftxui::vscroll_indicator | ftxui::frame,
+                                  ftxui::vscroll_indicator |
+                                  ftxui::hscroll_indicator | ftxui::frame,
                               focused ? ftxui::HEAVY : ftxui::LIGHT) |
                 ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width / 3) |
                 ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, screen_height / 3);
