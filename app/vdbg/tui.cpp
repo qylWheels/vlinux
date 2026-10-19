@@ -130,7 +130,9 @@ void TUI::show() {
 
     this->impl_->disassembler_area = ftxui::Renderer([=, this](bool focused) {
         return ftxui::window(ftxui::text("Disassembler"),
-                             this->impl_->disassembler_area_content->Render(),
+                             ftxui::Menu(this->impl_->disasm_entries,
+                                         &this->impl_->disasm_selected)
+                                 ->Render(),
                              focused ? ftxui::HEAVY : ftxui::LIGHT) |
                ftxui::size(ftxui::WIDTH, ftxui::EQUAL, 2 * screen_width / 3) |
                ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 2 * screen_height / 3);
