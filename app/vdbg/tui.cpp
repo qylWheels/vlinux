@@ -86,6 +86,8 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
             return;
         }
 
+        vm.pause();
+
         std::lock_guard<std::mutex> lock(this->impl_->content_mutex);
 
         ::cs_insn* insn;
