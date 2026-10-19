@@ -57,6 +57,7 @@ public:
     mutable std::mutex content_mutex;
     std::vector<std::string> disasm_entries;
     int disasm_selected = 0;
+    std::vector<std::string> syscall_entries;
 
 public:
     ftxui::ScreenInteractive screen;
@@ -96,6 +97,17 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
             std::vector<std::string>{insn_str});
     });
     if (!result) throw std::runtime_error("Failed to add instruction hook");
+
+    // Add syscall hook.
+    result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                     std::array<std::uint64_t, 6> args,
+                                     std::uint64_t ret) {
+        std::lock_guard<std::mutex> lock(this->impl_->content_mutex);
+        this->impl_->syscall_entries.push_back(fmt::format(
+            "<{}> ({}, {}, {}, {}, {}, {}) = {}", syscall_id, args[0], args[1],
+            args[2], args[3], args[4], args[5], ret));
+    });
+    if (!result) throw std::runtime_error("Failed to add syscall hook");
 }
 
 TUI::~TUI() = default;
