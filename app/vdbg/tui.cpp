@@ -138,6 +138,7 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
     });
 
     this->impl_->syscall_area = ftxui::Renderer([=, this](bool focused) {
+        std::lock_guard<std::mutex> lock(this->impl_->content_mutex);
         auto screen_width = this->impl_->screen.dimx();
         auto screen_height = this->impl_->screen.dimy();
         auto window =
