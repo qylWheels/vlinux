@@ -105,6 +105,7 @@ public:
     outcome::result<Result> run(std::chrono::milliseconds timeout,
                                 std::chrono::milliseconds sched_interval);
     void pause();
+    outcome::result<Result> get_result();
 
     // Hooks.
     outcome::result<void> add_syscall_hook(
