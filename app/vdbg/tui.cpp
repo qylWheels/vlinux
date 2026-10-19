@@ -150,9 +150,10 @@ void TUI::show() {
         this->impl_->help_area =
             ftxui::hbox(
                 {ftxui::text("q: Exit") | help_style, ftxui::filler(),
-                 ftxui::text("s: Step Into") | help_style, ftxui::filler(),
-                 ftxui::text("n: Step Over") | help_style, ftxui::filler(),
-                 ftxui::text("c: Continue") | help_style}) |
+                 ftxui::text("<Tab>: Change Focus") | help_style,
+                 ftxui::filler(), ftxui::text("s: Step Into") | help_style,
+                 ftxui::filler(), ftxui::text("n: Step Over") | help_style,
+                 ftxui::filler(), ftxui::text("c: Continue") | help_style}) |
             ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 1);
 
         return ftxui::vbox({
