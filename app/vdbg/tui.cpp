@@ -48,7 +48,7 @@ public:
 public:
     vlinux::VM* vm;
     ::csh* cshandle;
-    std::jthread worker_thread;
+    std::jthread worker_thread;  // Run VM in a separate thread.
     std::atomic_bool worker_thread_running{false};
 
 public:
