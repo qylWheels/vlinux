@@ -7,6 +7,7 @@
 #include <ftxui/component/app.hpp>
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/component_options.hpp>
+#include <ftxui/component/event.hpp>
 #include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/dom/elements.hpp>
 #include <ftxui/dom/node.hpp>
@@ -71,6 +72,14 @@ public:
     ftxui::Component memory_area_content = ftxui::Menu({});
     ftxui::Element memory_area;
     ftxui::Element help_area;
+
+public:
+    std::map<int, ftxui::Component> id_to_component{
+        {0, disassembler_area_content},
+        {1, register_area_content},
+        {2, syscall_area_content},
+        {3, memory_area_content}};
+    int current_component_id = 0;
 };
 
 TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
@@ -167,6 +176,16 @@ void TUI::show() {
     layout |= ftxui::CatchEvent([&](ftxui::Event e) {
         if (e == ftxui::Event::Character('q')) {
             this->impl_->screen.ExitLoopClosure()();
+            return true;
+        }
+        if (e == ftxui::Event::Tab) {
+            this->impl_->current_component_id =
+                (this->impl_->current_component_id + 1) % 4;
+            auto component =
+                this->impl_->id_to_component[this->impl_->current_component_id];
+            if (component->Focusable()) {
+                component->TakeFocus();
+            }
             return true;
         }
         if (e == ftxui::Event::Character('c')) {
