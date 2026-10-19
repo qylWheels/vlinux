@@ -84,8 +84,11 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
         auto disasm_area_reflected =
             this->impl_->disassembler_area | ftxui::reflect(box);
         auto disasm_area_height = box.y_max - box.y_min + 1;
+        auto disasm_max_lines = disasm_area_height + 5;
+        this->impl_->disasm_entries.resize(disasm_max_lines);
+        this->impl_->disasm_entries.clear();
 
-        for (int i = 0; i < disasm_area_height + 5; i++) {
+        for (int i = 0; i < disasm_max_lines; i++) {
             // 16 is maximum instruction size in x86-64.
             auto code_result = vm.read_mem(addr + i * 16, 16);
             bool valid = true;
@@ -107,7 +110,7 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
             }
             insn_str = fmt::format("{:#x}: {}", addr, insn_str);
             std::lock_guard<std::mutex> lock(this->impl_->content_mutex);
-            this->impl_->disasm_entries.push_back(insn_str);
+            this->impl_->disasm_entries[i] = insn_str;
 
             if (!valid) break;
         }
