@@ -514,7 +514,7 @@ outcome::result<VM::Result> VM::run(std::chrono::milliseconds timeout,
     return outcome::success(result);
 }
 
-void VM::stop() { ::uc_emu_stop(this->impl_->uc_); }
+void VM::pause() { this->impl_->scheduler_->stop_schedule(); }
 
 outcome::result<void> VM::add_syscall_hook(
     std::function<void(std::uint64_t syscall_id,

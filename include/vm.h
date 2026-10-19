@@ -104,7 +104,7 @@ public:
         const std::filesystem::path& path);
     outcome::result<Result> run(std::chrono::milliseconds timeout,
                                 std::chrono::milliseconds sched_interval);
-    void stop();
+    void pause();
 
     // Hooks.
     outcome::result<void> add_syscall_hook(
