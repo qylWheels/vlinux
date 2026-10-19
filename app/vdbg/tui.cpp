@@ -101,7 +101,7 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
         this->impl_->disasm_entries.clear();
 
         // 16 is maximum instruction size in x86-64.
-        auto code_result = vm.read_mem(addr, 16 * disasm_max_lines);
+        auto code_result = vm.read_vmem(addr, 16 * disasm_max_lines);
         if (code_result.has_error()) {
             this->impl_->disasm_entries.assign(disasm_max_lines,
                                                "<Invalid Read>");
