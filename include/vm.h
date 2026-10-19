@@ -118,6 +118,7 @@ public:
     // Observability.
     Scheduler& get_scheduler();
     outcome::result<Result> get_result() const;
+    std::uint64_t get_entry_point() const;
     outcome::result<std::uint64_t> read_reg(Register reg) const;
     outcome::result<std::vector<std::uint8_t>> read_mem(std::uint64_t addr,
                                                         std::size_t size) const;

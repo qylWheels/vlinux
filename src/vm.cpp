@@ -549,6 +549,8 @@ outcome::result<VM::Result> VM::get_result() const {
     return result;
 }
 
+std::uint64_t VM::get_entry_point() const { return this->impl_->entrypoint_; }
+
 outcome::result<std::uint64_t> VM::read_reg(Register reg) const {
     uc_err err;
     std::uint64_t value;
