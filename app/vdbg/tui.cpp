@@ -66,12 +66,12 @@ public:
     ftxui::Component disassembler_area_content;
     ftxui::Component disassembler_area;
     ftxui::Component register_area_content = ftxui::Menu({});
-    ftxui::Element register_area;
+    ftxui::Component register_area;
     ftxui::Component syscall_area_content = ftxui::Menu({});
-    ftxui::Element syscall_area;
+    ftxui::Component syscall_area;
     ftxui::Component memory_area_content = ftxui::Menu({});
-    ftxui::Element memory_area;
-    ftxui::Element help_area;
+    ftxui::Component memory_area;
+    ftxui::Component help_area;
 
 public:
     std::map<int, ftxui::Component> id_to_component{
@@ -141,42 +141,52 @@ void TUI::show() {
                                    2 * screen_height / 3);
             });
 
-        this->impl_->register_area =
-            ftxui::window(ftxui::text("Register"),
-                          this->impl_->register_area_content->Render(),
-                          ftxui::LIGHT) |
-            ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width / 3) |
-            ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, screen_height / 3);
-        this->impl_->syscall_area =
-            ftxui::window(ftxui::text("Syscall"),
-                          ftxui::Menu(this->impl_->syscall_entries,
-                                      &this->impl_->syscall_selected)
-                              ->Render(),
-                          ftxui::LIGHT) |
-            ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width / 3) |
-            ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, screen_height / 3);
-        this->impl_->memory_area =
-            ftxui::window(ftxui::text("Memory"),
-                          this->impl_->memory_area_content->Render(),
-                          ftxui::LIGHT) |
-            ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width) |
-            ftxui::yflex;
+        this->impl_->register_area = ftxui::Renderer([=, this](bool focused) {
+            return ftxui::window(ftxui::text("Register"),
+                                 this->impl_->register_area_content->Render(),
+                                 ftxui::LIGHT) |
+                   ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width / 3) |
+                   ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, screen_height / 3);
+        });
+
+        this->impl_->syscall_area = ftxui::Renderer([=, this](bool focused) {
+            return ftxui::window(ftxui::text("Syscall"),
+                                 ftxui::Menu(this->impl_->syscall_entries,
+                                             &this->impl_->syscall_selected)
+                                     ->Render(),
+                                 ftxui::LIGHT) |
+                   ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width / 3) |
+                   ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, screen_height / 3);
+        });
+
+        this->impl_->memory_area = ftxui::Renderer([=, this](bool focused) {
+            return ftxui::window(ftxui::text("Memory"),
+                                 this->impl_->memory_area_content->Render(),
+                                 ftxui::LIGHT) |
+                   ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width) |
+                   ftxui::yflex;
+        });
+
         auto help_style = ftxui::color(ftxui::Color::Gold1) | ftxui::inverted;
-        this->impl_->help_area =
-            ftxui::hbox(
-                {ftxui::text("q: Exit") | help_style, ftxui::filler(),
-                 ftxui::text("<Tab>: Change Focus") | help_style,
-                 ftxui::filler(), ftxui::text("s: Step Into") | help_style,
-                 ftxui::filler(), ftxui::text("n: Step Over") | help_style,
-                 ftxui::filler(), ftxui::text("c: Continue") | help_style}) |
-            ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 1);
+        this->impl_->help_area = ftxui::Renderer([=, this](bool focused) {
+            return ftxui::hbox({ftxui::text("q: Exit") | help_style,
+                                ftxui::filler(),
+                                ftxui::text("<Tab>: Change Focus") | help_style,
+                                ftxui::filler(),
+                                ftxui::text("s: Step Into") | help_style,
+                                ftxui::filler(),
+                                ftxui::text("n: Step Over") | help_style,
+                                ftxui::filler(),
+                                ftxui::text("c: Continue") | help_style}) |
+                   ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 1);
+        });
 
         return ftxui::vbox({
             ftxui::hbox({this->impl_->disassembler_area->Render(),
-                         ftxui::vbox({this->impl_->register_area,
-                                      this->impl_->syscall_area})}),
-            this->impl_->memory_area,
-            this->impl_->help_area,
+                         ftxui::vbox({this->impl_->register_area->Render(),
+                                      this->impl_->syscall_area->Render()})}),
+            this->impl_->memory_area->Render(),
+            this->impl_->help_area->Render(),
         });
     });
     layout |= ftxui::CatchEvent([&](ftxui::Event e) {
