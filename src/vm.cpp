@@ -579,10 +579,11 @@ outcome::result<std::uint64_t> VM::read_reg(Register reg) const {
     return value;
 }
 
-outcome::result<std::vector<std::uint8_t>> VM::read_mem(
-    std::uint64_t addr, std::size_t size) const {
+outcome::result<std::vector<std::uint8_t>> VM::read_vmem(
+    std::uint64_t vaddr, std::size_t size) const {
     std::vector<std::uint8_t> mem(size);
-    uc_err err = ::uc_mem_read(this->impl_->uc_, addr, mem.data(), size);
+    uc_err err =
+        ::uc_vmem_read(this->impl_->uc_, vaddr, UC_PROT_READ, mem.data(), size);
     if (err != UC_ERR_OK) return make_error_code(err);
     return mem;
 }
