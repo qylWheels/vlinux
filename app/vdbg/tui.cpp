@@ -144,7 +144,7 @@ void TUI::show() {
         this->impl_->register_area = ftxui::Renderer([=, this](bool focused) {
             return ftxui::window(ftxui::text("Register"),
                                  this->impl_->register_area_content->Render(),
-                                 ftxui::LIGHT) |
+                                 focused ? ftxui::HEAVY : ftxui::LIGHT) |
                    ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width / 3) |
                    ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, screen_height / 3);
         });
@@ -154,7 +154,7 @@ void TUI::show() {
                                  ftxui::Menu(this->impl_->syscall_entries,
                                              &this->impl_->syscall_selected)
                                      ->Render(),
-                                 ftxui::LIGHT) |
+                                 focused ? ftxui::HEAVY : ftxui::LIGHT) |
                    ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width / 3) |
                    ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, screen_height / 3);
         });
@@ -162,7 +162,7 @@ void TUI::show() {
         this->impl_->memory_area = ftxui::Renderer([=, this](bool focused) {
             return ftxui::window(ftxui::text("Memory"),
                                  this->impl_->memory_area_content->Render(),
-                                 ftxui::LIGHT) |
+                                 focused ? ftxui::HEAVY : ftxui::LIGHT) |
                    ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width) |
                    ftxui::yflex;
         });
