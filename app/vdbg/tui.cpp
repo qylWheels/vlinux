@@ -12,6 +12,7 @@
 #include <ftxui/dom/elements.hpp>
 #include <ftxui/dom/node.hpp>
 #include <ftxui/ftxui.hpp>
+#include <ftxui/screen/box.hpp>
 #include <ftxui/screen/screen.hpp>
 #include <functional>
 #include <memory>
@@ -76,23 +77,39 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
     auto result = vm.add_instr_hook([&](std::uint64_t addr) {
         ::cs_insn* insn;
         std::string insn_str;
-        // 16 is maximum instruction size in x86-64.
-        auto code_result = vm.read_mem(addr, 16);
-        if (code_result.has_error()) {
-            insn_str = "<Invalid Instruction>";
-        } else {
-            auto code = code_result.value();
-            int count = ::cs_disasm(*this->impl_->cshandle, code.data(),
-                                    code.size(), addr, 1, &insn);
-            if (count == 0)
-                insn_str = "<Invalid Instruction>";
-            else
-                insn_str = fmt::format("{} {}", insn->mnemonic, insn->op_str);
-            ::cs_free(insn, 1);
+
+        // Get disassembler area height.
+        ftxui::Box box;
+        auto disasm_area_reflected =
+            this->impl_->disassembler_area | ftxui::reflect(box);
+        auto disasm_area_height = box.y_max - box.y_min + 1;
+
+        for (int i = 0; i < disasm_area_height + 5; i++) {
+            // 16 is maximum instruction size in x86-64.
+            auto code_result = vm.read_mem(addr, 16);
+            bool valid = true;
+            if (code_result.has_error()) {
+                insn_str = "<Invalid Read>";
+                valid = false;
+            } else {
+                auto code = code_result.value();
+                int count = ::cs_disasm(*this->impl_->cshandle, code.data(),
+                                        code.size(), addr, 1, &insn);
+                if (count == 0) {
+                    insn_str = "<Invalid Instruction>";
+                    valid = false;
+                } else {
+                    insn_str =
+                        fmt::format("{} {}", insn->mnemonic, insn->op_str);
+                }
+                ::cs_free(insn, 1);
+            }
+            insn_str = fmt::format("{:#x}: {}", addr, insn_str);
+            std::lock_guard<std::mutex> lock(this->impl_->content_mutex);
+            this->impl_->disasm_entries.push_back(insn_str);
+
+            if (!valid) break;
         }
-        insn_str = fmt::format("{:#x}: {}", addr, insn_str);
-        this->impl_->set_disassembler_content(
-            std::vector<std::string>{insn_str});
     });
     if (!result) throw std::runtime_error("Failed to add instruction hook");
 
