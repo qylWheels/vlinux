@@ -10,7 +10,11 @@ namespace outcome = OUTCOME_V2_NAMESPACE;
 
 namespace vdbg {
 namespace syscall_parse {
-using SyscallParseResult = std::array<std::optional<std::string>, 6>;
+struct SyscallParseResult {
+    std::string syscall;
+    std::array<std::optional<std::string>, 6> args;
+    std::string ret;
+};
 
 class SyscallParser {
 public:
