@@ -19,12 +19,12 @@ int main(int argc, char* argv[]) {
 
     // Parse command line arguments.
     std::filesystem::path filepath;
-    bool parse_syscall = false;
+    bool raw_syscall = false;
     bool list_syscall = false;
     bool show_summary = false;
     bool show_tui = false;
     app.add_option("file", filepath, "Path to the file to debug");
-    app.add_flag("-p,--parse", parse_syscall, "Parse syscall arguments");
+    app.add_flag("-r,--raw", raw_syscall, "Show raw syscall arguments");
     app.add_flag("-s,--syscall", list_syscall,
                  "List all syscall during emulating");
     app.add_flag("-S,--summary", show_summary,
@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
         (void)vm.add_syscall_hook([&](std::uint64_t syscall_id,
                                       std::array<std::uint64_t, 6> args,
                                       std::uint64_t ret) {
-            if (parse_syscall) {
+            if (!raw_syscall) {
                 auto syscall_parser = vdbg::syscall_parse::SyscallParser();
                 auto result = syscall_parser.parse(syscall_id, args, ret);
                 if (result.has_value()) {
