@@ -25,8 +25,7 @@ outcome::result<SyscallParseResult> SyscallParser::parse(
             if (args[2] & PROT_EXEC) prot.push_back("PROT_EXEC");
             if (args[2] & PROT_GROWSUP) prot.push_back("PROT_GROWSUP");
             if (args[2] & PROT_GROWSDOWN) prot.push_back("PROT_GROWSDOWN");
-            auto prot_str = fmt::format(fmt::fg(fmt::color::red), "{}",
-                                        fmt::join(prot, " | "));
+            auto prot_str = fmt::format("{}", fmt::join(prot, " | "));
             SyscallParseResult result{"mprotect",
                                       {
                                           fmt::format("{:#x}", args[0]),

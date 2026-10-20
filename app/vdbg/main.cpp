@@ -48,8 +48,7 @@ int main(int argc, char* argv[]) {
                 auto syscall_parser = vdbg::syscall_parse::SyscallParser();
                 auto result = syscall_parser.parse(syscall_id, args, ret);
                 if (result.has_value()) {
-                    fmt::print(fg(fmt::color::gold) | fmt::emphasis::bold,
-                               "{} ", result.value().syscall);
+                    fmt::print("{} ", result.value().syscall);
                     auto result_value = result.value();
                     auto valid_args = result_value.args |
                                       std::views::take_while([](auto arg) {
@@ -64,8 +63,7 @@ int main(int argc, char* argv[]) {
             }
 
             // Fallback.
-            fmt::print(fg(fmt::color::gold) | fmt::emphasis::bold, "<{}> ",
-                       syscall_id);
+            fmt::print("<{}> ", syscall_id);
             fmt::print(" ({:#x}, {:#x}, {:#x}, {:#x}, {:#x}, {:#x}) = {:#x}\n",
                        syscall_id, args[0], args[1], args[2], args[3], args[4],
                        args[5], ret);
