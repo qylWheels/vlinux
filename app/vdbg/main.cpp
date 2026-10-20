@@ -6,10 +6,9 @@
 #include <sys/syscall.h>
 
 #include <CLI/CLI.hpp>
-#include <algorithm>
 #include <filesystem>
 #include <functional>
-#include <iterator>
+#include <ranges>
 
 #include "syscall_parse.h"
 #include "tui.h"
@@ -52,17 +51,12 @@ int main(int argc, char* argv[]) {
                     fmt::print(fg(fmt::color::gold) | fmt::emphasis::bold,
                                "{} ", result.value().syscall);
                     auto result_value = result.value();
-                    auto valid_arg_end = std::find_if_not(
-                        result_value.args.begin(), result_value.args.end(),
-                        [](auto arg) { return arg.has_value(); });
-                    auto valid_arg_opts =
-                        std::span(result_value.args)
-                            .subspan(0, std::distance(result_value.args.begin(),
-                                                      valid_arg_end));
-                    std::vector<std::string> valid_args(valid_arg_opts.size());
-                    std::transform(valid_arg_opts.begin(), valid_arg_opts.end(),
-                                   valid_args.begin(),
-                                   [](auto arg) { return arg.value(); });
+                    auto valid_args = result_value.args |
+                                      std::views::take_while([](auto arg) {
+                                          return arg.has_value();
+                                      }) |
+                                      std::views::transform(
+                                          [](auto arg) { return arg.value(); });
                     fmt::print("({}) = {}\n", fmt::join(valid_args, ", "),
                                result_value.ret);
                     return;
