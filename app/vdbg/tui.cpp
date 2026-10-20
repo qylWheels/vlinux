@@ -175,16 +175,11 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
             auto screen_width = this->impl_->screen.dimx();
             auto screen_height = this->impl_->screen.dimy();
             auto focused = this->impl_->syscall_list->Focused();
-            auto window =
-                ftxui::window(ftxui::text(focused ? "Syscall [*]" : "Syscall"),
-                              this->impl_->syscall_list->Render() |
-                                  ftxui::vscroll_indicator |
-                                  ftxui::hscroll_indicator | ftxui::frame,
-                              focused ? ftxui::HEAVY : ftxui::LIGHT) |
-                ftxui::size(ftxui::WIDTH, ftxui::EQUAL, screen_width / 3) |
-                ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, screen_height / 3);
-            if (focused) window |= ftxui::color(ftxui::Color::CyanLight);
-            return window;
+            return ftxui::Window({.inner = this->impl_->syscall_list,
+                                  .title = "Syscall",
+                                  .width = screen_width / 3,
+                                  .height = screen_height / 3})
+                ->Render();
         });
 
     this->impl_->memory_area = ftxui::Renderer([=, this](bool focused) {
