@@ -3,7 +3,7 @@ find_package(fmt CONFIG REQUIRED)
 find_package(ftxui CONFIG REQUIRED)
 find_package(capstone CONFIG REQUIRED)
 
-add_executable(vdbg main.cpp tui.cpp)
+add_executable(vdbg main.cpp tui.cpp syscall_parse.cpp)
 target_link_libraries(vdbg PRIVATE vlinux)
 target_link_libraries(
     vdbg
