@@ -33,7 +33,7 @@ outcome::result<SyscallParseResult> SyscallParser::parse(
                                           fmt::format("{:#x}", args[1]),
                                           prot_str,
                                       },
-                                      fmt::format("{}", ret)};
+                                      fmt::format("{}", static_cast<int>(ret))};
             return result;
         }
     }
