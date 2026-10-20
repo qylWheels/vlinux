@@ -65,8 +65,8 @@ int main(int argc, char* argv[]) {
             // Fallback.
             fmt::print("<{}> ", syscall_id);
             fmt::print(" ({:#x}, {:#x}, {:#x}, {:#x}, {:#x}, {:#x}) = {:#x}\n",
-                       syscall_id, args[0], args[1], args[2], args[3], args[4],
-                       args[5], ret);
+                       args[0], args[1], args[2], args[3], args[4], args[5],
+                       ret);
         });
     }
     std::uint64_t syscall_count = 0;
