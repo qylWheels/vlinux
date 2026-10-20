@@ -19,7 +19,7 @@ outcome::result<SyscallParseResult> SyscallParser::parse(
     switch (syscall) {
         case SYS_mprotect: {
             std::vector<std::string> prot;
-            if (args[2] & PROT_NONE) prot.push_back("PROT_NONE");
+            prot.push_back("PROT_NONE");
             if (args[2] & PROT_READ) prot.push_back("PROT_READ");
             if (args[2] & PROT_WRITE) prot.push_back("PROT_WRITE");
             if (args[2] & PROT_EXEC) prot.push_back("PROT_EXEC");
