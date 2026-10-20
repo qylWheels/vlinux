@@ -1,5 +1,6 @@
 #include "syscall_parse.h"
 
+#include <fmt/color.h>
 #include <fmt/core.h>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
@@ -24,11 +25,12 @@ outcome::result<SyscallParseResult> SyscallParser::parse(
             if (args[2] & PROT_EXEC) prot.push_back("PROT_EXEC");
             if (args[2] & PROT_GROWSUP) prot.push_back("PROT_GROWSUP");
             if (args[2] & PROT_GROWSDOWN) prot.push_back("PROT_GROWSDOWN");
-            auto prot_str = fmt::format("{}", fmt::join(prot, " | "));
-            SyscallParseResult result{"mprotect",
-                                      {fmt::format("{:#x}", args[0]),
-                                       fmt::format("{:#x}", args[1]), prot_str},
-                                      fmt::format("{}", ret)};
+            auto prot_str = fmt::format(fmt::fg(fmt::color::red), "{}",
+                                        fmt::join(prot, " | "));
+            SyscallParseResult result{
+                "mprotect",
+                {fmt::format("{:#x}", args[0]), fmt::format("{:#x}", args[1]),
+                 prot_str, fmt::format("{}", ret)}};
             return result;
         }
     }
