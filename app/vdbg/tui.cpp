@@ -142,6 +142,7 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
         ftxui::vscroll_indicator | ftxui::hscroll_indicator | ftxui::frame;
     this->impl_->disassembler_area =
         ftxui::Renderer(this->impl_->disassembler_list, [=, this]() {
+            std::lock_guard<std::mutex> lock(this->impl_->content_mutex);
             auto screen_width = this->impl_->screen.dimx();
             auto screen_height = this->impl_->screen.dimy();
             return ftxui::Window({.inner = this->impl_->disassembler_list,
