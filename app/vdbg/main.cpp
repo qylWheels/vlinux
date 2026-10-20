@@ -2,13 +2,16 @@
 #include <fmt/base.h>
 #include <fmt/color.h>
 #include <fmt/core.h>
+#include <fmt/ranges.h>
 #include <sys/syscall.h>
 
 #include <CLI/CLI.hpp>
+#include <algorithm>
 #include <filesystem>
 #include <functional>
-#include <map>
+#include <iterator>
 
+#include "syscall_parse.h"
 #include "tui.h"
 #include "vm.h"
 
@@ -17,10 +20,12 @@ int main(int argc, char* argv[]) {
 
     // Parse command line arguments.
     std::filesystem::path filepath;
+    bool parse_syscall = false;
     bool list_syscall = false;
     bool show_summary = false;
     bool show_tui = false;
     app.add_option("file", filepath, "Path to the file to debug");
+    app.add_flag("-p,--parse", parse_syscall, "Parse syscall arguments");
     app.add_flag("-s,--syscall", list_syscall,
                  "List all syscall during emulating");
     app.add_flag("-S,--summary", show_summary,
@@ -29,30 +34,6 @@ int main(int argc, char* argv[]) {
     CLI11_PARSE(app, argc, argv);
 
     // TODO: Check arguments.
-
-    // Parse methods.
-    std::map<int, std::function<void(std::uint64_t syscall_id,
-                                     std::array<std::uint64_t, 6> args,
-                                     std::uint64_t ret)>>
-        parse_methods = {
-            {SYS_mmap,
-             [](std::uint64_t syscall_id, std::array<std::uint64_t, 6> args,
-                std::uint64_t ret) {
-                 fmt::print(fg(fmt::color::gold) | fmt::emphasis::bold, "{} ",
-                            "mmap");
-                 fmt::print("({:#x}, {:#x}, {:#x}, {:#x}, {}, {}) = {:#x}\n",
-                            args[0], args[1], args[2], args[3],
-                            static_cast<int>(args[4]),
-                            static_cast<int>(args[5]), ret);
-             }},
-            {SYS_munmap,
-             [](std::uint64_t syscall_id, std::array<std::uint64_t, 6> args,
-                std::uint64_t ret) {
-                 fmt::print(fg(fmt::color::gold) | fmt::emphasis::bold, "{} ",
-                            "munmap");
-                 fmt::print("({:#x}, {:#x}) = {}\n", args[0], args[1],
-                            static_cast<int>(ret));
-             }}};
 
     // Load the program.
     vlinux::VM vm;
@@ -64,18 +45,36 @@ int main(int argc, char* argv[]) {
         (void)vm.add_syscall_hook([&](std::uint64_t syscall_id,
                                       std::array<std::uint64_t, 6> args,
                                       std::uint64_t ret) {
-            auto it = parse_methods.find(syscall_id);
-            if (it == parse_methods.end()) {
-                // Fallback.
-                fmt::print(fg(fmt::color::gold) | fmt::emphasis::bold, "<{}> ",
-                           syscall_id);
-                fmt::print(
-                    " ({:#x}, {:#x}, {:#x}, {:#x}, {:#x}, {:#x}) = {:#x}\n",
-                    syscall_id, args[0], args[1], args[2], args[3], args[4],
-                    args[5], ret);
-            } else {
-                it->second(syscall_id, args, ret);
+            if (parse_syscall) {
+                auto syscall_parser = vdbg::syscall_parse::SyscallParser();
+                auto result = syscall_parser.parse(syscall_id, args, ret);
+                if (result.has_value()) {
+                    fmt::print(fg(fmt::color::gold) | fmt::emphasis::bold,
+                               "{} ", result.value().syscall);
+                    auto result_value = result.value();
+                    auto valid_arg_end = std::find_if_not(
+                        result_value.args.begin(), result_value.args.end(),
+                        [](auto arg) { return arg.has_value(); });
+                    auto valid_arg_opts =
+                        std::span(result_value.args)
+                            .subspan(0, std::distance(result_value.args.begin(),
+                                                      valid_arg_end));
+                    std::vector<std::string> valid_args(valid_arg_opts.size());
+                    std::transform(valid_arg_opts.begin(), valid_arg_opts.end(),
+                                   valid_args.begin(),
+                                   [](auto arg) { return arg.value(); });
+                    fmt::print("({}) = {}\n", fmt::join(valid_args, ", "),
+                               result_value.ret);
+                    return;
+                }
             }
+
+            // Fallback.
+            fmt::print(fg(fmt::color::gold) | fmt::emphasis::bold, "<{}> ",
+                       syscall_id);
+            fmt::print(" ({:#x}, {:#x}, {:#x}, {:#x}, {:#x}, {:#x}) = {:#x}\n",
+                       syscall_id, args[0], args[1], args[2], args[3], args[4],
+                       args[5], ret);
         });
     }
     std::uint64_t syscall_count = 0;
