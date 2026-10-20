@@ -164,7 +164,9 @@ TUI::TUI(vlinux::VM& vm, ::csh& cshandle)
     });
 
     this->impl_->syscall_list = ftxui::Menu(&this->impl_->syscall_entries,
-                                            &this->impl_->syscall_selected);
+                                            &this->impl_->syscall_selected) |
+                                ftxui::vscroll_indicator |
+                                ftxui::hscroll_indicator | ftxui::frame;
     this->impl_->syscall_area =
         ftxui::Renderer(this->impl_->syscall_list, [=, this]() {
             std::lock_guard<std::mutex> lock(this->impl_->content_mutex);
