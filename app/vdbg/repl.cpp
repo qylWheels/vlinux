@@ -1,6 +1,7 @@
 #include "repl.h"
 
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 #include <charconv>
 #include <cstdint>
@@ -21,8 +22,8 @@ class Repl::Impl {
 public:
     vlinux::VM* vm;
     ::csh* cshandle;
-    std::unordered_map<std::string, std::function<outcome::result<void>(
-                                        std::vector<std::string>)>>
+    std::unordered_map<std::string, std::function<outcome::result<std::string>(
+                                        std::vector<std::string> args)>>
         command_handlers;
     std::vector<std::string> history;
     std::set<std::uint64_t> breakpoints;
@@ -40,7 +41,7 @@ Repl::Repl(vlinux::VM& vm, ::csh& cshandle) : impl_(std::make_unique<Impl>()) {
     });
 
     impl_->command_handlers["break"] =
-        [&](std::vector<std::string> args) -> outcome::result<void> {
+        [&](std::vector<std::string> args) -> outcome::result<std::string> {
         if (args.size() != 1) {
             return std::errc::invalid_argument;
         }
@@ -59,12 +60,12 @@ Repl::Repl(vlinux::VM& vm, ::csh& cshandle) : impl_(std::make_unique<Impl>()) {
             return std::errc::address_in_use;
         }
 
-        return outcome::success();
+        return fmt::format("Breakpoint set at {:#x}", addr);
     };
 
     // Usage: disassemble <addr> <count>
     impl_->command_handlers["disassemble"] =
-        [&](std::vector<std::string> args) -> outcome::result<void> {
+        [&](std::vector<std::string> args) -> outcome::result<std::string> {
         if (args.size() != 2) {
             return std::errc::invalid_argument;
         }
@@ -104,7 +105,7 @@ Repl::Repl(vlinux::VM& vm, ::csh& cshandle) : impl_(std::make_unique<Impl>()) {
             }
         }
 
-        return outcome::success();
+        return fmt::format("{}", fmt::join(insn_strs, "\n"));
     };
 }
 
