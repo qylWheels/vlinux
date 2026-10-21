@@ -11,7 +11,7 @@ namespace vdbg {
 namespace repl {
 class Repl {
 public:
-    Repl() = default;
+    Repl();
     ~Repl() = default;
     Repl(const Repl&) = delete;
     Repl& operator=(const Repl&) = delete;
