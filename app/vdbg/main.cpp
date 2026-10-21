@@ -131,7 +131,8 @@ int main(int argc, char* argv[]) {
             if (result.has_value()) {
                 fmt::println("{}", result.value());
             } else {
-                fmt::println("Failed to execute command: {}", result.error());
+                fmt::println("Failed to execute command: {}",
+                             result.error().message());
             }
         }
     }
