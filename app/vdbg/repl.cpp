@@ -109,6 +109,8 @@ Repl::Repl(vlinux::VM& vm, ::csh& cshandle) : impl_(std::make_unique<Impl>()) {
     };
 }
 
+Repl::~Repl() = default;
+
 outcome::result<std::string> Repl::readline() {
     std::string line;
     if (std::getline(std::cin, line).eof()) {

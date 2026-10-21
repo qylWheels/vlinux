@@ -16,7 +16,7 @@ namespace repl {
 class Repl {
 public:
     Repl(vlinux::VM& vm, ::csh& cshandle);
-    ~Repl() = default;
+    ~Repl();
     Repl(const Repl&) = delete;
     Repl& operator=(const Repl&) = delete;
     Repl(Repl&&) = delete;
