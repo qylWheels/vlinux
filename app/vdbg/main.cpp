@@ -128,11 +128,10 @@ int main(int argc, char* argv[]) {
             fmt::print("vdbg> ");
             std::getline(std::cin, input);
             auto result = repl.execute(input);
-            if (result.has_value()) {
-                fmt::println("{}", result.value());
+            if (result.first) {
+                fmt::println("{}", result.second);
             } else {
-                fmt::println("Failed to execute command: {}",
-                             result.error().message());
+                fmt::println("Error: {}", result.second);
             }
         }
     }
