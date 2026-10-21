@@ -143,7 +143,7 @@ Repl::Repl(vlinux::VM& vm, ::csh& cshandle) : impl_(std::make_unique<Impl>()) {
                     fmt::format("Failed to run: {}", result.error().message())};
         }
 
-        return {true, ""};
+        return {true, "Run completed"};
     };
 }
 
