@@ -16,7 +16,7 @@ namespace vdbg {
 namespace repl {
 class Repl {
 public:
-    Repl(vlinux::VM& vm, ::csh& cshandle);
+    Repl(vlinux::VM& vm, ::csh& cshandle, std::shared_ptr<vlinux::Task> task);
     ~Repl();
     Repl(const Repl&) = delete;
     Repl& operator=(const Repl&) = delete;

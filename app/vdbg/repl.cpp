@@ -25,6 +25,7 @@ class Repl::Impl {
 public:
     vlinux::VM* vm;
     ::csh* cshandle;
+    std::shared_ptr<vlinux::Task> task;
     std::unordered_map<std::string, std::function<std::pair<bool, std::string>(
                                         std::vector<std::string> args)>>
         command_handlers;
@@ -32,9 +33,11 @@ public:
     std::set<std::uint64_t> breakpoints;
 };
 
-Repl::Repl(vlinux::VM& vm, ::csh& cshandle) : impl_(std::make_unique<Impl>()) {
+Repl::Repl(vlinux::VM& vm, ::csh& cshandle, std::shared_ptr<vlinux::Task> task)
+    : impl_(std::make_unique<Impl>()) {
     impl_->vm = &vm;
     impl_->cshandle = &cshandle;
+    impl_->task = task;
 
     // Add instruction hook.
     auto result = impl_->vm->add_instr_hook([&](std::uint64_t addr) {
