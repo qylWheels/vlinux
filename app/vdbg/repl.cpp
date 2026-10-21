@@ -16,6 +16,7 @@
 #include <string>
 #include <system_error>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace vdbg {
@@ -24,7 +25,7 @@ class Repl::Impl {
 public:
     vlinux::VM* vm;
     ::csh* cshandle;
-    std::unordered_map<std::string, std::function<outcome::result<std::string>(
+    std::unordered_map<std::string, std::function<std::pair<bool, std::string>(
                                         std::vector<std::string> args)>>
         command_handlers;
     std::vector<std::string> history;
@@ -43,19 +44,19 @@ Repl::Repl(vlinux::VM& vm, ::csh& cshandle) : impl_(std::make_unique<Impl>()) {
     });
 
     impl_->command_handlers["entrypoint"] =
-        [&](std::vector<std::string> args) -> outcome::result<std::string> {
+        [&](std::vector<std::string> args) -> std::pair<bool, std::string> {
         if (args.size() != 0) {
-            return std::errc::invalid_argument;
+            return {false, "Invalid arguments. Usage: entrypoint"};
         }
 
-        return fmt::format("Entry point is {:#x}",
-                           impl_->vm->get_entry_point());
+        return {true, fmt::format("Entry point is {:#x}",
+                                  impl_->vm->get_entry_point())};
     };
 
     impl_->command_handlers["break"] =
-        [&](std::vector<std::string> args) -> outcome::result<std::string> {
+        [&](std::vector<std::string> args) -> std::pair<bool, std::string> {
         if (args.size() != 1) {
-            return std::errc::invalid_argument;
+            return {false, "Invalid arguments. Usage: break <addr>"};
         }
 
         // Parse address.
@@ -63,23 +64,25 @@ Repl::Repl(vlinux::VM& vm, ::csh& cshandle) : impl_(std::make_unique<Impl>()) {
         auto [ptr, ec] = std::from_chars(args[0].data(),
                                          args[0].data() + args[0].size(), addr);
         if (ec != std::errc{} || ptr != args[0].data() + args[0].size()) {
-            return std::errc(ec);
+            return {false, "Invalid address"};
         }
 
         // Add breakpoint.
         auto [it, inserted] = impl_->breakpoints.insert(addr);
         if (!inserted) {
-            return std::errc::address_in_use;
+            return {false,
+                    fmt::format("Breakpoint already set at {:#x}", addr)};
         }
 
-        return fmt::format("Breakpoint set at {:#x}", addr);
+        return {true, fmt::format("Breakpoint set at {:#x}", addr)};
     };
 
     // Usage: disassemble <addr> <count>
     impl_->command_handlers["disassemble"] =
-        [&](std::vector<std::string> args) -> outcome::result<std::string> {
+        [&](std::vector<std::string> args) -> std::pair<bool, std::string> {
         if (args.size() != 2) {
-            return std::errc::invalid_argument;
+            return {false,
+                    "Invalid arguments. Usage: disassemble <addr> <count>"};
         }
 
         // Parse args.
@@ -88,14 +91,14 @@ Repl::Repl(vlinux::VM& vm, ::csh& cshandle) : impl_(std::make_unique<Impl>()) {
             args[0].data(), args[0].data() + args[0].size(), addr);
         if (addr_ec != std::errc{} ||
             addr_ptr != args[0].data() + args[0].size()) {
-            return std::errc(addr_ec);
+            return {false, "Invalid address"};
         }
         std::uint64_t count;
         auto [count_ptr, count_ec] = std::from_chars(
             args[1].data(), args[1].data() + args[1].size(), count);
         if (count_ec != std::errc{} ||
             count_ptr != args[1].data() + args[1].size()) {
-            return std::errc(count_ec);
+            return {false, "Invalid count"};
         }
 
         // Disassemble.
@@ -104,7 +107,12 @@ Repl::Repl(vlinux::VM& vm, ::csh& cshandle) : impl_(std::make_unique<Impl>()) {
         for (std::uint64_t i = 0; i < count; i++) {
             ::cs_insn* insn;
             // 16 is maximum instruction size in x86-64.
-            OUTCOME_TRY(auto code, vm.read_vmem(addr + offset, 16));
+            auto code_result = vm.read_vmem(addr + offset, 16);
+            if (code_result.has_error()) {
+                return {false, fmt::format("Failed to read memory at {:#x}",
+                                           addr + offset)};
+            }
+            auto code = code_result.value();
             int count = ::cs_disasm(*this->impl_->cshandle, code.data(),
                                     code.size(), addr, 1, &insn);
             if (count == 0) {
@@ -117,21 +125,25 @@ Repl::Repl(vlinux::VM& vm, ::csh& cshandle) : impl_(std::make_unique<Impl>()) {
             }
         }
 
-        return fmt::format("{}", fmt::join(insn_strs, "\n"));
+        return {true, fmt::format("{}", fmt::join(insn_strs, "\n"))};
     };
 
     impl_->command_handlers["run"] =
-        [&](std::vector<std::string> args) -> outcome::result<std::string> {
+        [&](std::vector<std::string> args) -> std::pair<bool, std::string> {
         if (args.size() != 0) {
-            return std::errc::invalid_argument;
+            return {false, "Invalid arguments. Usage: run"};
         }
 
-        OUTCOME_TRY(vm.run(
+        auto result = vm.run(
             // FIXME: Set a reasonable timeout.
             std::chrono::milliseconds(100'000'000),
-            std::chrono::milliseconds(200)));
+            std::chrono::milliseconds(200));
+        if (result.has_error()) {
+            return {false,
+                    fmt::format("Failed to run: {}", result.error().message())};
+        }
 
-        return "";
+        return {true, ""};
     };
 }
 
@@ -145,7 +157,7 @@ outcome::result<std::string> Repl::readline() {
     return line;
 }
 
-outcome::result<std::string> Repl::execute(std::string_view line) {
+std::pair<bool, std::string> Repl::execute(std::string_view line) {
     std::vector<std::string> args;
 
     auto it = line | std::views::split(' ');
@@ -154,7 +166,7 @@ outcome::result<std::string> Repl::execute(std::string_view line) {
     }
 
     if (args.empty()) {
-        return outcome::success();  // Empty line is allowed.
+        return {true, ""};  // Empty line is allowed.
     }
 
     // Parse and execute the command.
@@ -162,7 +174,8 @@ outcome::result<std::string> Repl::execute(std::string_view line) {
     args.erase(args.begin());
     auto handler_it = impl_->command_handlers.find(cmd);
     if (handler_it == impl_->command_handlers.end()) {
-        return std::errc::not_supported;
+        return {false,
+                fmt::format("Command {} not supported", std::string(cmd))};
     }
     return handler_it->second(args);
 }

@@ -6,6 +6,7 @@
 #include <outcome/outcome.hpp>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include "vm.h"
 
@@ -24,7 +25,7 @@ public:
 
 public:
     outcome::result<std::string> readline();
-    outcome::result<std::string> execute(std::string_view line);
+    std::pair<bool, std::string> execute(std::string_view line);
 
 private:
     class Impl;
