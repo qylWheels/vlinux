@@ -1,5 +1,7 @@
 #pragma once
 
+#include <capstone/capstone.h>
+
 #include <memory>
 #include <outcome/outcome.hpp>
 #include <string>
@@ -13,7 +15,7 @@ namespace vdbg {
 namespace repl {
 class Repl {
 public:
-    Repl(vlinux::VM& vm);
+    Repl(vlinux::VM& vm, ::csh& cshandle);
     ~Repl() = default;
     Repl(const Repl&) = delete;
     Repl& operator=(const Repl&) = delete;

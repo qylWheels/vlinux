@@ -18,6 +18,7 @@ namespace repl {
 class Repl::Impl {
 public:
     vlinux::VM* vm;
+    ::csh* cshandle;
     std::unordered_map<std::string, std::function<outcome::result<void>(
                                         std::vector<std::string>)>>
         command_handlers;
@@ -25,8 +26,9 @@ public:
     std::set<std::uint64_t> breakpoints;
 };
 
-Repl::Repl(vlinux::VM& vm) : impl_(std::make_unique<Impl>()) {
+Repl::Repl(vlinux::VM& vm, ::csh& cshandle) : impl_(std::make_unique<Impl>()) {
     impl_->vm = &vm;
+    impl_->cshandle = &cshandle;
 
     // Add instruction hook.
     auto result = impl_->vm->add_instr_hook([&](std::uint64_t addr) {
