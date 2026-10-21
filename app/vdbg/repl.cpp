@@ -1,9 +1,11 @@
 #include "repl.h"
 
+#include <bits/chrono.h>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
 #include <charconv>
+#include <chrono>
 #include <cstdint>
 #include <functional>
 #include <ios>
@@ -106,6 +108,20 @@ Repl::Repl(vlinux::VM& vm, ::csh& cshandle) : impl_(std::make_unique<Impl>()) {
         }
 
         return fmt::format("{}", fmt::join(insn_strs, "\n"));
+    };
+
+    impl_->command_handlers["run"] =
+        [&](std::vector<std::string> args) -> outcome::result<std::string> {
+        if (args.size() != 0) {
+            return std::errc::invalid_argument;
+        }
+
+        OUTCOME_TRY(vm.run(
+            // FIXME: Set a reasonable timeout.
+            std::chrono::milliseconds(100'000'000),
+            std::chrono::milliseconds(200)));
+
+        return "";
     };
 }
 
