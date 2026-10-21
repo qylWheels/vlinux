@@ -117,7 +117,7 @@ Repl::Repl(vlinux::VM& vm, ::csh& cshandle, std::shared_ptr<vlinux::Task> task)
             }
             auto code = code_result.value();
             int count = ::cs_disasm(*this->impl_->cshandle, code.data(),
-                                    code.size(), addr, 1, &insn);
+                                    code.size(), addr + offset, 1, &insn);
             if (count == 0) {
                 insn_strs.push_back("<Invalid Instruction>");
             } else {
