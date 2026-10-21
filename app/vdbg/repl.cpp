@@ -110,7 +110,7 @@ Repl::Repl(vlinux::VM& vm, ::csh& cshandle, std::shared_ptr<vlinux::Task> task)
         for (std::uint64_t i = 0; i < count; i++) {
             ::cs_insn* insn;
             // 16 is maximum instruction size in x86-64.
-            auto code_result = vm.read_vmem(addr + offset, 16);
+            auto code_result = vm.read_vmem(impl_->task, addr + offset, 16);
             if (code_result.has_error()) {
                 return {false, fmt::format("Failed to read memory at {:#x}",
                                            addr + offset)};
