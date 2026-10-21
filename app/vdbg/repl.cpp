@@ -42,6 +42,16 @@ Repl::Repl(vlinux::VM& vm, ::csh& cshandle) : impl_(std::make_unique<Impl>()) {
         }
     });
 
+    impl_->command_handlers["entrypoint"] =
+        [&](std::vector<std::string> args) -> outcome::result<std::string> {
+        if (args.size() != 0) {
+            return std::errc::invalid_argument;
+        }
+
+        return fmt::format("Entry point is {:#x}",
+                           impl_->vm->get_entry_point());
+    };
+
     impl_->command_handlers["break"] =
         [&](std::vector<std::string> args) -> outcome::result<std::string> {
         if (args.size() != 1) {
