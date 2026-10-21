@@ -3,6 +3,7 @@
 #include <ios>
 #include <iostream>
 #include <string>
+#include <system_error>
 #include <vector>
 
 namespace vdbg {
@@ -22,7 +23,9 @@ outcome::result<std::string> Repl::readline() {
     return line;
 }
 
-outcome::result<void> Repl::execute(std::string_view line) {}
+outcome::result<void> Repl::execute(std::string_view line) {
+    return std::errc::not_supported;
+}
 
 }  // namespace repl
 }  // namespace vdbg
