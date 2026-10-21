@@ -121,7 +121,7 @@ int main(int argc, char* argv[]) {
         }
 
         // Initialize REPL.
-        vdbg::repl::Repl repl(vm, handle);
+        vdbg::repl::Repl repl(vm, handle, task.value());
 
         // Show REPL.
         while (true) {
