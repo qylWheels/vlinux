@@ -1,5 +1,6 @@
 #include "repl.h"
 
+#include <charconv>
 #include <cstdint>
 #include <functional>
 #include <ios>
@@ -23,7 +24,30 @@ public:
     std::set<std::uint64_t> breakpoints;
 };
 
-Repl::Repl() : impl_(std::make_unique<Impl>()) {}
+Repl::Repl() : impl_(std::make_unique<Impl>()) {
+    impl_->command_handlers["break"] =
+        [&](std::vector<std::string> args) -> outcome::result<void> {
+        if (args.size() != 1) {
+            return std::errc::invalid_argument;
+        }
+
+        // Parse address.
+        std::uint64_t addr;
+        auto [ptr, ec] = std::from_chars(args[0].data(),
+                                         args[0].data() + args[0].size(), addr);
+        if (ec != std::errc{} || ptr != args[0].data() + args[0].size()) {
+            return std::errc(ec);
+        }
+
+        // Add breakpoint.
+        auto [it, inserted] = impl_->breakpoints.insert(addr);
+        if (!inserted) {
+            return std::errc::address_in_use;
+        }
+
+        return outcome::success();
+    };
+}
 
 outcome::result<std::string> Repl::readline() {
     std::string line;
