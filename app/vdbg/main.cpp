@@ -13,7 +13,6 @@
 
 #include "repl.h"
 #include "syscall_parse.h"
-#include "tui.h"
 #include "vm.h"
 
 int main(int argc, char* argv[]) {
@@ -25,7 +24,6 @@ int main(int argc, char* argv[]) {
     bool repl = false;
     bool list_syscall = false;
     bool show_summary = false;
-    bool show_tui = false;
     app.add_option("file", filepath, "Path to the file to debug");
     app.add_flag("-r,--raw", raw_syscall, "Show raw syscall arguments");
     app.add_flag("-R,--repl", repl, "Enable REPL debugger");
@@ -33,7 +31,6 @@ int main(int argc, char* argv[]) {
                  "List all syscall during emulating");
     app.add_flag("-S,--summary", show_summary,
                  "Show summary of syscall during emulating");
-    app.add_flag("-t,--tui", show_tui, "Show TUI for debugging");
     CLI11_PARSE(app, argc, argv);
 
     // TODO: Check arguments.
@@ -87,31 +84,11 @@ int main(int argc, char* argv[]) {
         (void)vm.add_instr_hook([&](std::uint64_t addr) { ++instr_count; });
     }
 
-    // Show TUI if requested.
-    ::cs_err err;
-    ::csh handle;
-    if (show_tui) {
-        // Initialize Capstone engine.
-        err = ::cs_open(CS_ARCH_X86, CS_MODE_64, &handle);
-        if (err != CS_ERR_OK) {
-            fmt::println(stderr,
-                         "Failed to initialize Capstone engine: {} ({})",
-                         ::cs_strerror(err), static_cast<int>(err));
-            return err;
-        }
-
-        // Initialize TUI.
-        vdbg::tui::TUI tui(vm, handle);
-
-        // Show TUI.
-        tui.show();
-    }
-
     // Enable REPL if requested.
+    ::csh handle;
     if (repl) {
         // Initialize Capstone engine.
         ::cs_err err;
-        ::csh handle;
         err = ::cs_open(CS_ARCH_X86, CS_MODE_64, &handle);
         if (err != CS_ERR_OK) {
             fmt::println(stderr,
@@ -137,8 +114,8 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Emulate the program straight forward if TUI not enabled.
-    if (!show_tui) {
+    // Emulate the program straight forward if REPL not enabled.
+    if (!repl) {
         (void)vm.run(std::chrono::milliseconds(5000),
                      std::chrono::milliseconds(100));
     }
@@ -155,8 +132,8 @@ int main(int argc, char* argv[]) {
                                  fmt::emphasis::bold | fg(fmt::color::gold)));
     }
 
-    // Free Capstone engine if TUI enabled.
-    if (show_tui) {
+    // Free Capstone engine if REPL enabled.
+    if (repl) {
         ::cs_close(&handle);
     }
 
