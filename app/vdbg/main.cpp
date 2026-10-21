@@ -41,7 +41,8 @@ int main(int argc, char* argv[]) {
     // Load the program.
     vlinux::VM vm;
     vm.reset();
-    (void)vm.load(filepath);
+    auto task = vm.load(filepath);
+    if (!task) return -1;
 
     // Add syscall hooks.
     if (list_syscall) {
