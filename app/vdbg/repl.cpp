@@ -28,6 +28,13 @@ public:
 Repl::Repl(vlinux::VM& vm) : impl_(std::make_unique<Impl>()) {
     impl_->vm = &vm;
 
+    // Add instruction hook.
+    auto result = impl_->vm->add_instr_hook([&](std::uint64_t addr) {
+        if (impl_->breakpoints.find(addr) != impl_->breakpoints.end()) {
+            impl_->vm->pause();
+        }
+    });
+
     impl_->command_handlers["break"] =
         [&](std::vector<std::string> args) -> outcome::result<void> {
         if (args.size() != 1) {
