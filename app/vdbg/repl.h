@@ -24,7 +24,7 @@ public:
 
 public:
     outcome::result<std::string> readline();
-    outcome::result<void> execute(std::string_view line);
+    outcome::result<std::string> execute(std::string_view line);
 
 private:
     class Impl;

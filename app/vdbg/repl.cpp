@@ -117,7 +117,7 @@ outcome::result<std::string> Repl::readline() {
     return line;
 }
 
-outcome::result<void> Repl::execute(std::string_view line) {
+outcome::result<std::string> Repl::execute(std::string_view line) {
     std::vector<std::string> args;
 
     auto it = line | std::views::split(' ');
