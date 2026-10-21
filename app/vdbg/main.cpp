@@ -9,7 +9,9 @@
 #include <filesystem>
 #include <functional>
 #include <ranges>
+#include <string>
 
+#include "repl.h"
 #include "syscall_parse.h"
 #include "tui.h"
 #include "vm.h"
@@ -102,6 +104,36 @@ int main(int argc, char* argv[]) {
 
         // Show TUI.
         tui.show();
+    }
+
+    // Enable REPL if requested.
+    if (repl) {
+        // Initialize Capstone engine.
+        ::cs_err err;
+        ::csh handle;
+        err = ::cs_open(CS_ARCH_X86, CS_MODE_64, &handle);
+        if (err != CS_ERR_OK) {
+            fmt::println(stderr,
+                         "Failed to initialize Capstone engine: {} ({})",
+                         ::cs_strerror(err), static_cast<int>(err));
+            return err;
+        }
+
+        // Initialize REPL.
+        vdbg::repl::Repl repl(vm, handle);
+
+        // Show REPL.
+        while (true) {
+            std::string input;
+            fmt::print("vdbg> ");
+            std::getline(std::cin, input);
+            auto result = repl.execute(input);
+            if (result.has_value()) {
+                fmt::println("{}", result.value());
+            } else {
+                fmt::println("Failed to execute command: {}", result.error());
+            }
+        }
     }
 
     // Emulate the program straight forward if TUI not enabled.
