@@ -1,5 +1,7 @@
 #include "repl.h"
 
+#include <fmt/format.h>
+
 #include <charconv>
 #include <cstdint>
 #include <functional>
@@ -59,6 +61,51 @@ Repl::Repl(vlinux::VM& vm, ::csh& cshandle) : impl_(std::make_unique<Impl>()) {
 
         return outcome::success();
     };
+
+    // Usage: disassemble <addr> <count>
+    impl_->command_handlers["disassemble"] =
+        [&](std::vector<std::string> args) -> outcome::result<void> {
+        if (args.size() != 2) {
+            return std::errc::invalid_argument;
+        }
+
+        // Parse args.
+        std::uint64_t addr;
+        auto [addr_ptr, addr_ec] = std::from_chars(
+            args[0].data(), args[0].data() + args[0].size(), addr);
+        if (addr_ec != std::errc{} ||
+            addr_ptr != args[0].data() + args[0].size()) {
+            return std::errc(addr_ec);
+        }
+        std::uint64_t count;
+        auto [count_ptr, count_ec] = std::from_chars(
+            args[1].data(), args[1].data() + args[1].size(), count);
+        if (count_ec != std::errc{} ||
+            count_ptr != args[1].data() + args[1].size()) {
+            return std::errc(count_ec);
+        }
+
+        // Disassemble.
+        std::vector<std::string> insn_strs;
+        std::uint64_t offset = 0;  // Offset from addr.
+        for (std::uint64_t i = 0; i < count; i++) {
+            ::cs_insn* insn;
+            // 16 is maximum instruction size in x86-64.
+            OUTCOME_TRY(auto code, vm.read_vmem(addr + offset, 16));
+            int count = ::cs_disasm(*this->impl_->cshandle, code.data(),
+                                    code.size(), addr, 1, &insn);
+            if (count == 0) {
+                insn_strs.push_back("<Invalid Instruction>");
+            } else {
+                insn_strs.push_back(fmt::format("{:#x}: {} {}", insn->address,
+                                                insn->mnemonic, insn->op_str));
+                offset += insn->size;
+                ::cs_free(insn, count);
+            }
+        }
+
+        return outcome::success();
+    };
 }
 
 outcome::result<std::string> Repl::readline() {
@@ -90,6 +137,5 @@ outcome::result<void> Repl::execute(std::string_view line) {
     }
     return handler_it->second(args);
 }
-
 }  // namespace repl
 }  // namespace vdbg
