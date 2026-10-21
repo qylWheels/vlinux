@@ -96,6 +96,13 @@ int main(int argc, char* argv[]) {
                          ::cs_strerror(err), static_cast<int>(err));
             return err;
         }
+        err = ::cs_option(handle, CS_OPT_SYNTAX, CS_OPT_SYNTAX_ATT);
+        if (err != CS_ERR_OK) {
+            fmt::println(stderr,
+                         "Failed to set Capstone syntax to AT&T: {} ({})",
+                         ::cs_strerror(err), static_cast<int>(err));
+            return err;
+        }
 
         // Initialize REPL.
         vdbg::repl::Repl repl(vm, handle, task.value());
