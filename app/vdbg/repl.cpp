@@ -17,6 +17,7 @@ namespace vdbg {
 namespace repl {
 class Repl::Impl {
 public:
+    vlinux::VM* vm;
     std::unordered_map<std::string, std::function<outcome::result<void>(
                                         std::vector<std::string>)>>
         command_handlers;
@@ -24,7 +25,9 @@ public:
     std::set<std::uint64_t> breakpoints;
 };
 
-Repl::Repl() : impl_(std::make_unique<Impl>()) {
+Repl::Repl(vlinux::VM& vm) : impl_(std::make_unique<Impl>()) {
+    impl_->vm = &vm;
+
     impl_->command_handlers["break"] =
         [&](std::vector<std::string> args) -> outcome::result<void> {
         if (args.size() != 1) {

@@ -5,13 +5,15 @@
 #include <string>
 #include <string_view>
 
+#include "vm.h"
+
 namespace outcome = OUTCOME_V2_NAMESPACE;
 
 namespace vdbg {
 namespace repl {
 class Repl {
 public:
-    Repl();
+    Repl(vlinux::VM& vm);
     ~Repl() = default;
     Repl(const Repl&) = delete;
     Repl& operator=(const Repl&) = delete;
