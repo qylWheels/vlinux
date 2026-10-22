@@ -690,6 +690,9 @@ public:
         }
         assert(cwd_inode_opt.has_value());
         auto cwd_inode = cwd_inode_opt.value();
+        if (cwd_inode->type() != IINode::Type::Directory) {
+            return -ENOTDIR;
+        }
 
         // Lookup parent inode of target file.
         std::filesystem::path path(pathname);
