@@ -12,6 +12,7 @@
     "fmt",
     "ftxui",
     "outcome",
-    "unicorn"
+    "unicorn",
+    "readline"
   ]
 }
