@@ -8,8 +8,6 @@
 #include <chrono>
 #include <cstdint>
 #include <functional>
-#include <ios>
-#include <iostream>
 #include <outcome/result.hpp>
 #include <ranges>
 #include <set>
@@ -151,14 +149,6 @@ Repl::Repl(vlinux::VM& vm, ::csh& cshandle, std::shared_ptr<vlinux::Task> task)
 }
 
 Repl::~Repl() = default;
-
-outcome::result<std::string> Repl::readline() {
-    std::string line;
-    if (std::getline(std::cin, line).eof()) {
-        return std::io_errc::stream;
-    }
-    return line;
-}
 
 std::pair<bool, std::string> Repl::execute(std::string_view line) {
     std::vector<std::string> args;
