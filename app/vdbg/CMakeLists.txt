@@ -1,3 +1,7 @@
+# PkgConfig.
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(readline REQUIRED IMPORTED_TARGET readline)
+
 find_package(CLI11 CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(ftxui CONFIG REQUIRED)
@@ -10,6 +14,6 @@ target_link_libraries(
     PRIVATE
     CLI11::CLI11 fmt::fmt outcome::hl
     ftxui::dom ftxui::ftxui ftxui::screen ftxui::component
-    capstone::capstone
+    capstone::capstone PkgConfig::readline
 )
 target_include_directories(vdbg PRIVATE ${CMAKE_SOURCE_DIR}/include)
