@@ -1,8 +1,18 @@
 {
   "dependencies": [
+    {
+      "name": "capstone",
+      "features": [
+        "x86"
+      ]
+    },
+    "cli11",
+    "cpptrace",
     "elfio",
+    "fmt",
+    "ftxui",
     "outcome",
     "unicorn",
-    "cpptrace"
+    "readline"
   ]
 }

@@ -77,12 +77,34 @@ public:
             behav_of_tasks_;
     };
 
+    enum class Register {
+        RAX,
+        RBX,
+        RCX,
+        RDX,
+        R8,
+        R9,
+        R10,
+        R11,
+        R12,
+        R13,
+        R14,
+        R15,
+        RSI,
+        RDI,
+        RBP,
+        RSP,
+        RFLAGS,
+        RIP,
+    };
+
 public:
     void reset();
     outcome::result<std::shared_ptr<Task>> load(
         const std::filesystem::path& path);
     outcome::result<Result> run(std::chrono::milliseconds timeout,
                                 std::chrono::milliseconds sched_interval);
+    void pause();
 
     // Hooks.
     outcome::result<void> add_syscall_hook(
@@ -90,9 +112,17 @@ public:
                            std::array<std::uint64_t, 6> args,
                            std::uint64_t ret)>
             hook);
+    outcome::result<void> add_instr_hook(
+        std::function<void(std::uint64_t addr)> hook);
 
     // Observability.
     Scheduler& get_scheduler();
+    outcome::result<Result> get_result() const;
+    std::uint64_t get_entry_point() const;
+    outcome::result<std::uint64_t> read_reg(Register reg) const;
+    outcome::result<std::vector<std::uint8_t>> read_vmem(
+        std::shared_ptr<Task> task, std::uint64_t vaddr,
+        std::size_t size) const;
 
 private:
     class Impl;
