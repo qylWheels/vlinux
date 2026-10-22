@@ -752,6 +752,12 @@ public:
         // Create and open file.
         auto create_and_open =
             [&]() -> std::variant<int, std::shared_ptr<File>> {
+            // It is an error if `pathname` is exist and O_CREAT is set.
+            auto peek_inode_opt = curr_inode->lookup(path.filename());
+            if (peek_inode_opt.has_value()) {
+                return -EEXIST;
+            }
+
             auto sb = curr_inode->super_block();
             auto inode_result =
                 sb.lock()->alloc_inode(sb.lock(), IINode::Type::File);
