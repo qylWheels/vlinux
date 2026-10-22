@@ -728,6 +728,11 @@ public:
                 return -ENOENT;
             }
 
+            // Writing to a directory is not allowed.
+            if (inode_result.value()->type() == IINode::Type::Directory) {
+                return -EISDIR;
+            }
+
             auto inode = inode_result.value();
             auto file = std::make_shared<File>(inode, context.uc);
             auto result = file->get();
