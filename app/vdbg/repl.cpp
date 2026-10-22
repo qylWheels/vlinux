@@ -8,6 +8,7 @@
 #include <chrono>
 #include <cstdint>
 #include <functional>
+#include <numeric>
 #include <outcome/result.hpp>
 #include <ranges>
 #include <set>
@@ -165,12 +166,26 @@ std::pair<bool, std::string> Repl::execute(std::string_view line) {
     // Parse and execute the command.
     std::string cmd = args.front();
     args.erase(args.begin());
-    auto handler_it = impl_->command_handlers.find(cmd);
-    if (handler_it == impl_->command_handlers.end()) {
+    auto candidates =
+        impl_->command_handlers | std::views::filter([&](const auto& kv) {
+            return kv.first.starts_with(cmd);
+        });
+    auto dist = std::ranges::distance(candidates.begin(), candidates.end());
+    if (dist > 1) {
+        auto candidates_strs = std::accumulate(
+            candidates.begin(), candidates.end(), std::vector<std::string>(),
+            [](std::vector<std::string> acc, const auto& kv) {
+                acc.push_back(kv.first);
+                return acc;
+            });
         return {false,
-                fmt::format("Command {} not supported", std::string(cmd))};
+                fmt::format("Ambiguous command: \"{}\", candidates are: {}",
+                            cmd, candidates_strs)};
     }
-    return handler_it->second(args);
+    if (dist == 0) {
+        return {false, fmt::format("Command {} not supported", cmd)};
+    }
+    return candidates.begin()->second(args);
 }
 }  // namespace repl
 }  // namespace vdbg
