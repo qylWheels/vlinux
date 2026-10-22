@@ -729,7 +729,8 @@ public:
             }
 
             // Writing to a directory is not allowed.
-            if (inode_result.value()->type() == IINode::Type::Directory) {
+            if (inode_result.value()->type() == IINode::Type::Directory &&
+                ((flags & O_WRONLY) || (flags & O_RDWR))) {
                 return -EISDIR;
             }
 
