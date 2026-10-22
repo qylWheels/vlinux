@@ -722,6 +722,8 @@ public:
             } else {
                 inode_result = curr_inode->lookup(path.filename());
             }
+
+            // Check inode_result.
             if (!inode_result.has_value()) {
                 return -ENOENT;
             }
