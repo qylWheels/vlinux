@@ -3,6 +3,8 @@
 #include <fmt/color.h>
 #include <fmt/core.h>
 #include <fmt/ranges.h>
+#include <readline/history.h>
+#include <readline/readline.h>
 #include <sys/syscall.h>
 
 #include <CLI/CLI.hpp>
@@ -108,16 +110,18 @@ int main(int argc, char* argv[]) {
         vdbg::repl::Repl repl(vm, handle, task.value());
 
         // Show REPL.
-        while (true) {
-            std::string input;
-            fmt::print("vdbg> ");
-            std::getline(std::cin, input);
-            auto result = repl.execute(input);
-            if (result.first) {
-                fmt::println("{}", result.second);
-            } else {
-                fmt::println("Error: {}", result.second);
+        char* line;
+        while ((line = readline("vdbg> ")) != NULL) {
+            if (*line) {
+                add_history(line);
+                auto result = repl.execute(line);
+                if (result.first) {
+                    fmt::println("{}", result.second);
+                } else {
+                    fmt::println("Error: {}", result.second);
+                }
             }
+            free(line);
         }
     }
 
