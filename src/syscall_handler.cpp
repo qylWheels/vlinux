@@ -711,6 +711,9 @@ public:
                 }
                 curr_inode = inode_result.value();
             }
+            if (curr_inode->type() != IINode::Type::Directory) {
+                return -ENOTDIR;
+            }
         }
 
         // Plain open.
