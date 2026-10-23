@@ -839,8 +839,8 @@ public:
 public:
     static std::uint64_t handle(SyscallHandler::Context context,
                                 std::array<std::uint64_t, 6> args) {
-        std::array<std::uint64_t, 6> new_args{AT_FDCWD, args[0], args[1],
-                                              args[2]};
+        std::array<std::uint64_t, 6> new_args{
+            static_cast<std::uint64_t>(AT_FDCWD), args[0], args[1], args[2]};
         return SysOpenAtHandler::handle(context, new_args);
     }
 };
