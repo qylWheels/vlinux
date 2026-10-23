@@ -209,7 +209,7 @@ public:
 private:
     uc_engine* uc_;
     std::uint64_t refcount_ = 0;
-    std::uint64_t flags_ = 0;
+    std::uint64_t flags_ = 0;  // Permissions.
     std::uint64_t offset_ = 0;
     std::shared_ptr<IINode> inode_;
     std::filesystem::path path_;
