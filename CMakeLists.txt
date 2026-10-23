@@ -47,6 +47,7 @@ option(BUILD_TESTS "Build tests" ON)
 if(BUILD_TESTS)
 add_subdirectory(tests)
 endif()
+add_subdirectory(rootfs)
 
 set(SRC_FILES
     src/mm.cpp src/vm.cpp src/task.cpp src/syscall_handler.cpp
