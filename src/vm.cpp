@@ -86,9 +86,10 @@ public:
             [this](uc_context* ctx) -> outcome::result<void> {
             return this->register_context(ctx);
         };
-        this->task_initializer_.create_task =
-            [this](uc_context* ctx) -> outcome::result<std::shared_ptr<Task>> {
-            return std::make_shared<vlinux::Task>(ctx);
+        this->task_initializer_.create_task = [this](uc_context* ctx,
+                                                     std::shared_ptr<File> cwd)
+            -> outcome::result<std::shared_ptr<Task>> {
+            return std::make_shared<vlinux::Task>(ctx, cwd);
         };
         this->task_initializer_.setup_task_properties =
             [this](std::shared_ptr<Task> task, std::string name, bool root_task,
@@ -195,7 +196,7 @@ public:
             this->task_initializer_.init_task(
                 mm::kIdleTaskCodeRegionStart, "idle", true, idle_task_pid,
                 idle_task_tgid, nullptr, {}, Task::State::Ready, 0, 0,
-                idle_address_space, idle_task_pagetable));
+                idle_address_space, idle_task_pagetable, "/"));
 
         // Setup init task.
         OUTCOME_TRY(auto init_task_pid, this->pid_manager_.alloc_pid());
