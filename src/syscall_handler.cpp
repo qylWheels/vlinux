@@ -18,6 +18,7 @@
 #include <optional>
 #include <outcome/result.hpp>
 #include <outcome/try.hpp>
+#include <ranges>
 #include <string>
 #include <system_error>
 #include <variant>
@@ -885,6 +886,15 @@ public:
                 return -EFAULT;
             }
         }
+
+        // Transform linux iov to our iov.
+        auto transform_view =
+            iovs | std::views::transform([](const auto& iov) {
+                return IoVector{reinterpret_cast<std::uint64_t>(iov.iov_base),
+                                iov.iov_len};
+            });
+        std::vector<IoVector> iovs2(transform_view.begin(),
+                                    transform_view.end());
 
         return -ENOSYS;
     }
