@@ -873,6 +873,9 @@ public:
             return -EBADF;
         }
 
+        // Check iovcnt.
+        if (iovcnt < 0) return -EINVAL;
+
         // Read and check iovs.
         std::vector<iovec> iovs(iovcnt);
         for (int i = 0; i < iovcnt; ++i) {
