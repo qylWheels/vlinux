@@ -896,7 +896,10 @@ public:
         std::vector<IoVector> iovs2(transform_view.begin(),
                                     transform_view.end());
 
-        return -ENOSYS;
+        // Read from file.
+        auto file = task->files[fd].value();
+        auto ret = file->iov_read(iovs2);
+        return ret ? ret.value() : ret.error().value();
     }
 };
 
