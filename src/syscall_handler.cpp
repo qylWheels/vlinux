@@ -679,14 +679,20 @@ public:
         // Get inode:
         // 1. referred by dirfd if pathname is relative.
         // 2. referred by "/" if pathname is absolute.
+        // 3. referred by AT_FDCWD if pathname is relative.
         std::optional<std::shared_ptr<File>> cwd_file_opt = std::nullopt;
         std::optional<std::shared_ptr<IINode>> cwd_inode_opt = std::nullopt;
-        if (pathname[0] != '/') {
-            cwd_file_opt = task->files[dirfd];
-            if (!cwd_file_opt.has_value()) {
-                return -EBADF;
+        if (pathname[0] != '/') {  // Relative pathname.
+            if (dirfd == AT_FDCWD) {
+                cwd_file_opt = task->cwd;
+                cwd_inode_opt = task->cwd->inode();
+            } else {
+                cwd_file_opt = task->files[dirfd];
+                if (!cwd_file_opt.has_value()) {
+                    return -EBADF;
+                }
+                cwd_inode_opt = cwd_file_opt.value()->inode();
             }
-            cwd_inode_opt = cwd_file_opt.value()->inode();
         } else {
             auto root_inode = context.mount_info->curr_mount_of("/");
             assert(root_inode.has_value());
