@@ -86,10 +86,9 @@ public:
             [this](uc_context* ctx) -> outcome::result<void> {
             return this->register_context(ctx);
         };
-        this->task_initializer_.create_task = [this](uc_context* ctx,
-                                                     std::shared_ptr<File> cwd)
-            -> outcome::result<std::shared_ptr<Task>> {
-            return std::make_shared<vlinux::Task>(ctx, cwd);
+        this->task_initializer_.create_task =
+            [this](uc_context* ctx) -> outcome::result<std::shared_ptr<Task>> {
+            return std::make_shared<vlinux::Task>(ctx);
         };
         this->task_initializer_.setup_task_properties =
             [this](std::shared_ptr<Task> task, std::string name, bool root_task,
@@ -99,8 +98,8 @@ public:
                    Task::State state, std::uint64_t stack_top,
                    std::uint64_t stack_bottom,
                    std::shared_ptr<mm::VirtualMemoryAddressSpace> address_space,
-                   std::shared_ptr<mm::PageTable> page_table)
-            -> outcome::result<void> {
+                   std::shared_ptr<mm::PageTable> page_table,
+                   std::shared_ptr<File> cwd) -> outcome::result<void> {
             task->name = name;
             task->root_task = root_task;
             task->pid = pid;
@@ -112,6 +111,7 @@ public:
             task->stack_bottom = stack_bottom;
             task->address_space = address_space;
             task->page_table = page_table;
+            task->cwd = cwd;
             return outcome::success();
         };
         this->task_initializer_.add_task_to_task_manager =
