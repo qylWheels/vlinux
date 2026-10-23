@@ -863,9 +863,11 @@ public:
         std::uint32_t pos_low = static_cast<std::uint32_t>(args[3]);
         std::uint32_t pos_high = static_cast<std::uint32_t>(args[4]);
 
+        auto task = context.scheduler->current_task();
+
         // Check fd.
-        if (fd < 0 || fd >= context.task->files.size() ||
-            !context.task->files[fd].has_value()) {
+        if (fd < 0 || fd >= task->files.size() ||
+            !task->files[fd].has_value()) {
             return -EBADF;
         }
 
