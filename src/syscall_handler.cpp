@@ -845,6 +845,34 @@ public:
     }
 };
 
+class SysPreadvHandler {
+private:
+    SysPreadvHandler() = default;
+    ~SysPreadvHandler() = default;
+    SysPreadvHandler(const SysPreadvHandler&) = delete;
+    SysPreadvHandler& operator=(const SysPreadvHandler&) = delete;
+    SysPreadvHandler(SysPreadvHandler&&) = delete;
+    SysPreadvHandler& operator=(SysPreadvHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        int fd = static_cast<int>(args[0]);
+        std::uint64_t iov_addr = args[1];
+        int iovcnt = static_cast<int>(args[2]);
+        std::uint32_t pos_low = static_cast<std::uint32_t>(args[3]);
+        std::uint32_t pos_high = static_cast<std::uint32_t>(args[4]);
+
+        // Check fd.
+        if (fd < 0 || fd >= context.task->files.size() ||
+            !context.task->files[fd].has_value()) {
+            return -EBADF;
+        }
+
+        return -ENOSYS;
+    }
+};
+
 class SyscallHandler::Impl {
 public:
     Impl() = default;
@@ -898,6 +926,9 @@ std::uint64_t SyscallHandler::dispatch(Context context,
             break;
         case SYS_openat:
             ret = SysOpenAtHandler::handle(context, args);
+            break;
+        case SYS_preadv:
+            ret = SysPreadvHandler::handle(context, args);
             break;
         default:
             ret = -ENOSYS;
