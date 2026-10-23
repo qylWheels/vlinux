@@ -874,6 +874,11 @@ public:
             return -EBADF;
         }
 
+        // Check permission.
+        if (task->files[fd].value()->flags() & O_WRONLY) {
+            return -EBADF;
+        }
+
         // Check iovcnt.
         if (iovcnt < 0) return -EINVAL;
 
