@@ -196,7 +196,7 @@ public:
             this->task_initializer_.init_task(
                 mm::kIdleTaskCodeRegionStart, "idle", true, idle_task_pid,
                 idle_task_tgid, nullptr, {}, Task::State::Ready, 0, 0,
-                idle_address_space, idle_task_pagetable, "/"));
+                idle_address_space, idle_task_pagetable, nullptr));
 
         // Setup init task.
         OUTCOME_TRY(auto init_task_pid, this->pid_manager_.alloc_pid());
@@ -220,7 +220,7 @@ public:
             this->task_initializer_.init_task(
                 mm::kInitTaskCodeRegionStart, "init", true, init_task_pid,
                 init_task_tgid, idle_task, {}, Task::State::Ready, 0, 0,
-                init_address_space, init_task_pagetable));
+                init_address_space, init_task_pagetable, nullptr));
 
         // Set idle children to init task.
         idle_task->children.push_back(init_task);
@@ -437,6 +437,13 @@ outcome::result<std::shared_ptr<Task>> VM::load(
         return std::errc::address_in_use;
     }
 
+    // Open "/" as its current working directory.
+    auto root_dir_inode = this->impl_->mount_info_.curr_mount_of("/").value();
+    OUTCOME_TRY(root_dir_inode->inc_mem_refcount());
+    auto root_dir_file =
+        std::make_shared<File>(root_dir_inode, this->impl_->uc_);
+    OUTCOME_TRY(root_dir_file->get());
+
     // Create task.
     OUTCOME_TRY(auto pid, this->impl_->pid_manager_.alloc_pid());
     auto tgid = pid;
@@ -452,7 +459,7 @@ outcome::result<std::shared_ptr<Task>> VM::load(
                                false, pid, tgid, parent, {}, Task::State::New,
                                stack_page_vdesc->start_addr,
                                stack_page_vdesc->start_addr + mm::PAGE_SIZE,
-                               address_space, page_table));
+                               address_space, page_table, root_dir_file));
 
     // Set stack top.
     std::uint64_t rsp = stack_page_vdesc->start_addr + mm::PAGE_SIZE;
