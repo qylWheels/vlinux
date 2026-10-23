@@ -1,5 +1,6 @@
 #include "syscall_handler.h"
 
+#include <bits/types/struct_iovec.h>
 #include <fcntl.h>
 #include <linux/limits.h>
 #include <sys/mman.h>
@@ -20,6 +21,7 @@
 #include <string>
 #include <system_error>
 #include <variant>
+#include <vector>
 
 #include "mm.h"
 #include "vfs.h"
@@ -869,6 +871,16 @@ public:
         if (fd < 0 || fd >= task->files.size() ||
             !task->files[fd].has_value()) {
             return -EBADF;
+        }
+
+        // Read and check iovs.
+        std::vector<iovec> iovs(iovcnt);
+        for (int i = 0; i < iovcnt; ++i) {
+            auto err = ::uc_vmem_read(context.uc, iov_addr + i * sizeof(iovec),
+                                      UC_PROT_READ, &iovs[i], sizeof(iovec));
+            if (err != 0) {
+                return -EFAULT;
+            }
         }
 
         return -ENOSYS;
