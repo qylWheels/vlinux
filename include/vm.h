@@ -26,11 +26,11 @@ public:
         std::vector<std::shared_ptr<Task>> children, Task::State state,
         std::uint64_t stack_top, std::uint64_t stack_bottom,
         std::shared_ptr<mm::VirtualMemoryAddressSpace> address_space,
-        std::shared_ptr<mm::PageTable> page_table) {
+        std::shared_ptr<mm::PageTable> page_table, std::shared_ptr<File> cwd) {
         OUTCOME_TRY(uc_context * ctx, create_task_ctx());
         OUTCOME_TRY(setup_task_ctx(ctx, rip));
         OUTCOME_TRY(add_task_ctx_to_context_manager(ctx));
-        OUTCOME_TRY(auto task, create_task(ctx));
+        OUTCOME_TRY(auto task, create_task(ctx, cwd));
         OUTCOME_TRY(setup_task_properties(
             task, name, root_task, pid, tgid, parent, children, state,
             stack_top, stack_bottom, address_space, page_table));
@@ -46,7 +46,8 @@ public:
         setup_task_ctx;
     std::function<outcome::result<void>(uc_context*)>
         add_task_ctx_to_context_manager;
-    std::function<outcome::result<std::shared_ptr<Task>>(uc_context* ctx)>
+    std::function<outcome::result<std::shared_ptr<Task>>(
+        uc_context* ctx, std::shared_ptr<File> cwd)>
         create_task;
     std::function<outcome::result<void>(
         std::shared_ptr<Task> task, std::string name, bool root_task,
