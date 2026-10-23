@@ -507,6 +507,8 @@ public:
                 }
             }
         }
+        task->cwd = parent->cwd;
+        // TODO: Copy files from parent except files set O_CLOEXEC.
         task->syscalls = {};
 
         // Add task to scheduler. clone() runs inside the scheduling loop, so
