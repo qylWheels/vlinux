@@ -667,7 +667,9 @@ public:
         // Only check dirfd when pathname is relative.
         if (pathname[0] != '/') {
             // Check dirfd.
-            if (dirfd < 0 || dirfd >= task->files.size()) return -EBADF;
+            if ((dirfd != AT_FDCWD) &&
+                (dirfd < 0 || dirfd >= task->files.size()))
+                return -EBADF;
         }
 
         // We DON'T need to check flags for now.
