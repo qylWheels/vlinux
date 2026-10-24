@@ -903,7 +903,9 @@ public:
 
         // Read from file.
         auto file = task->files[fd].value();
-        auto ret = file->preadv(iovs2);
+        std::uint64_t offset = static_cast<std::uint64_t>(pos_low) |
+                               (static_cast<std::uint64_t>(pos_high) << 32);
+        auto ret = file->preadv(iovs2, offset);
         return ret ? ret.value() : ret.error().value();
     }
 };
