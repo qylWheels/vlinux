@@ -920,7 +920,8 @@ public:
 
         // Pre-work.
         auto pre_work_result = PreadvPwritevCommon::pre_work(
-            context, fd, iov_addr, iovcnt, pos_low, pos_high);
+            context, fd, iov_addr, iovcnt, pos_low, pos_high,
+            PreadvPwritevCommon::Type::Preadv);
         if (std::holds_alternative<int>(pre_work_result)) {
             return std::get<int>(pre_work_result);
         }
@@ -958,7 +959,8 @@ public:
 
         // Pre-work.
         auto pre_work_result = PreadvPwritevCommon::pre_work(
-            context, fd, iov_addr, iovcnt, pos_low, pos_high);
+            context, fd, iov_addr, iovcnt, pos_low, pos_high,
+            PreadvPwritevCommon::Type::Pwritev);
         if (std::holds_alternative<int>(pre_work_result)) {
             return std::get<int>(pre_work_result);
         }
