@@ -987,6 +987,55 @@ private:
 public:
     static std::uint64_t handle(SyscallHandler::Context context,
                                 std::array<std::uint64_t, 6> args) {
+        int fd = static_cast<int>(args[0]);
+        std::int64_t offset = static_cast<std::int64_t>(args[1]);
+        int whence = static_cast<int>(args[2]);
+
+        auto task = context.scheduler->current_task();
+
+        // Check fd.
+        if (fd < 0 || fd >= task->files.size() ||
+            !task->files[fd].has_value()) {
+            return -EBADF;
+        }
+
+        // Check whence.
+        if (whence < 0 || whence > 2) {
+            return -EINVAL;
+        }
+
+        // Calculate and check offset.
+        auto file = task->files[fd].value();
+        std::int64_t real_offset;
+        switch (whence) {
+            case SEEK_SET: {
+                if (offset < 0) {
+                    return -EINVAL;
+                }
+                real_offset = offset;
+                break;
+            }
+            case SEEK_CUR: {
+                auto curr_offset = static_cast<std::int64_t>(file->offset());
+                real_offset = curr_offset + offset;
+                if (real_offset < 0) {
+                    return -EINVAL;
+                }
+                break;
+            }
+            case SEEK_END: {
+                auto curr_offset =
+                    static_cast<std::int64_t>(file->inode()->size());
+                real_offset = curr_offset + offset;
+                if (real_offset < 0) {
+                    return -EINVAL;
+                }
+                break;
+            }
+            default:
+                std::abort();  // Unreachable.
+        }
+
         return -ENOSYS;
     }
 };
