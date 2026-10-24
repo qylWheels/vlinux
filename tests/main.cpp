@@ -207,7 +207,7 @@ TEST_CASE("Test VFS", "[vfs]") {
         auto ret = file->pwritev({iov}, 0);
         REQUIRE(ret.has_value());
         REQUIRE(ret.value() == len);
-        REQUIRE(file->offset() == len);
+        REQUIRE(file->offset() == 0);
 
         // Test read.
         char data_read[4096] = {0};
