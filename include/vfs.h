@@ -203,8 +203,10 @@ public:
     }
     std::filesystem::path path() const { return this->path_; }
 
-    outcome::result<std::size_t> preadv(std::vector<IoVector> iov);
-    outcome::result<std::size_t> pwritev(std::vector<IoVector> iov);
+    outcome::result<std::size_t> preadv(std::vector<IoVector> iov,
+                                        std::int64_t offset);
+    outcome::result<std::size_t> pwritev(std::vector<IoVector> iov,
+                                         std::int64_t offset);
 
 private:
     uc_engine* uc_;
