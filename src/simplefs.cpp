@@ -21,7 +21,6 @@ public:
 
 public:
     std::uint64_t id_;
-    std::uint64_t block_count_;
     Type type_;
     std::uint64_t permissions_;
     std::chrono::time_point<std::chrono::system_clock> atime_;
@@ -151,7 +150,6 @@ outcome::result<std::shared_ptr<IINode>> SuperBlock::alloc_inode(
     std::shared_ptr<ISuperBlock> sb, IINode::Type type) {
     auto inode = std::make_shared<INode>();
     inode->impl_->id_ = this->impl_->next_inode_id_++;
-    inode->impl_->block_count_ = 0;
     inode->impl_->type_ = type;
     inode->impl_->permissions_ = 0;
     inode->impl_->atime_ = std::chrono::system_clock::now();
