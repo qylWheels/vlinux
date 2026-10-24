@@ -660,4 +660,42 @@ TEST_CASE("Test VM", "[vm]") {
         REQUIRE(rootfd.value() < pathfd.value());
         REQUIRE(pathfd.value() < pathfd2.value());
     }
+
+    SECTION("Test preadv() and pwritev()") {
+        auto task =
+            vm.load(build_path / "tests/syscall_tests/test_preadv_pwritev")
+                .value();
+
+        int fd = -1, exit_status = -1;
+        auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                              std::array<std::uint64_t, 6> args,
+                                              std::uint64_t ret) {
+            if (syscall_id != SYS_open && syscall_id != SYS_preadv &&
+                syscall_id != SYS_pwritev && syscall_id != SYS_exit) {
+                return;
+            }
+
+            switch (syscall_id) {
+                case SYS_open:
+                    fd = static_cast<int>(ret);
+                    break;
+                case SYS_preadv:
+                case SYS_pwritev:
+                    break;
+                case SYS_exit:
+                    exit_status = static_cast<int>(args[0]);
+                    break;
+                default:
+                    break;
+            }
+        });
+        REQUIRE(result.has_value());
+
+        REQUIRE(vm.run(std::chrono::milliseconds(100),
+                       std::chrono::milliseconds(10))
+                    .has_value());
+
+        REQUIRE(fd >= 0);
+        REQUIRE(exit_status == 0);
+    }
 }
