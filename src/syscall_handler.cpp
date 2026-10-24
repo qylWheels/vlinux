@@ -848,6 +848,22 @@ public:
     }
 };
 
+class SysCloseHandler {
+private:
+    SysCloseHandler() = default;
+    ~SysCloseHandler() = default;
+    SysCloseHandler(const SysCloseHandler&) = delete;
+    SysCloseHandler& operator=(const SysCloseHandler&) = delete;
+    SysCloseHandler(SysCloseHandler&&) = delete;
+    SysCloseHandler& operator=(SysCloseHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        return -ENOSYS;
+    }
+};
+
 struct PreadvPwritevCommon {
     enum class Type { Preadv, Pwritev };
 
@@ -1099,6 +1115,9 @@ std::uint64_t SyscallHandler::dispatch(Context context,
             break;
         case SYS_openat:
             ret = SysOpenAtHandler::handle(context, args);
+            break;
+        case SYS_close:
+            ret = SysCloseHandler::handle(context, args);
             break;
         case SYS_lseek:
             ret = SysLseekHandler::handle(context, args);
