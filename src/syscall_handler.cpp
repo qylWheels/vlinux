@@ -975,6 +975,22 @@ public:
     }
 };
 
+class SysLseekHandler {
+private:
+    SysLseekHandler() = default;
+    ~SysLseekHandler() = default;
+    SysLseekHandler(const SysLseekHandler&) = delete;
+    SysLseekHandler& operator=(const SysLseekHandler&) = delete;
+    SysLseekHandler(SysLseekHandler&&) = delete;
+    SysLseekHandler& operator=(SysLseekHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        return -ENOSYS;
+    }
+};
+
 class SyscallHandler::Impl {
 public:
     Impl() = default;
@@ -1028,6 +1044,9 @@ std::uint64_t SyscallHandler::dispatch(Context context,
             break;
         case SYS_openat:
             ret = SysOpenAtHandler::handle(context, args);
+            break;
+        case SYS_lseek:
+            ret = SysLseekHandler::handle(context, args);
             break;
         case SYS_preadv:
             ret = SysPreadvHandler::handle(context, args);
