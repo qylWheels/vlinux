@@ -1023,6 +1023,9 @@ std::uint64_t SyscallHandler::dispatch(Context context,
         case SYS_preadv:
             ret = SysPreadvHandler::handle(context, args);
             break;
+        case SYS_pwritev:
+            ret = SysPwritevHandler::handle(context, args);
+            break;
         default:
             ret = -ENOSYS;
             break;
