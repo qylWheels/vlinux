@@ -20,7 +20,12 @@ outcome::result<std::size_t> File::preadv(std::vector<IoVector> iov,
 
     std::uint64_t read_len = 0;
     for (const auto& v : iov) {
-        auto len = std::min(v.len, data->size() - offset);
+        std::uint64_t len;
+        if (offset >= data->size()) {
+            len = 0;
+        } else {
+            len = std::min(v.len, data->size() - offset);
+        }
         if (::uc_vmem_write(this->uc_, v.base, UC_PROT_WRITE,
                             data->data() + offset, len) != UC_ERR_OK) {
             return std::errc::bad_address;
