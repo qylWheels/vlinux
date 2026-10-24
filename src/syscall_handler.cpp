@@ -848,6 +848,49 @@ public:
     }
 };
 
+struct PreadvPwritevCommon {
+    static std::variant<std::vector<IoVector>, int> pre_work(
+        SyscallHandler::Context context, int fd, std::uint64_t iov_addr,
+        int iovcnt, std::uint32_t pos_low, std::uint32_t pos_high) {
+        auto task = context.scheduler->current_task();
+
+        // Check fd.
+        if (fd < 0 || fd >= task->files.size() ||
+            !task->files[fd].has_value()) {
+            return -EBADF;
+        }
+
+        // Check permission.
+        if (task->files[fd].value()->flags() & O_WRONLY) {
+            return -EBADF;
+        }
+
+        // Check iovcnt.
+        if (iovcnt < 0) return -EINVAL;
+
+        // Read and check iovs.
+        std::vector<iovec> iovs(iovcnt);
+        for (int i = 0; i < iovcnt; ++i) {
+            auto err = ::uc_vmem_read(context.uc, iov_addr + i * sizeof(iovec),
+                                      UC_PROT_READ, &iovs[i], sizeof(iovec));
+            if (err != 0) {
+                return -EFAULT;
+            }
+        }
+
+        // Transform linux iov to our iov.
+        auto transform_view =
+            iovs | std::views::transform([](const auto& iov) {
+                return IoVector{reinterpret_cast<std::uint64_t>(iov.iov_base),
+                                iov.iov_len};
+            });
+        std::vector<IoVector> iovs2(transform_view.begin(),
+                                    transform_view.end());
+
+        return iovs2;
+    }
+};
+
 class SysPreadvHandler {
 private:
     SysPreadvHandler() = default;
@@ -906,6 +949,44 @@ public:
         std::uint64_t offset = static_cast<std::uint64_t>(pos_low) |
                                (static_cast<std::uint64_t>(pos_high) << 32);
         auto ret = file->preadv(iovs2, offset);
+        return ret ? ret.value() : ret.error().value();
+    }
+};
+
+class SysPwritevHandler {
+private:
+    SysPwritevHandler() = default;
+    ~SysPwritevHandler() = default;
+    SysPwritevHandler(const SysPwritevHandler&) = delete;
+    SysPwritevHandler& operator=(const SysPwritevHandler&) = delete;
+    SysPwritevHandler(SysPwritevHandler&&) = delete;
+    SysPwritevHandler& operator=(SysPwritevHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        // Get args.
+        int fd = static_cast<int>(args[0]);
+        std::uint64_t iov_addr = args[1];
+        int iovcnt = static_cast<int>(args[2]);
+        std::uint32_t pos_low = static_cast<std::uint32_t>(args[3]);
+        std::uint32_t pos_high = static_cast<std::uint32_t>(args[4]);
+
+        auto task = context.scheduler->current_task();
+
+        // Pre-work.
+        auto pre_work_result = PreadvPwritevCommon::pre_work(
+            context, fd, iov_addr, iovcnt, pos_low, pos_high);
+        if (std::holds_alternative<int>(pre_work_result)) {
+            return std::get<int>(pre_work_result);
+        }
+        auto iovs2 = std::get<std::vector<IoVector>>(pre_work_result);
+
+        // Write to file.
+        auto file = task->files[fd].value();
+        std::uint64_t offset = static_cast<std::uint64_t>(pos_low) |
+                               (static_cast<std::uint64_t>(pos_high) << 32);
+        auto ret = file->pwritev(iovs2, offset);
         return ret ? ret.value() : ret.error().value();
     }
 };
