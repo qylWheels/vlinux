@@ -40,6 +40,19 @@ INode::~INode() = default;
 std::uint64_t INode::id() const { return this->impl_->id_; }
 
 // Size.
+std::uint64_t INode::size() const {
+    if (std::holds_alternative<INode::NormalFileContent>(this->impl_->data_)) {
+        return std::get<INode::NormalFileContent>(this->impl_->data_).size();
+    }
+    if (std::holds_alternative<INode::DirectoryFileContent>(
+            this->impl_->data_)) {
+        auto diritem_count =
+            std::get<INode::DirectoryFileContent>(this->impl_->data_).size();
+        return diritem_count * sizeof(DirItem);
+    }
+    return 0;
+}
+
 std::uint64_t INode::block_count() const { return this->impl_->block_count_; }
 
 // Type and permissions.

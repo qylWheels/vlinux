@@ -46,6 +46,7 @@ public:
     virtual std::uint64_t id() const override;
 
     // Size.
+    virtual std::uint64_t size() const override;
     virtual std::uint64_t block_count() const override;
 
     // Type and permissions.
