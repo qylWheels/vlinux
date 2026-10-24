@@ -1006,19 +1006,19 @@ public:
 
         // Calculate and check offset.
         auto file = task->files[fd].value();
-        std::int64_t real_offset;
+        std::int64_t result_offset;
         switch (whence) {
             case SEEK_SET: {
                 if (offset < 0) {
                     return -EINVAL;
                 }
-                real_offset = offset;
+                result_offset = offset;
                 break;
             }
             case SEEK_CUR: {
                 auto curr_offset = static_cast<std::int64_t>(file->offset());
-                real_offset = curr_offset + offset;
-                if (real_offset < 0) {
+                result_offset = curr_offset + offset;
+                if (result_offset < 0) {
                     return -EINVAL;
                 }
                 break;
@@ -1026,8 +1026,8 @@ public:
             case SEEK_END: {
                 auto curr_offset =
                     static_cast<std::int64_t>(file->inode()->size());
-                real_offset = curr_offset + offset;
-                if (real_offset < 0) {
+                result_offset = curr_offset + offset;
+                if (result_offset < 0) {
                     return -EINVAL;
                 }
                 break;
@@ -1036,7 +1036,13 @@ public:
                 std::abort();  // Unreachable.
         }
 
-        return -ENOSYS;
+        // Set offset.
+        auto ret = file->set_offset(result_offset);
+        if (!ret) {
+            return -ret.error().value();
+        }
+
+        return result_offset;
     }
 };
 
