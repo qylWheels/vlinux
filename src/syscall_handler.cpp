@@ -849,9 +849,11 @@ public:
 };
 
 struct PreadvPwritevCommon {
+    enum class Type { Preadv, Pwritev };
+
     static std::variant<std::vector<IoVector>, int> pre_work(
         SyscallHandler::Context context, int fd, std::uint64_t iov_addr,
-        int iovcnt, std::uint32_t pos_low, std::uint32_t pos_high) {
+        int iovcnt, std::uint32_t pos_low, std::uint32_t pos_high, Type type) {
         auto task = context.scheduler->current_task();
 
         // Check fd.
@@ -861,7 +863,12 @@ struct PreadvPwritevCommon {
         }
 
         // Check permission.
-        if (task->files[fd].value()->flags() & O_WRONLY) {
+        if (type == Type::Preadv &&
+            ((task->files[fd].value()->flags() & O_ACCMODE) == O_WRONLY)) {
+            return -EBADF;
+        }
+        if (type == Type::Pwritev &&
+            ((task->files[fd].value()->flags() & O_ACCMODE) == O_RDONLY)) {
             return -EBADF;
         }
 
