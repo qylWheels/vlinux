@@ -204,7 +204,7 @@ TEST_CASE("Test VFS", "[vfs]") {
         REQUIRE(::uc_mem_map_ptr(uc, 0x1000, 4096, UC_PROT_READ, data) ==
                 UC_ERR_OK);
         vlinux::IoVector iov{0x1000, len};
-        auto ret = file->iov_write({iov});
+        auto ret = file->pwritev({iov});
         REQUIRE(ret.has_value());
         REQUIRE(ret.value() == len);
         REQUIRE(file->offset() == len);
@@ -214,12 +214,12 @@ TEST_CASE("Test VFS", "[vfs]") {
         REQUIRE(::uc_mem_map_ptr(uc, 0x8000, 4096, UC_PROT_READ, data_read) ==
                 UC_ERR_OK);
         vlinux::IoVector iov_read{0x8000, 4096};
-        ret = file->iov_read({iov_read});
+        ret = file->preadv({iov_read});
         REQUIRE(ret.has_value());
         REQUIRE(ret.value() == 0);
         REQUIRE(file->set_offset(0).has_value());
         REQUIRE(file->offset() == 0);
-        ret = file->iov_read({iov_read});
+        ret = file->preadv({iov_read});
         REQUIRE(ret.has_value());
         REQUIRE(ret.value() == len);
         REQUIRE(std::strcmp(data_read, data) == 0);

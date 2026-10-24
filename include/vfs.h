@@ -203,8 +203,8 @@ public:
     }
     std::filesystem::path path() const { return this->path_; }
 
-    outcome::result<std::size_t> iov_read(std::vector<IoVector> iov);
-    outcome::result<std::size_t> iov_write(std::vector<IoVector> iov);
+    outcome::result<std::size_t> preadv(std::vector<IoVector> iov);
+    outcome::result<std::size_t> pwritev(std::vector<IoVector> iov);
 
 private:
     uc_engine* uc_;

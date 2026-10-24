@@ -903,7 +903,7 @@ public:
 
         // Read from file.
         auto file = task->files[fd].value();
-        auto ret = file->iov_read(iovs2);
+        auto ret = file->preadv(iovs2);
         return ret ? ret.value() : ret.error().value();
     }
 };

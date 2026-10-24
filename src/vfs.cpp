@@ -8,7 +8,7 @@
 #include <system_error>
 
 namespace vlinux {
-outcome::result<std::size_t> File::iov_read(std::vector<IoVector> iov) {
+outcome::result<std::size_t> File::preadv(std::vector<IoVector> iov) {
     if (this->inode_->type() != IINode::Type::File) {
         return std::errc::is_a_directory;
     }
@@ -31,7 +31,7 @@ outcome::result<std::size_t> File::iov_read(std::vector<IoVector> iov) {
     return read_len;
 }
 
-outcome::result<std::size_t> File::iov_write(std::vector<IoVector> iov) {
+outcome::result<std::size_t> File::pwritev(std::vector<IoVector> iov) {
     if (this->inode_->type() != IINode::Type::File) {
         return std::errc::is_a_directory;
     }
