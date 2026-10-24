@@ -57,7 +57,7 @@ void _start(void) {
     }
 
     // Compare strings.
-    if (strcmp(read_buf, "hello world") != 0) {
+    if (strcmp(read_buf, "helloworld") != 0) {
         exit(4);
     }
 
