@@ -50,8 +50,8 @@ public:
     virtual std::uint64_t id() const = 0;
 
     // Size.
-    virtual std::uint64_t size() const = 0;  // File size in bytes.
-    virtual std::uint64_t block_count() const = 0;
+    virtual std::uint64_t size() const = 0;         // File size in bytes.
+    virtual std::uint64_t block_count() const = 0;  // Number of blocks used.
 
     // Type and permissions.
     virtual Type type() const = 0;
