@@ -52,7 +52,10 @@ std::uint64_t INode::size() const {
     return 0;
 }
 
-std::uint64_t INode::block_count() const { return this->impl_->block_count_; }
+std::uint64_t INode::block_count() const {
+    auto blk_sz = this->impl_->super_block_.lock()->block_size();
+    return (this->size() + blk_sz - 1) / blk_sz;
+}
 
 // Type and permissions.
 IINode::Type INode::type() const { return this->impl_->type_; }
