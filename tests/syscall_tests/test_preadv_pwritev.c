@@ -27,8 +27,8 @@ void exit(int status) { syscall(SYS_exit, status, 0, 0, 0, 0, 0); }
 
 void _start(void) {
     // Open a file.
-    int fd = syscall(SYS_open, (unsigned long long)"hello", O_RDONLY | O_CREAT,
-                     0, 0, 0, 0);
+    int fd = syscall(SYS_open, (unsigned long long)"hello", O_RDWR | O_CREAT, 0,
+                     0, 0, 0);
     if (fd < 0) {
         exit(1);
     }
