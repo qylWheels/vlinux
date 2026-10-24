@@ -216,12 +216,8 @@ TEST_CASE("Test VFS", "[vfs]") {
         vlinux::IoVector iov_read{0x8000, 4096};
         ret = file->preadv({iov_read}, 0);
         REQUIRE(ret.has_value());
-        REQUIRE(ret.value() == 0);
-        REQUIRE(file->set_offset(0).has_value());
-        REQUIRE(file->offset() == 0);
-        ret = file->preadv({iov_read}, 0);
-        REQUIRE(ret.has_value());
         REQUIRE(ret.value() == len);
+        REQUIRE(file->offset() == 0);
         REQUIRE(std::strcmp(data_read, data) == 0);
 
         // Release resources.
