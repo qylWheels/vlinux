@@ -932,7 +932,7 @@ public:
         std::uint64_t offset = static_cast<std::uint64_t>(pos_low) |
                                (static_cast<std::uint64_t>(pos_high) << 32);
         auto ret = file->preadv(iovs2, offset);
-        return ret ? ret.value() : ret.error().value();
+        return ret ? ret.value() : -ret.error().value();
     }
 };
 
@@ -971,7 +971,7 @@ public:
         std::uint64_t offset = static_cast<std::uint64_t>(pos_low) |
                                (static_cast<std::uint64_t>(pos_high) << 32);
         auto ret = file->pwritev(iovs2, offset);
-        return ret ? ret.value() : ret.error().value();
+        return ret ? ret.value() : -ret.error().value();
     }
 };
 
