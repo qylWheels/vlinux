@@ -860,6 +860,27 @@ private:
 public:
     static std::uint64_t handle(SyscallHandler::Context context,
                                 std::array<std::uint64_t, 6> args) {
+        int fd = static_cast<int>(args[0]);
+
+        auto task = context.scheduler->current_task();
+
+        // Check fd.
+        if (fd < 0 || fd >= task->files.size() ||
+            !task->files[fd].has_value()) {
+            return -EBADF;
+        }
+
+        // Decrement refcount.
+        if (!task->files[fd].value()->inode()->dec_mem_refcount()) {
+            return -EIO;
+        }
+        if (!task->files[fd].value()->put()) {
+            return -EIO;
+        }
+
+        // Close file.
+        task->files[fd] = std::nullopt;
+
         return -ENOSYS;
     }
 };
