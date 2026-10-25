@@ -732,4 +732,30 @@ TEST_CASE("Test VM", "[vm]") {
         REQUIRE(exit_status == 0);
         REQUIRE(!task->files[fd].has_value());
     }
+
+    SECTION("Test lseek()") {
+        auto task =
+            vm.load(build_path / "tests/syscall_tests/test_lseek").value();
+
+        int exit_status = -1;
+        auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                              std::array<std::uint64_t, 6> args,
+                                              std::uint64_t ret) {
+            if (syscall_id != SYS_exit) {
+                return;
+            }
+
+            if (syscall_id == SYS_exit) {
+                exit_status = static_cast<int>(args[0]);
+                return;
+            }
+        });
+        REQUIRE(result.has_value());
+
+        REQUIRE(vm.run(std::chrono::milliseconds(100),
+                       std::chrono::milliseconds(10))
+                    .has_value());
+
+        REQUIRE(exit_status == 0);
+    }
 }
