@@ -1150,7 +1150,7 @@ std::uint64_t SyscallHandler::dispatch(Context context,
             ret = SysPwritevHandler::handle(context, args);
             break;
         default:
-            ret = -ENOSYS;
+            ret = 0;  // Pretend that we have handled it.
             break;
     }
 
