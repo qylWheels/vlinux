@@ -881,7 +881,7 @@ public:
         // Close file.
         task->files[fd] = std::nullopt;
 
-        return -ENOSYS;
+        return 0;
     }
 };
 
