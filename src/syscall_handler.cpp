@@ -1012,14 +1012,14 @@ public:
     }
 };
 
-class SysPreadHandler {
+class SysPread64Handler {
 private:
-    SysPreadHandler() = default;
-    ~SysPreadHandler() = default;
-    SysPreadHandler(const SysPreadHandler&) = delete;
-    SysPreadHandler& operator=(const SysPreadHandler&) = delete;
-    SysPreadHandler(SysPreadHandler&&) = delete;
-    SysPreadHandler& operator=(SysPreadHandler&&) = delete;
+    SysPread64Handler() = default;
+    ~SysPread64Handler() = default;
+    SysPread64Handler(const SysPread64Handler&) = delete;
+    SysPread64Handler& operator=(const SysPread64Handler&) = delete;
+    SysPread64Handler(SysPread64Handler&&) = delete;
+    SysPread64Handler& operator=(SysPread64Handler&&) = delete;
 
 public:
     static std::uint64_t handle(SyscallHandler::Context context,
@@ -1055,14 +1055,14 @@ public:
     }
 };
 
-class SysPwriteHandler {
+class SysPwrite64Handler {
 private:
-    SysPwriteHandler() = default;
-    ~SysPwriteHandler() = default;
-    SysPwriteHandler(const SysPwriteHandler&) = delete;
-    SysPwriteHandler& operator=(const SysPwriteHandler&) = delete;
-    SysPwriteHandler(SysPwriteHandler&&) = delete;
-    SysPwriteHandler& operator=(SysPwriteHandler&&) = delete;
+    SysPwrite64Handler() = default;
+    ~SysPwrite64Handler() = default;
+    SysPwrite64Handler(const SysPwrite64Handler&) = delete;
+    SysPwrite64Handler& operator=(const SysPwrite64Handler&) = delete;
+    SysPwrite64Handler(SysPwrite64Handler&&) = delete;
+    SysPwrite64Handler& operator=(SysPwrite64Handler&&) = delete;
 
 public:
     static std::uint64_t handle(SyscallHandler::Context context,
@@ -1209,7 +1209,7 @@ public:
         std::uint64_t offset = file->offset();
         std::array<std::uint64_t, 6> new_args{args[0], args[1], args[2],
                                               offset};
-        auto ret = SysPreadHandler::handle(context, new_args);
+        auto ret = SysPread64Handler::handle(context, new_args);
         if (static_cast<std::int64_t>(ret) < 0) {
             return ret;
         }
@@ -1250,7 +1250,7 @@ public:
         std::uint64_t offset = file->offset();
         std::array<std::uint64_t, 6> new_args{args[0], args[1], args[2],
                                               offset};
-        auto ret = SysPwriteHandler::handle(context, new_args);
+        auto ret = SysPwrite64Handler::handle(context, new_args);
         if (static_cast<std::int64_t>(ret) < 0) {
             return ret;
         }
@@ -1414,10 +1414,10 @@ std::uint64_t SyscallHandler::dispatch(Context context,
             ret = SysWritevHandler::handle(context, args);
             break;
         case SYS_pread64:
-            ret = SysPreadHandler::handle(context, args);
+            ret = SysPread64Handler::handle(context, args);
             break;
         case SYS_pwrite64:
-            ret = SysPwriteHandler::handle(context, args);
+            ret = SysPwrite64Handler::handle(context, args);
             break;
         default:
             ret = 0;  // Pretend that we have handled it.
