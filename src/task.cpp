@@ -72,6 +72,11 @@ outcome::result<void> Scheduler::start_schedule(
     while (true) {
         uc_err err;
 
+        // Check request stop.
+        if (this->request_stop_) {
+            break;
+        }
+
         // Check timeout.
         if (std::chrono::steady_clock::now() >= this->end_time_) {
             break;
@@ -167,6 +172,8 @@ outcome::result<void> Scheduler::start_schedule(
 
     return outcome::success();
 }
+
+void Scheduler::stop_schedule() { this->request_stop_ = true; }
 
 bool Scheduler::tlb_fill_callback(uc_engine *uc, uint64_t vaddr,
                                   uc_mem_type type, uc_tlb_entry *result,

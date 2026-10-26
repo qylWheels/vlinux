@@ -138,6 +138,7 @@ public:
     std::shared_ptr<Task> current_task();
     outcome::result<void> start_schedule(std::chrono::milliseconds timeout,
                                          std::chrono::milliseconds interval);
+    void stop_schedule();
 
 public:
     enum class Status { Stopped, Running };
@@ -156,6 +157,7 @@ private:
     std::chrono::time_point<std::chrono::steady_clock> end_time_;
 
     // Task-related fields.
+    bool request_stop_ = false;
     std::shared_ptr<Task> current_task_;
     std::deque<std::shared_ptr<Task>> ready_task_queue_;  // Ready queue.
     std::set<std::shared_ptr<Task>>

@@ -11,6 +11,7 @@
 #include <elfio/elfio.hpp>
 #include <format>
 #include <fstream>
+#include <functional>
 #include <limits>
 #include <map>
 #include <memory>
@@ -44,6 +45,25 @@ public:
         if (err != UC_ERR_OK) {
             throw std::runtime_error(
                 std::format("uc_ctl_tlb_mode failed: {}", uc_strerror(err)));
+        }
+
+        // Add instruction hook.
+        err = ::uc_hook_add(this->uc_, &this->instr_hook_, UC_HOOK_CODE,
+                            reinterpret_cast<void*>(instr_hook_callback), this,
+                            1, 0);
+        if (err != UC_ERR_OK) {
+            throw std::runtime_error(std::format(
+                "Add instruction hook failed: {}", uc_strerror(err)));
+        }
+
+        // Add syscall hook.
+        err = uc_hook_add(this->uc_, &this->syscall_hook_, UC_HOOK_INSN,
+                          reinterpret_cast<void*>(syscall_hook_callback), this,
+                          0, std::numeric_limits<std::uint64_t>::max(),
+                          UC_X86_INS_SYSCALL);
+        if (err != UC_ERR_OK) {
+            throw std::runtime_error(
+                std::format("Add syscall hook failed: {}", uc_strerror(err)));
         }
 
         this->scheduler_ = std::make_shared<Scheduler>(this->uc_);
@@ -296,6 +316,18 @@ public:
             {static_cast<uint32_t>(syscall_number), std::to_array(args), ret});
     }
 
+    static void instr_hook_callback(uc_engine* uc, uint64_t address,
+                                    uint32_t size, void* user_data) {
+        Impl* self = reinterpret_cast<Impl*>(user_data);
+        uc_err err;
+
+        // Dispatch.
+        auto task = self->scheduler_->current_task();
+        for (auto& hook : self->instr_hooks_) {
+            hook(address);
+        }
+    }
+
 public:
     std::uint64_t entrypoint_;
 
@@ -317,8 +349,12 @@ public:
     std::set<std::shared_ptr<ISuperBlock>> super_blocks_;
     MountInfo mount_info_;
 
+    // Instruction hook fields.
+    std::vector<std::function<void(std::uint64_t addr)>> instr_hooks_;
+
     uc_engine* uc_;
     uc_hook syscall_hook_;
+    uc_hook instr_hook_;
     std::shared_ptr<Task> curr_task_;
 };
 
@@ -479,17 +515,6 @@ outcome::result<std::shared_ptr<Task>> VM::load(
 
 outcome::result<VM::Result> VM::run(std::chrono::milliseconds timeout,
                                     std::chrono::milliseconds sched_interval) {
-    uc_err err;
-
-    // Add syscall hook.
-    err = uc_hook_add(
-        this->impl_->uc_, &this->impl_->syscall_hook_, UC_HOOK_INSN,
-        reinterpret_cast<void*>(Impl::syscall_hook_callback), this->impl_.get(),
-        0, std::numeric_limits<std::uint64_t>::max(), UC_X86_INS_SYSCALL);
-    if (err != UC_ERR_OK) {
-        return make_error_code(err);
-    }
-
     // Set state to ready.
     this->impl_->curr_task_->state = Task::State::Ready;
 
@@ -505,6 +530,8 @@ outcome::result<VM::Result> VM::run(std::chrono::milliseconds timeout,
     return outcome::success(result);
 }
 
+void VM::pause() { this->impl_->scheduler_->stop_schedule(); }
+
 outcome::result<void> VM::add_syscall_hook(
     std::function<void(std::uint64_t syscall_id,
                        std::array<std::uint64_t, 6> args, std::uint64_t ret)>
@@ -513,6 +540,65 @@ outcome::result<void> VM::add_syscall_hook(
     return outcome::success();
 }
 
+outcome::result<void> VM::add_instr_hook(
+    std::function<void(std::uint64_t addr)> hook) {
+    this->impl_->instr_hooks_.push_back(hook);
+    return outcome::success();
+}
+
 // Observability.
 Scheduler& VM::get_scheduler() { return *this->impl_->scheduler_; }
+
+outcome::result<VM::Result> VM::get_result() const {
+    Result result;
+    for (auto task : this->impl_->tasks_) {
+        result.behav_of_tasks_[task] = task->syscalls;
+    }
+    return result;
+}
+
+std::uint64_t VM::get_entry_point() const { return this->impl_->entrypoint_; }
+
+outcome::result<std::uint64_t> VM::read_reg(Register reg) const {
+    uc_err err;
+    std::uint64_t value;
+    int uc_reg = reg == Register::RAX      ? UC_X86_REG_RAX
+                 : reg == Register::RBX    ? UC_X86_REG_RBX
+                 : reg == Register::RCX    ? UC_X86_REG_RCX
+                 : reg == Register::RDX    ? UC_X86_REG_RDX
+                 : reg == Register::R8     ? UC_X86_REG_R8
+                 : reg == Register::R9     ? UC_X86_REG_R9
+                 : reg == Register::R10    ? UC_X86_REG_R10
+                 : reg == Register::R11    ? UC_X86_REG_R11
+                 : reg == Register::R12    ? UC_X86_REG_R12
+                 : reg == Register::R13    ? UC_X86_REG_R13
+                 : reg == Register::R14    ? UC_X86_REG_R14
+                 : reg == Register::R15    ? UC_X86_REG_R15
+                 : reg == Register::RSI    ? UC_X86_REG_RSI
+                 : reg == Register::RDI    ? UC_X86_REG_RDI
+                 : reg == Register::RBP    ? UC_X86_REG_RBP
+                 : reg == Register::RSP    ? UC_X86_REG_RSP
+                 : reg == Register::RFLAGS ? UC_X86_REG_RFLAGS
+                 : reg == Register::RIP    ? UC_X86_REG_RIP
+                                           : -1;
+    if (uc_reg == -1) return std::errc::invalid_argument;
+    err = ::uc_reg_read(this->impl_->uc_, uc_reg, &value);
+    if (err != UC_ERR_OK) return make_error_code(err);
+    return value;
+}
+
+outcome::result<std::vector<std::uint8_t>> VM::read_vmem(
+    std::shared_ptr<Task> task, std::uint64_t vaddr, std::size_t size) const {
+    // Get physical address.
+    auto paddr_opt = task->page_table->va_to_pa(vaddr);
+    if (!paddr_opt) return std::errc::bad_address;
+
+    // Read memory.
+    std::vector<std::uint8_t> mem(size);
+    uc_err err =
+        ::uc_mem_read(this->impl_->uc_, paddr_opt.value(), mem.data(), size);
+    if (err != UC_ERR_OK) return make_error_code(err);
+
+    return mem;
+}
 }  // namespace vlinux

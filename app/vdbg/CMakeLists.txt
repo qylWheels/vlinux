@@ -1,0 +1,19 @@
+# PkgConfig.
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(readline REQUIRED IMPORTED_TARGET readline)
+
+find_package(CLI11 CONFIG REQUIRED)
+find_package(fmt CONFIG REQUIRED)
+find_package(ftxui CONFIG REQUIRED)
+find_package(capstone CONFIG REQUIRED)
+
+add_executable(vdbg main.cpp syscall_parse.cpp repl.cpp)
+target_link_libraries(vdbg PRIVATE vlinux)
+target_link_libraries(
+    vdbg
+    PRIVATE
+    CLI11::CLI11 fmt::fmt outcome::hl
+    ftxui::dom ftxui::ftxui ftxui::screen ftxui::component
+    capstone::capstone PkgConfig::readline
+)
+target_include_directories(vdbg PRIVATE ${CMAKE_SOURCE_DIR}/include)
