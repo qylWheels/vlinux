@@ -699,6 +699,117 @@ TEST_CASE("Test VM", "[vm]") {
         REQUIRE(exit_status == 0);
     }
 
+    SECTION("Test read() and write()") {
+        auto task =
+            vm.load(build_path / "tests/syscall_tests/test_read_write").value();
+
+        int fd = -1, exit_status = -1;
+        auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                              std::array<std::uint64_t, 6> args,
+                                              std::uint64_t ret) {
+            if (syscall_id != SYS_open && syscall_id != SYS_read &&
+                syscall_id != SYS_write && syscall_id != SYS_exit) {
+                return;
+            }
+
+            switch (syscall_id) {
+                case SYS_open:
+                    fd = static_cast<int>(ret);
+                    break;
+                case SYS_read:
+                case SYS_write:
+                    break;
+                case SYS_exit:
+                    exit_status = static_cast<int>(args[0]);
+                    break;
+                default:
+                    break;
+            }
+        });
+        REQUIRE(result.has_value());
+
+        REQUIRE(vm.run(std::chrono::milliseconds(100),
+                       std::chrono::milliseconds(10))
+                    .has_value());
+
+        REQUIRE(fd >= 0);
+        REQUIRE(exit_status == 0);
+    }
+
+    SECTION("Test pread() and pwrite()") {
+        auto task =
+            vm.load(build_path / "tests/syscall_tests/test_pread_pwrite").value();
+
+        int fd = -1, exit_status = -1;
+        auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                              std::array<std::uint64_t, 6> args,
+                                              std::uint64_t ret) {
+            if (syscall_id != SYS_open && syscall_id != SYS_pread64 &&
+                syscall_id != SYS_pwrite64 && syscall_id != SYS_exit) {
+                return;
+            }
+
+            switch (syscall_id) {
+                case SYS_open:
+                    fd = static_cast<int>(ret);
+                    break;
+                case SYS_pread64:
+                case SYS_pwrite64:
+                    break;
+                case SYS_exit:
+                    exit_status = static_cast<int>(args[0]);
+                    break;
+                default:
+                    break;
+            }
+        });
+        REQUIRE(result.has_value());
+
+        REQUIRE(vm.run(std::chrono::milliseconds(100),
+                       std::chrono::milliseconds(10))
+                    .has_value());
+
+        REQUIRE(fd >= 0);
+        REQUIRE(exit_status == 0);
+    }
+
+    SECTION("Test readv() and writev()") {
+        auto task =
+            vm.load(build_path / "tests/syscall_tests/test_readv_writev").value();
+
+        int fd = -1, exit_status = -1;
+        auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                              std::array<std::uint64_t, 6> args,
+                                              std::uint64_t ret) {
+            if (syscall_id != SYS_open && syscall_id != SYS_readv &&
+                syscall_id != SYS_writev && syscall_id != SYS_exit) {
+                return;
+            }
+
+            switch (syscall_id) {
+                case SYS_open:
+                    fd = static_cast<int>(ret);
+                    break;
+                case SYS_readv:
+                case SYS_writev:
+                    break;
+                case SYS_exit:
+                    exit_status = static_cast<int>(args[0]);
+                    break;
+                default:
+                    break;
+            }
+        });
+        REQUIRE(result.has_value());
+
+        REQUIRE(vm.run(std::chrono::milliseconds(100),
+                       std::chrono::milliseconds(10))
+                    .has_value());
+
+        REQUIRE(fd >= 0);
+        REQUIRE(exit_status == 0);
+    }
+
     SECTION("Test close()") {
         auto task =
             vm.load(build_path / "tests/syscall_tests/test_close").value();
