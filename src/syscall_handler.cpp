@@ -20,6 +20,7 @@
 #include <outcome/try.hpp>
 #include <ranges>
 #include <string>
+#include <string_view>
 #include <system_error>
 #include <variant>
 #include <vector>
@@ -44,6 +45,68 @@ std::function<std::int64_t(std::uint64_t, std::uint64_t, std::uint64_t)>
 namespace helpers {
 bool check_fd(Task& task, int fd) {
     return fd >= 0 && fd < task.files.size() && task.files[fd].has_value();
+}
+
+std::variant<std::shared_ptr<IINode>, int> retrieve_parent_of_path(
+    Task& task, MountInfo& mount_info, int dirfd, std::string_view pathname) {
+    // Only check dirfd when pathname is relative.
+    if (pathname[0] != '/') {
+        // Check dirfd.
+        if ((dirfd != AT_FDCWD) && (dirfd < 0 || dirfd >= task.files.size()))
+            return -EBADF;
+    }
+
+    // Get inode:
+    // 1. referred by dirfd if pathname is relative.
+    // 2. referred by "/" if pathname is absolute.
+    // 3. referred by AT_FDCWD if pathname is relative.
+    std::optional<std::shared_ptr<File>> cwd_file_opt = std::nullopt;
+    std::optional<std::shared_ptr<IINode>> cwd_inode_opt = std::nullopt;
+    if (pathname[0] != '/') {  // Relative pathname.
+        if (dirfd == AT_FDCWD) {
+            cwd_file_opt = task.cwd;
+            cwd_inode_opt = task.cwd->inode();
+        } else {
+            cwd_file_opt = task.files[dirfd];
+            if (!cwd_file_opt.has_value()) {
+                return -EBADF;
+            }
+            cwd_inode_opt = cwd_file_opt.value()->inode();
+        }
+    } else {
+        auto root_inode = mount_info.curr_mount_of("/");
+        assert(root_inode.has_value());
+        cwd_inode_opt = root_inode.value();
+    }
+    assert(cwd_inode_opt.has_value());
+    auto cwd_inode = cwd_inode_opt.value();
+    if (cwd_inode->type() != IINode::Type::Directory) {
+        return -ENOTDIR;
+    }
+
+    // Lookup parent inode of target file.
+    std::filesystem::path path(pathname);
+    std::filesystem::path curr_path =
+        pathname[0] == '/' ? "" : cwd_file_opt.value()->path();
+    auto curr_inode = cwd_inode;
+    for (auto component : path.parent_path()) {
+        curr_path /= component;
+        auto mount_inode = mount_info.curr_mount_of(curr_path);
+        if (mount_inode.has_value()) {
+            curr_inode = mount_inode.value();
+        } else {
+            auto inode_result = curr_inode->lookup(component);
+            if (!inode_result.has_value()) {
+                return -ENOENT;
+            }
+            curr_inode = inode_result.value();
+        }
+        if (curr_inode->type() != IINode::Type::Directory) {
+            return -ENOTDIR;
+        }
+    }
+
+    return curr_inode;
 }
 }  // namespace helpers
 
