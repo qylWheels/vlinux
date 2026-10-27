@@ -732,8 +732,7 @@ public:
         // Only check dirfd when pathname is relative.
         if (pathname[0] != '/') {
             // Check dirfd.
-            if ((dirfd != AT_FDCWD) &&
-                (dirfd < 0 || dirfd >= task->files.size()))
+            if ((dirfd != AT_FDCWD) && (!helpers::check_fd(*task, dirfd)))
                 return -EBADF;
         }
 
