@@ -75,8 +75,8 @@ int main(int argc, char* argv[]) {
         if (!ret) {
             fmt::println(
                 stderr,
-                "Failed to add syscall hook for listing syscalls: {} ({})", ret,
-                ret.error().message());
+                "Failed to add syscall hook for listing syscalls: {} ({})",
+                ret.error().value(), ret.error().message());
             return -ret.error().value();
         }
     }
@@ -89,7 +89,7 @@ int main(int argc, char* argv[]) {
             fmt::println(stderr,
                          "Failed to add syscall hook to show summary of "
                          "syscalls: {} ({})",
-                         ret, ret.error().message());
+                         ret.error().value(), ret.error().message());
             return -ret.error().value();
         }
     }
@@ -103,7 +103,7 @@ int main(int argc, char* argv[]) {
             fmt::println(stderr,
                          "Failed to add instruction hook to show summary of "
                          "instructions: {} ({})",
-                         ret, ret.error().message());
+                         ret.error().value(), ret.error().message());
             return -ret.error().value();
         }
     }
@@ -152,8 +152,8 @@ int main(int argc, char* argv[]) {
         auto ret = vm.run(std::chrono::milliseconds(5000),
                           std::chrono::milliseconds(100));
         if (!ret) {
-            fmt::println(stderr, "Failed to run the program: {} ({})", ret,
-                         ret.error().message());
+            fmt::println(stderr, "Failed to run the program: {} ({})",
+                         ret.error().value(), ret.error().message());
             return -ret.error().value();
         }
     }
