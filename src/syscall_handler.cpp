@@ -49,13 +49,6 @@ bool check_fd(Task& task, int fd) {
 
 std::variant<std::shared_ptr<IINode>, int> retrieve_parent_of_path(
     Task& task, MountInfo& mount_info, int dirfd, std::string_view pathname) {
-    // Only check dirfd when pathname is relative.
-    if (pathname[0] != '/') {
-        // Check dirfd.
-        if ((dirfd != AT_FDCWD) && (dirfd < 0 || dirfd >= task.files.size()))
-            return -EBADF;
-    }
-
     // Get inode:
     // 1. referred by dirfd if pathname is relative.
     // 2. referred by "/" if pathname is absolute.
