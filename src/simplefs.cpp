@@ -21,7 +21,6 @@ public:
 
 public:
     std::uint64_t id_;
-    std::uint64_t block_count_;
     Type type_;
     std::uint64_t permissions_;
     std::chrono::time_point<std::chrono::system_clock> atime_;
@@ -40,7 +39,23 @@ INode::~INode() = default;
 std::uint64_t INode::id() const { return this->impl_->id_; }
 
 // Size.
-std::uint64_t INode::block_count() const { return this->impl_->block_count_; }
+std::uint64_t INode::size() const {
+    if (std::holds_alternative<INode::NormalFileContent>(this->impl_->data_)) {
+        return std::get<INode::NormalFileContent>(this->impl_->data_).size();
+    }
+    if (std::holds_alternative<INode::DirectoryFileContent>(
+            this->impl_->data_)) {
+        auto diritem_count =
+            std::get<INode::DirectoryFileContent>(this->impl_->data_).size();
+        return diritem_count * sizeof(DirItem);
+    }
+    return 0;
+}
+
+std::uint64_t INode::block_count() const {
+    auto blk_sz = this->impl_->super_block_.lock()->block_size();
+    return (this->size() + blk_sz - 1) / blk_sz;
+}
 
 // Type and permissions.
 IINode::Type INode::type() const { return this->impl_->type_; }
@@ -138,7 +153,6 @@ outcome::result<std::shared_ptr<IINode>> SuperBlock::alloc_inode(
     std::shared_ptr<ISuperBlock> sb, IINode::Type type) {
     auto inode = std::make_shared<INode>();
     inode->impl_->id_ = this->impl_->next_inode_id_++;
-    inode->impl_->block_count_ = 0;
     inode->impl_->type_ = type;
     inode->impl_->permissions_ = 0;
     inode->impl_->atime_ = std::chrono::system_clock::now();

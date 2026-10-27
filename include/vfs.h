@@ -50,7 +50,8 @@ public:
     virtual std::uint64_t id() const = 0;
 
     // Size.
-    virtual std::uint64_t block_count() const = 0;
+    virtual std::uint64_t size() const = 0;         // File size in bytes.
+    virtual std::uint64_t block_count() const = 0;  // Number of blocks used.
 
     // Type and permissions.
     virtual Type type() const = 0;
@@ -203,13 +204,15 @@ public:
     }
     std::filesystem::path path() const { return this->path_; }
 
-    outcome::result<std::size_t> iov_read(std::vector<IoVector> iov);
-    outcome::result<std::size_t> iov_write(std::vector<IoVector> iov);
+    outcome::result<std::size_t> preadv(std::vector<IoVector> iov,
+                                        std::int64_t offset);
+    outcome::result<std::size_t> pwritev(std::vector<IoVector> iov,
+                                         std::int64_t offset);
 
 private:
     uc_engine* uc_;
     std::uint64_t refcount_ = 0;
-    std::uint64_t flags_ = 0;
+    std::uint64_t flags_ = 0;  // Permissions.
     std::uint64_t offset_ = 0;
     std::shared_ptr<IINode> inode_;
     std::filesystem::path path_;

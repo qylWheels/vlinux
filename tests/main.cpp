@@ -204,24 +204,20 @@ TEST_CASE("Test VFS", "[vfs]") {
         REQUIRE(::uc_mem_map_ptr(uc, 0x1000, 4096, UC_PROT_READ, data) ==
                 UC_ERR_OK);
         vlinux::IoVector iov{0x1000, len};
-        auto ret = file->iov_write({iov});
+        auto ret = file->pwritev({iov}, 0);
         REQUIRE(ret.has_value());
         REQUIRE(ret.value() == len);
-        REQUIRE(file->offset() == len);
+        REQUIRE(file->offset() == 0);
 
         // Test read.
         char data_read[4096] = {0};
         REQUIRE(::uc_mem_map_ptr(uc, 0x8000, 4096, UC_PROT_READ, data_read) ==
                 UC_ERR_OK);
         vlinux::IoVector iov_read{0x8000, 4096};
-        ret = file->iov_read({iov_read});
-        REQUIRE(ret.has_value());
-        REQUIRE(ret.value() == 0);
-        REQUIRE(file->set_offset(0).has_value());
-        REQUIRE(file->offset() == 0);
-        ret = file->iov_read({iov_read});
+        ret = file->preadv({iov_read}, 0);
         REQUIRE(ret.has_value());
         REQUIRE(ret.value() == len);
+        REQUIRE(file->offset() == 0);
         REQUIRE(std::strcmp(data_read, data) == 0);
 
         // Release resources.
@@ -631,7 +627,8 @@ TEST_CASE("Test VM", "[vm]") {
         auto task =
             vm.load(build_path / "tests/syscall_tests/test_openat").value();
 
-        std::optional<int> rootfd = std::nullopt, pathfd = std::nullopt;
+        std::optional<int> rootfd = std::nullopt, pathfd = std::nullopt,
+                           pathfd2 = std::nullopt;
         auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
                                               std::array<std::uint64_t, 6> args,
                                               std::uint64_t ret) {
@@ -645,6 +642,8 @@ TEST_CASE("Test VM", "[vm]") {
                 rootfd = static_cast<int>(ret);
             } else if (!pathfd.has_value()) {
                 pathfd = static_cast<int>(ret);
+            } else if (!pathfd2.has_value()) {
+                pathfd2 = static_cast<int>(ret);
             } else {
                 // Ignore.
             }
@@ -657,6 +656,217 @@ TEST_CASE("Test VM", "[vm]") {
 
         REQUIRE(rootfd.has_value());
         REQUIRE(pathfd.has_value());
+        REQUIRE(pathfd2.has_value());
         REQUIRE(rootfd.value() < pathfd.value());
+        REQUIRE(pathfd.value() < pathfd2.value());
+    }
+
+    SECTION("Test preadv() and pwritev()") {
+        auto task =
+            vm.load(build_path / "tests/syscall_tests/test_preadv_pwritev")
+                .value();
+
+        int fd = -1, exit_status = -1;
+        auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                              std::array<std::uint64_t, 6> args,
+                                              std::uint64_t ret) {
+            if (syscall_id != SYS_open && syscall_id != SYS_preadv &&
+                syscall_id != SYS_pwritev && syscall_id != SYS_exit) {
+                return;
+            }
+
+            switch (syscall_id) {
+                case SYS_open:
+                    fd = static_cast<int>(ret);
+                    break;
+                case SYS_preadv:
+                case SYS_pwritev:
+                    break;
+                case SYS_exit:
+                    exit_status = static_cast<int>(args[0]);
+                    break;
+                default:
+                    break;
+            }
+        });
+        REQUIRE(result.has_value());
+
+        REQUIRE(vm.run(std::chrono::milliseconds(100),
+                       std::chrono::milliseconds(10))
+                    .has_value());
+
+        REQUIRE(fd >= 0);
+        REQUIRE(exit_status == 0);
+    }
+
+    SECTION("Test read() and write()") {
+        auto task =
+            vm.load(build_path / "tests/syscall_tests/test_read_write").value();
+
+        int fd = -1, exit_status = -1;
+        auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                              std::array<std::uint64_t, 6> args,
+                                              std::uint64_t ret) {
+            if (syscall_id != SYS_open && syscall_id != SYS_read &&
+                syscall_id != SYS_write && syscall_id != SYS_exit) {
+                return;
+            }
+
+            switch (syscall_id) {
+                case SYS_open:
+                    fd = static_cast<int>(ret);
+                    break;
+                case SYS_read:
+                case SYS_write:
+                    break;
+                case SYS_exit:
+                    exit_status = static_cast<int>(args[0]);
+                    break;
+                default:
+                    break;
+            }
+        });
+        REQUIRE(result.has_value());
+
+        REQUIRE(vm.run(std::chrono::milliseconds(100),
+                       std::chrono::milliseconds(10))
+                    .has_value());
+
+        REQUIRE(fd >= 0);
+        REQUIRE(exit_status == 0);
+    }
+
+    SECTION("Test pread() and pwrite()") {
+        auto task =
+            vm.load(build_path / "tests/syscall_tests/test_pread_pwrite").value();
+
+        int fd = -1, exit_status = -1;
+        auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                              std::array<std::uint64_t, 6> args,
+                                              std::uint64_t ret) {
+            if (syscall_id != SYS_open && syscall_id != SYS_pread64 &&
+                syscall_id != SYS_pwrite64 && syscall_id != SYS_exit) {
+                return;
+            }
+
+            switch (syscall_id) {
+                case SYS_open:
+                    fd = static_cast<int>(ret);
+                    break;
+                case SYS_pread64:
+                case SYS_pwrite64:
+                    break;
+                case SYS_exit:
+                    exit_status = static_cast<int>(args[0]);
+                    break;
+                default:
+                    break;
+            }
+        });
+        REQUIRE(result.has_value());
+
+        REQUIRE(vm.run(std::chrono::milliseconds(100),
+                       std::chrono::milliseconds(10))
+                    .has_value());
+
+        REQUIRE(fd >= 0);
+        REQUIRE(exit_status == 0);
+    }
+
+    SECTION("Test readv() and writev()") {
+        auto task =
+            vm.load(build_path / "tests/syscall_tests/test_readv_writev").value();
+
+        int fd = -1, exit_status = -1;
+        auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                              std::array<std::uint64_t, 6> args,
+                                              std::uint64_t ret) {
+            if (syscall_id != SYS_open && syscall_id != SYS_readv &&
+                syscall_id != SYS_writev && syscall_id != SYS_exit) {
+                return;
+            }
+
+            switch (syscall_id) {
+                case SYS_open:
+                    fd = static_cast<int>(ret);
+                    break;
+                case SYS_readv:
+                case SYS_writev:
+                    break;
+                case SYS_exit:
+                    exit_status = static_cast<int>(args[0]);
+                    break;
+                default:
+                    break;
+            }
+        });
+        REQUIRE(result.has_value());
+
+        REQUIRE(vm.run(std::chrono::milliseconds(100),
+                       std::chrono::milliseconds(10))
+                    .has_value());
+
+        REQUIRE(fd >= 0);
+        REQUIRE(exit_status == 0);
+    }
+
+    SECTION("Test close()") {
+        auto task =
+            vm.load(build_path / "tests/syscall_tests/test_close").value();
+
+        int fd = -1;
+        int exit_status = -1;
+        auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                              std::array<std::uint64_t, 6> args,
+                                              std::uint64_t ret) {
+            if (syscall_id != SYS_open && syscall_id != SYS_exit) {
+                return;
+            }
+
+            if (syscall_id == SYS_open) {
+                fd = static_cast<int>(ret);
+                return;
+            }
+
+            if (syscall_id == SYS_exit) {
+                exit_status = static_cast<int>(args[0]);
+                return;
+            }
+        });
+        REQUIRE(result.has_value());
+
+        REQUIRE(vm.run(std::chrono::milliseconds(100),
+                       std::chrono::milliseconds(10))
+                    .has_value());
+
+        REQUIRE(fd >= 0);
+        REQUIRE(exit_status == 0);
+        REQUIRE(!task->files[fd].has_value());
+    }
+
+    SECTION("Test lseek()") {
+        auto task =
+            vm.load(build_path / "tests/syscall_tests/test_lseek").value();
+
+        int exit_status = -1;
+        auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                              std::array<std::uint64_t, 6> args,
+                                              std::uint64_t ret) {
+            if (syscall_id != SYS_exit) {
+                return;
+            }
+
+            if (syscall_id == SYS_exit) {
+                exit_status = static_cast<int>(args[0]);
+                return;
+            }
+        });
+        REQUIRE(result.has_value());
+
+        REQUIRE(vm.run(std::chrono::milliseconds(100),
+                       std::chrono::milliseconds(10))
+                    .has_value());
+
+        REQUIRE(exit_status == 0);
     }
 }

@@ -1,5 +1,6 @@
 #include "syscall_handler.h"
 
+#include <bits/types/struct_iovec.h>
 #include <fcntl.h>
 #include <linux/limits.h>
 #include <sys/mman.h>
@@ -17,9 +18,11 @@
 #include <optional>
 #include <outcome/result.hpp>
 #include <outcome/try.hpp>
+#include <ranges>
 #include <string>
 #include <system_error>
 #include <variant>
+#include <vector>
 
 #include "mm.h"
 #include "vfs.h"
@@ -507,6 +510,8 @@ public:
                 }
             }
         }
+        task->cwd = parent->cwd;
+        // TODO: Copy files from parent except files set O_CLOEXEC.
         task->syscalls = {};
 
         // Add task to scheduler. clone() runs inside the scheduling loop, so
@@ -665,7 +670,9 @@ public:
         // Only check dirfd when pathname is relative.
         if (pathname[0] != '/') {
             // Check dirfd.
-            if (dirfd < 0 || dirfd >= task->files.size()) return -EBADF;
+            if ((dirfd != AT_FDCWD) &&
+                (dirfd < 0 || dirfd >= task->files.size()))
+                return -EBADF;
         }
 
         // We DON'T need to check flags for now.
@@ -675,14 +682,20 @@ public:
         // Get inode:
         // 1. referred by dirfd if pathname is relative.
         // 2. referred by "/" if pathname is absolute.
+        // 3. referred by AT_FDCWD if pathname is relative.
         std::optional<std::shared_ptr<File>> cwd_file_opt = std::nullopt;
         std::optional<std::shared_ptr<IINode>> cwd_inode_opt = std::nullopt;
-        if (pathname[0] != '/') {
-            cwd_file_opt = task->files[dirfd];
-            if (!cwd_file_opt.has_value()) {
-                return -EBADF;
+        if (pathname[0] != '/') {  // Relative pathname.
+            if (dirfd == AT_FDCWD) {
+                cwd_file_opt = task->cwd;
+                cwd_inode_opt = task->cwd->inode();
+            } else {
+                cwd_file_opt = task->files[dirfd];
+                if (!cwd_file_opt.has_value()) {
+                    return -EBADF;
+                }
+                cwd_inode_opt = cwd_file_opt.value()->inode();
             }
-            cwd_inode_opt = cwd_file_opt.value()->inode();
         } else {
             auto root_inode = context.mount_info->curr_mount_of("/");
             assert(root_inode.has_value());
@@ -690,6 +703,9 @@ public:
         }
         assert(cwd_inode_opt.has_value());
         auto cwd_inode = cwd_inode_opt.value();
+        if (cwd_inode->type() != IINode::Type::Directory) {
+            return -ENOTDIR;
+        }
 
         // Lookup parent inode of target file.
         std::filesystem::path path(pathname);
@@ -708,6 +724,9 @@ public:
                 }
                 curr_inode = inode_result.value();
             }
+            if (curr_inode->type() != IINode::Type::Directory) {
+                return -ENOTDIR;
+            }
         }
 
         // Plain open.
@@ -722,8 +741,16 @@ public:
             } else {
                 inode_result = curr_inode->lookup(path.filename());
             }
+
+            // Check inode_result.
             if (!inode_result.has_value()) {
                 return -ENOENT;
+            }
+
+            // Writing to a directory is not allowed.
+            if (inode_result.value()->type() == IINode::Type::Directory &&
+                ((flags & O_WRONLY) || (flags & O_RDWR))) {
+                return -EISDIR;
             }
 
             auto inode = inode_result.value();
@@ -750,6 +777,12 @@ public:
         // Create and open file.
         auto create_and_open =
             [&]() -> std::variant<int, std::shared_ptr<File>> {
+            // It is an error if `pathname` is exist and O_CREAT is set.
+            auto peek_inode_opt = curr_inode->lookup(path.filename());
+            if (peek_inode_opt.has_value()) {
+                return -EEXIST;
+            }
+
             auto sb = curr_inode->super_block();
             auto inode_result =
                 sb.lock()->alloc_inode(sb.lock(), IINode::Type::File);
@@ -809,8 +842,496 @@ public:
 public:
     static std::uint64_t handle(SyscallHandler::Context context,
                                 std::array<std::uint64_t, 6> args) {
-        std::array<std::uint64_t, 6> new_args{0, args[0], args[1], args[2]};
+        std::array<std::uint64_t, 6> new_args{
+            static_cast<std::uint64_t>(AT_FDCWD), args[0], args[1], args[2]};
         return SysOpenAtHandler::handle(context, new_args);
+    }
+};
+
+class SysCloseHandler {
+private:
+    SysCloseHandler() = default;
+    ~SysCloseHandler() = default;
+    SysCloseHandler(const SysCloseHandler&) = delete;
+    SysCloseHandler& operator=(const SysCloseHandler&) = delete;
+    SysCloseHandler(SysCloseHandler&&) = delete;
+    SysCloseHandler& operator=(SysCloseHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        int fd = static_cast<int>(args[0]);
+
+        auto task = context.scheduler->current_task();
+
+        // Check fd.
+        if (fd < 0 || fd >= task->files.size() ||
+            !task->files[fd].has_value()) {
+            return -EBADF;
+        }
+
+        // Decrement refcount.
+        if (!task->files[fd].value()->inode()->dec_mem_refcount()) {
+            return -EIO;
+        }
+        if (!task->files[fd].value()->put()) {
+            return -EIO;
+        }
+
+        // Close file.
+        task->files[fd] = std::nullopt;
+
+        return 0;
+    }
+};
+
+struct PreadvPwritevCommon {
+    enum class Type { Preadv, Pwritev };
+
+    static std::variant<std::vector<IoVector>, int> pre_work(
+        SyscallHandler::Context context, int fd, std::uint64_t iov_addr,
+        int iovcnt, std::uint32_t pos_low, std::uint32_t pos_high, Type type) {
+        auto task = context.scheduler->current_task();
+
+        // Check fd.
+        if (fd < 0 || fd >= task->files.size() ||
+            !task->files[fd].has_value()) {
+            return -EBADF;
+        }
+
+        // Check permission.
+        if (type == Type::Preadv &&
+            ((task->files[fd].value()->flags() & O_ACCMODE) == O_WRONLY)) {
+            return -EBADF;
+        }
+        if (type == Type::Pwritev &&
+            ((task->files[fd].value()->flags() & O_ACCMODE) == O_RDONLY)) {
+            return -EBADF;
+        }
+
+        // Check iovcnt.
+        if (iovcnt < 0) return -EINVAL;
+
+        // Read and check iovs.
+        std::vector<iovec> iovs(iovcnt);
+        for (int i = 0; i < iovcnt; ++i) {
+            auto err = ::uc_vmem_read(context.uc, iov_addr + i * sizeof(iovec),
+                                      UC_PROT_READ, &iovs[i], sizeof(iovec));
+            if (err != 0) {
+                return -EFAULT;
+            }
+        }
+
+        // Transform linux iov to our iov.
+        auto transform_view =
+            iovs | std::views::transform([](const auto& iov) {
+                return IoVector{reinterpret_cast<std::uint64_t>(iov.iov_base),
+                                iov.iov_len};
+            });
+        std::vector<IoVector> iovs2(transform_view.begin(),
+                                    transform_view.end());
+
+        return iovs2;
+    }
+};
+
+class SysPreadvHandler {
+private:
+    SysPreadvHandler() = default;
+    ~SysPreadvHandler() = default;
+    SysPreadvHandler(const SysPreadvHandler&) = delete;
+    SysPreadvHandler& operator=(const SysPreadvHandler&) = delete;
+    SysPreadvHandler(SysPreadvHandler&&) = delete;
+    SysPreadvHandler& operator=(SysPreadvHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        int fd = static_cast<int>(args[0]);
+        std::uint64_t iov_addr = args[1];
+        int iovcnt = static_cast<int>(args[2]);
+        std::uint32_t pos_low = static_cast<std::uint32_t>(args[3]);
+        std::uint32_t pos_high = static_cast<std::uint32_t>(args[4]);
+
+        auto task = context.scheduler->current_task();
+
+        // Pre-work.
+        auto pre_work_result = PreadvPwritevCommon::pre_work(
+            context, fd, iov_addr, iovcnt, pos_low, pos_high,
+            PreadvPwritevCommon::Type::Preadv);
+        if (std::holds_alternative<int>(pre_work_result)) {
+            return std::get<int>(pre_work_result);
+        }
+        auto iovs2 = std::get<std::vector<IoVector>>(pre_work_result);
+
+        // Read from file.
+        auto file = task->files[fd].value();
+        std::uint64_t offset = static_cast<std::uint64_t>(pos_low) |
+                               (static_cast<std::uint64_t>(pos_high) << 32);
+        auto ret = file->preadv(iovs2, offset);
+        return ret ? ret.value() : -ret.error().value();
+    }
+};
+
+class SysPwritevHandler {
+private:
+    SysPwritevHandler() = default;
+    ~SysPwritevHandler() = default;
+    SysPwritevHandler(const SysPwritevHandler&) = delete;
+    SysPwritevHandler& operator=(const SysPwritevHandler&) = delete;
+    SysPwritevHandler(SysPwritevHandler&&) = delete;
+    SysPwritevHandler& operator=(SysPwritevHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        // Get args.
+        int fd = static_cast<int>(args[0]);
+        std::uint64_t iov_addr = args[1];
+        int iovcnt = static_cast<int>(args[2]);
+        std::uint32_t pos_low = static_cast<std::uint32_t>(args[3]);
+        std::uint32_t pos_high = static_cast<std::uint32_t>(args[4]);
+
+        auto task = context.scheduler->current_task();
+
+        // Pre-work.
+        auto pre_work_result = PreadvPwritevCommon::pre_work(
+            context, fd, iov_addr, iovcnt, pos_low, pos_high,
+            PreadvPwritevCommon::Type::Pwritev);
+        if (std::holds_alternative<int>(pre_work_result)) {
+            return std::get<int>(pre_work_result);
+        }
+        auto iovs2 = std::get<std::vector<IoVector>>(pre_work_result);
+
+        // Write to file.
+        auto file = task->files[fd].value();
+        std::uint64_t offset = static_cast<std::uint64_t>(pos_low) |
+                               (static_cast<std::uint64_t>(pos_high) << 32);
+        auto ret = file->pwritev(iovs2, offset);
+        return ret ? ret.value() : -ret.error().value();
+    }
+};
+
+class SysPread64Handler {
+private:
+    SysPread64Handler() = default;
+    ~SysPread64Handler() = default;
+    SysPread64Handler(const SysPread64Handler&) = delete;
+    SysPread64Handler& operator=(const SysPread64Handler&) = delete;
+    SysPread64Handler(SysPread64Handler&&) = delete;
+    SysPread64Handler& operator=(SysPread64Handler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        int fd = static_cast<int>(args[0]);
+        std::uint64_t buf = args[1];
+        std::uint64_t count = args[2];
+        std::int64_t offset = static_cast<std::int64_t>(args[3]);
+
+        auto task = context.scheduler->current_task();
+
+        // Check fd.
+        if (fd < 0 || fd >= task->files.size() ||
+            !task->files[fd].has_value()) {
+            return -EBADF;
+        }
+
+        // Check permission.
+        if ((task->files[fd].value()->flags() & O_ACCMODE) == O_WRONLY) {
+            return -EBADF;
+        }
+
+        // Check offset.
+        if (offset < 0) {
+            return -EINVAL;
+        }
+
+        // Read from file.
+        auto file = task->files[fd].value();
+        std::vector<IoVector> iov{{buf, count}};
+        auto ret = file->preadv(iov, offset);
+        return ret ? ret.value() : -ret.error().value();
+    }
+};
+
+class SysPwrite64Handler {
+private:
+    SysPwrite64Handler() = default;
+    ~SysPwrite64Handler() = default;
+    SysPwrite64Handler(const SysPwrite64Handler&) = delete;
+    SysPwrite64Handler& operator=(const SysPwrite64Handler&) = delete;
+    SysPwrite64Handler(SysPwrite64Handler&&) = delete;
+    SysPwrite64Handler& operator=(SysPwrite64Handler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        int fd = static_cast<int>(args[0]);
+        std::uint64_t buf = args[1];
+        std::uint64_t count = args[2];
+        std::int64_t offset = static_cast<std::int64_t>(args[3]);
+
+        auto task = context.scheduler->current_task();
+
+        // Check fd.
+        if (fd < 0 || fd >= task->files.size() ||
+            !task->files[fd].has_value()) {
+            return -EBADF;
+        }
+
+        // Check permission.
+        if ((task->files[fd].value()->flags() & O_ACCMODE) == O_RDONLY) {
+            return -EBADF;
+        }
+
+        // Check offset.
+        if (offset < 0) {
+            return -EINVAL;
+        }
+
+        // Write to file.
+        auto file = task->files[fd].value();
+        std::vector<IoVector> iov{{buf, count}};
+        auto ret = file->pwritev(iov, offset);
+        return ret ? ret.value() : -ret.error().value();
+    }
+};
+
+class SysReadvHandler {
+private:
+    SysReadvHandler() = default;
+    ~SysReadvHandler() = default;
+    SysReadvHandler(const SysReadvHandler&) = delete;
+    SysReadvHandler& operator=(const SysReadvHandler&) = delete;
+    SysReadvHandler(SysReadvHandler&&) = delete;
+    SysReadvHandler& operator=(SysReadvHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        int fd = static_cast<int>(args[0]);
+
+        auto task = context.scheduler->current_task();
+
+        // Check fd.
+        if (fd < 0 || fd >= task->files.size() ||
+            !task->files[fd].has_value()) {
+            return -EBADF;
+        }
+        auto file = task->files[fd].value();
+
+        // Read from the current file offset.
+        std::uint64_t offset = file->offset();
+        auto new_args = args;
+        new_args[3] = static_cast<std::uint32_t>(offset);
+        new_args[4] = static_cast<std::uint32_t>(offset >> 32);
+        auto ret = SysPreadvHandler::handle(context, new_args);
+        if (static_cast<std::int64_t>(ret) < 0) {
+            return ret;
+        }
+
+        // Advance the file offset.
+        auto result = file->set_offset(offset + ret);
+        if (!result) {
+            return -result.error().value();
+        }
+        return ret;
+    }
+};
+
+class SysWritevHandler {
+private:
+    SysWritevHandler() = default;
+    ~SysWritevHandler() = default;
+    SysWritevHandler(const SysWritevHandler&) = delete;
+    SysWritevHandler& operator=(const SysWritevHandler&) = delete;
+    SysWritevHandler(SysWritevHandler&&) = delete;
+    SysWritevHandler& operator=(SysWritevHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        int fd = static_cast<int>(args[0]);
+
+        auto task = context.scheduler->current_task();
+
+        // Check fd.
+        if (fd < 0 || fd >= task->files.size() ||
+            !task->files[fd].has_value()) {
+            return -EBADF;
+        }
+        auto file = task->files[fd].value();
+
+        // Write to the current file offset.
+        std::uint64_t offset = file->offset();
+        auto new_args = args;
+        new_args[3] = static_cast<std::uint32_t>(offset);
+        new_args[4] = static_cast<std::uint32_t>(offset >> 32);
+        auto ret = SysPwritevHandler::handle(context, new_args);
+        if (static_cast<std::int64_t>(ret) < 0) {
+            return ret;
+        }
+
+        // Advance the file offset.
+        auto result = file->set_offset(offset + ret);
+        if (!result) {
+            return -result.error().value();
+        }
+        return ret;
+    }
+};
+
+class SysReadHandler {
+private:
+    SysReadHandler() = default;
+    ~SysReadHandler() = default;
+    SysReadHandler(const SysReadHandler&) = delete;
+    SysReadHandler& operator=(const SysReadHandler&) = delete;
+    SysReadHandler(SysReadHandler&&) = delete;
+    SysReadHandler& operator=(SysReadHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        int fd = static_cast<int>(args[0]);
+
+        auto task = context.scheduler->current_task();
+
+        // Check fd.
+        if (fd < 0 || fd >= task->files.size() ||
+            !task->files[fd].has_value()) {
+            return -EBADF;
+        }
+        auto file = task->files[fd].value();
+
+        // Read from the current file offset.
+        std::uint64_t offset = file->offset();
+        std::array<std::uint64_t, 6> new_args{args[0], args[1], args[2],
+                                              offset};
+        auto ret = SysPread64Handler::handle(context, new_args);
+        if (static_cast<std::int64_t>(ret) < 0) {
+            return ret;
+        }
+
+        // Advance the file offset.
+        auto result = file->set_offset(offset + ret);
+        if (!result) {
+            return -result.error().value();
+        }
+        return ret;
+    }
+};
+
+class SysWriteHandler {
+private:
+    SysWriteHandler() = default;
+    ~SysWriteHandler() = default;
+    SysWriteHandler(const SysWriteHandler&) = delete;
+    SysWriteHandler& operator=(const SysWriteHandler&) = delete;
+    SysWriteHandler(SysWriteHandler&&) = delete;
+    SysWriteHandler& operator=(SysWriteHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        int fd = static_cast<int>(args[0]);
+
+        auto task = context.scheduler->current_task();
+
+        // Check fd.
+        if (fd < 0 || fd >= task->files.size() ||
+            !task->files[fd].has_value()) {
+            return -EBADF;
+        }
+        auto file = task->files[fd].value();
+
+        // Write to the current file offset.
+        std::uint64_t offset = file->offset();
+        std::array<std::uint64_t, 6> new_args{args[0], args[1], args[2],
+                                              offset};
+        auto ret = SysPwrite64Handler::handle(context, new_args);
+        if (static_cast<std::int64_t>(ret) < 0) {
+            return ret;
+        }
+
+        // Advance the file offset.
+        auto result = file->set_offset(offset + ret);
+        if (!result) {
+            return -result.error().value();
+        }
+        return ret;
+    }
+};
+
+class SysLseekHandler {
+private:
+    SysLseekHandler() = default;
+    ~SysLseekHandler() = default;
+    SysLseekHandler(const SysLseekHandler&) = delete;
+    SysLseekHandler& operator=(const SysLseekHandler&) = delete;
+    SysLseekHandler(SysLseekHandler&&) = delete;
+    SysLseekHandler& operator=(SysLseekHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        int fd = static_cast<int>(args[0]);
+        std::int64_t offset = static_cast<std::int64_t>(args[1]);
+        int whence = static_cast<int>(args[2]);
+
+        auto task = context.scheduler->current_task();
+
+        // Check fd.
+        if (fd < 0 || fd >= task->files.size() ||
+            !task->files[fd].has_value()) {
+            return -EBADF;
+        }
+
+        // Check whence.
+        if (whence < 0 || whence > 2) {
+            return -EINVAL;
+        }
+
+        // Calculate and check offset.
+        auto file = task->files[fd].value();
+        std::int64_t result_offset;
+        switch (whence) {
+            case SEEK_SET: {
+                if (offset < 0) {
+                    return -EINVAL;
+                }
+                result_offset = offset;
+                break;
+            }
+            case SEEK_CUR: {
+                auto curr_offset = static_cast<std::int64_t>(file->offset());
+                result_offset = curr_offset + offset;
+                if (result_offset < 0) {
+                    return -EINVAL;
+                }
+                break;
+            }
+            case SEEK_END: {
+                auto curr_offset =
+                    static_cast<std::int64_t>(file->inode()->size());
+                result_offset = curr_offset + offset;
+                if (result_offset < 0) {
+                    return -EINVAL;
+                }
+                break;
+            }
+            default:
+                std::abort();  // Unreachable.
+        }
+
+        // Set offset.
+        auto ret = file->set_offset(result_offset);
+        if (!ret) {
+            return -ret.error().value();
+        }
+
+        return result_offset;
     }
 };
 
@@ -868,8 +1389,38 @@ std::uint64_t SyscallHandler::dispatch(Context context,
         case SYS_openat:
             ret = SysOpenAtHandler::handle(context, args);
             break;
+        case SYS_close:
+            ret = SysCloseHandler::handle(context, args);
+            break;
+        case SYS_lseek:
+            ret = SysLseekHandler::handle(context, args);
+            break;
+        case SYS_preadv:
+            ret = SysPreadvHandler::handle(context, args);
+            break;
+        case SYS_pwritev:
+            ret = SysPwritevHandler::handle(context, args);
+            break;
+        case SYS_read:
+            ret = SysReadHandler::handle(context, args);
+            break;
+        case SYS_write:
+            ret = SysWriteHandler::handle(context, args);
+            break;
+        case SYS_readv:
+            ret = SysReadvHandler::handle(context, args);
+            break;
+        case SYS_writev:
+            ret = SysWritevHandler::handle(context, args);
+            break;
+        case SYS_pread64:
+            ret = SysPread64Handler::handle(context, args);
+            break;
+        case SYS_pwrite64:
+            ret = SysPwrite64Handler::handle(context, args);
+            break;
         default:
-            ret = -ENOSYS;
+            ret = 0;  // Pretend that we have handled it.
             break;
     }
 
