@@ -741,55 +741,14 @@ public:
 
         // TODO: Check mode (only for O_CREAT flag).
 
-        // Get inode:
-        // 1. referred by dirfd if pathname is relative.
-        // 2. referred by "/" if pathname is absolute.
-        // 3. referred by AT_FDCWD if pathname is relative.
-        std::optional<std::shared_ptr<File>> cwd_file_opt = std::nullopt;
-        std::optional<std::shared_ptr<IINode>> cwd_inode_opt = std::nullopt;
-        if (pathname[0] != '/') {  // Relative pathname.
-            if (dirfd == AT_FDCWD) {
-                cwd_file_opt = task->cwd;
-                cwd_inode_opt = task->cwd->inode();
-            } else {
-                cwd_file_opt = task->files[dirfd];
-                if (!cwd_file_opt.has_value()) {
-                    return -EBADF;
-                }
-                cwd_inode_opt = cwd_file_opt.value()->inode();
-            }
-        } else {
-            auto root_inode = context.mount_info->curr_mount_of("/");
-            assert(root_inode.has_value());
-            cwd_inode_opt = root_inode.value();
+        auto parent_inode_of_path_result = helpers::retrieve_parent_of_path(
+            *task, *context.mount_info, dirfd, pathname);
+        if (std::holds_alternative<int>(parent_inode_of_path_result)) {
+            return std::get<int>(parent_inode_of_path_result);
         }
-        assert(cwd_inode_opt.has_value());
-        auto cwd_inode = cwd_inode_opt.value();
-        if (cwd_inode->type() != IINode::Type::Directory) {
-            return -ENOTDIR;
-        }
-
-        // Lookup parent inode of target file.
-        std::filesystem::path path(pathname);
-        std::filesystem::path curr_path =
-            pathname[0] == '/' ? "" : cwd_file_opt.value()->path();
-        auto curr_inode = cwd_inode;
-        for (auto component : path.parent_path()) {
-            curr_path /= component;
-            auto mount_inode = context.mount_info->curr_mount_of(curr_path);
-            if (mount_inode.has_value()) {
-                curr_inode = mount_inode.value();
-            } else {
-                auto inode_result = curr_inode->lookup(component);
-                if (!inode_result.has_value()) {
-                    return -ENOENT;
-                }
-                curr_inode = inode_result.value();
-            }
-            if (curr_inode->type() != IINode::Type::Directory) {
-                return -ENOTDIR;
-            }
-        }
+        auto parent_inode_of_path =
+            std::get<std::shared_ptr<IINode>>(parent_inode_of_path_result);
+        auto path = std::filesystem::path{pathname};
 
         // Plain open.
         auto plain_open = [&]() -> std::variant<int, std::shared_ptr<File>> {
@@ -799,9 +758,9 @@ public:
             // path.filename() is empty when pathname is "/", which is
             // already opened and stored in curr_inode.
             if (path.filename().empty()) {
-                inode_result = curr_inode;
+                inode_result = parent_inode_of_path;
             } else {
-                inode_result = curr_inode->lookup(path.filename());
+                inode_result = parent_inode_of_path->lookup(path.filename());
             }
 
             // Check inode_result.
@@ -840,18 +799,18 @@ public:
         auto create_and_open =
             [&]() -> std::variant<int, std::shared_ptr<File>> {
             // It is an error if `pathname` is exist and O_CREAT is set.
-            auto peek_inode_opt = curr_inode->lookup(path.filename());
+            auto peek_inode_opt = parent_inode_of_path->lookup(path.filename());
             if (peek_inode_opt.has_value()) {
                 return -EEXIST;
             }
 
-            auto sb = curr_inode->super_block();
+            auto sb = parent_inode_of_path->super_block();
             auto inode_result =
                 sb.lock()->alloc_inode(sb.lock(), IINode::Type::File);
             if (!inode_result.has_value()) return -ENOMEM;
             auto inode = inode_result.value();
 
-            auto curr_inode_data = curr_inode->data().value();
+            auto curr_inode_data = parent_inode_of_path->data().value();
 
             // curr_inode must be a directory. link the new file into it
             // so that the lookup() in plain_open() can find it below.
