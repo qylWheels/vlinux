@@ -45,9 +45,9 @@ int main(int argc, char* argv[]) {
 
     // Add syscall hooks.
     if (list_syscall) {
-        (void)vm.add_syscall_hook([&](std::uint64_t syscall_id,
-                                      std::array<std::uint64_t, 6> args,
-                                      std::uint64_t ret) {
+        auto ret = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                           std::array<std::uint64_t, 6> args,
+                                           std::uint64_t ret) {
             if (!raw_syscall) {
                 auto syscall_parser = vdbg::syscall_parse::SyscallParser();
                 auto result = syscall_parser.parse(syscall_id, args, ret);
@@ -72,18 +72,40 @@ int main(int argc, char* argv[]) {
                        args[0], args[1], args[2], args[3], args[4], args[5],
                        ret);
         });
+        if (!ret) {
+            fmt::println(
+                stderr,
+                "Failed to add syscall hook for listing syscalls: {} ({})",
+                ret.error().value(), ret.error().message());
+            return -ret.error().value();
+        }
     }
     std::uint64_t syscall_count = 0;
     if (show_summary) {
-        (void)vm.add_syscall_hook([&](std::uint64_t syscall_id,
-                                      std::array<std::uint64_t, 6> args,
-                                      std::uint64_t ret) { ++syscall_count; });
+        auto ret = vm.add_syscall_hook(
+            [&](std::uint64_t syscall_id, std::array<std::uint64_t, 6> args,
+                std::uint64_t ret) { ++syscall_count; });
+        if (!ret) {
+            fmt::println(stderr,
+                         "Failed to add syscall hook to show summary of "
+                         "syscalls: {} ({})",
+                         ret.error().value(), ret.error().message());
+            return -ret.error().value();
+        }
     }
 
     // Add instruction hooks.
     std::uint64_t instr_count = 0;
     if (show_summary) {
-        (void)vm.add_instr_hook([&](std::uint64_t addr) { ++instr_count; });
+        auto ret =
+            vm.add_instr_hook([&](std::uint64_t addr) { ++instr_count; });
+        if (!ret) {
+            fmt::println(stderr,
+                         "Failed to add instruction hook to show summary of "
+                         "instructions: {} ({})",
+                         ret.error().value(), ret.error().message());
+            return -ret.error().value();
+        }
     }
 
     // Enable REPL if requested.
@@ -127,8 +149,13 @@ int main(int argc, char* argv[]) {
 
     // Emulate the program straight forward if REPL not enabled.
     if (!repl) {
-        (void)vm.run(std::chrono::milliseconds(5000),
-                     std::chrono::milliseconds(100));
+        auto ret = vm.run(std::chrono::milliseconds(5000),
+                          std::chrono::milliseconds(100));
+        if (!ret) {
+            fmt::println(stderr, "Failed to run the program: {} ({})",
+                         ret.error().value(), ret.error().message());
+            return -ret.error().value();
+        }
     }
 
     // Show summary if requested.
