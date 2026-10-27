@@ -47,6 +47,22 @@ bool check_fd(Task& task, int fd) {
     return fd >= 0 && fd < task.files.size() && task.files[fd].has_value();
 }
 
+std::variant<std::string, int> read_string_from_vmem(::uc_engine* uc,
+                                                     std::uint64_t addr) {
+    std::string pathname;
+    for (int i = 0; i < PATH_MAX; ++i) {
+        char c;
+        if (::uc_vmem_read(uc, addr + i, UC_PROT_READ, &c, 1) != UC_ERR_OK) {
+            return -EFAULT;
+        }
+        if (c == '\0') {
+            break;
+        }
+        pathname += c;
+    }
+    return pathname;
+}
+
 std::variant<std::shared_ptr<IINode>, int> retrieve_parent_of_path(
     Task& task, MountInfo& mount_info, int dirfd, std::string_view pathname) {
     // Get inode:
