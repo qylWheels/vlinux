@@ -41,6 +41,12 @@ std::function<std::int64_t(std::uint64_t, std::uint64_t, std::uint64_t)>
            static_cast<std::int64_t>(vlinux::mm::PAGE_SIZE);
 };
 
+namespace helpers {
+bool check_fd(Task& task, int fd) {
+    return fd >= 0 && fd < task.files.size() && task.files[fd].has_value();
+}
+}  // namespace helpers
+
 class SysMmapHandler {
 public:
     SysMmapHandler() = default;
