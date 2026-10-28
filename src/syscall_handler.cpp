@@ -6,6 +6,7 @@
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #include <unicorn/unicorn.h>
+#include <unistd.h>
 
 #include <algorithm>
 #include <array>
@@ -1368,6 +1369,70 @@ public:
         }
 
         return result_offset;
+    }
+};
+
+class SysFaccessatHandler {
+private:
+    SysFaccessatHandler() = default;
+    ~SysFaccessatHandler() = default;
+    SysFaccessatHandler(const SysFaccessatHandler&) = delete;
+    SysFaccessatHandler& operator=(const SysFaccessatHandler&) = delete;
+    SysFaccessatHandler(SysFaccessatHandler&&) = delete;
+    SysFaccessatHandler& operator=(SysFaccessatHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        int dirfd = static_cast<int>(args[0]);
+        std::uint64_t path_addr = args[1];
+        int mode = static_cast<int>(args[2]);
+
+        auto task = context.scheduler->current_task();
+
+        // Check fd.
+        if (dirfd != AT_FDCWD && !helpers::check_fd(*task, dirfd)) {
+            return -EBADF;
+        }
+
+        // Check mode.
+        if (mode & ~(F_OK | R_OK | W_OK | X_OK)) {
+            return -EINVAL;
+        }
+
+        // Read pathname.
+        auto pathname_result =
+            helpers::read_string_from_vmem(context.uc, path_addr);
+        if (std::holds_alternative<int>(pathname_result)) {
+            return std::get<int>(pathname_result);
+        }
+        auto pathname = std::get<std::string>(pathname_result);
+
+        // Find parent inode of the pathname.
+        auto parent_inode_result = helpers::retrieve_parent_of_path(
+            *task, *context.mount_info, dirfd, pathname);
+        if (std::holds_alternative<int>(parent_inode_result)) {
+            return std::get<int>(parent_inode_result);
+        }
+        auto parent_inode =
+            std::get<std::shared_ptr<IINode>>(parent_inode_result);
+
+        // Lookup inode of pathname.
+        outcome::result<std::shared_ptr<IINode>> inode_result =
+            std::errc::io_error;
+        if (pathname == "/") {
+            // "/"'s parent is "/" itself.
+            inode_result = parent_inode;
+        } else {
+            inode_result = parent_inode->lookup(pathname);
+        }
+        if (!inode_result) {
+            return -ENOENT;
+        }
+
+        // TODO: We haven't implemented permission subsystem yet,
+        // so just return ok if user query them.
+        return mode;
     }
 };
 
