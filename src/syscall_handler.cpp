@@ -1420,11 +1420,12 @@ public:
         // Lookup inode of pathname.
         outcome::result<std::shared_ptr<IINode>> inode_result =
             std::errc::io_error;
-        if (pathname == "/") {
+        auto path = std::filesystem::path{pathname};
+        if (path.filename().empty()) {
             // "/"'s parent is "/" itself.
             inode_result = parent_inode;
         } else {
-            inode_result = parent_inode->lookup(pathname);
+            inode_result = parent_inode->lookup(path.filename());
         }
         if (!inode_result) {
             return -ENOENT;
@@ -1489,6 +1490,9 @@ std::uint64_t SyscallHandler::dispatch(Context context,
             break;
         case SYS_openat:
             ret = SysOpenAtHandler::handle(context, args);
+            break;
+        case SYS_faccessat:
+            ret = SysFaccessatHandler::handle(context, args);
             break;
         case SYS_close:
             ret = SysCloseHandler::handle(context, args);
