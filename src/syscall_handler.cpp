@@ -1432,7 +1432,7 @@ public:
 
         // TODO: We haven't implemented permission subsystem yet,
         // so just return ok if user query them.
-        return mode;
+        return 0;
     }
 };
 
