@@ -661,6 +661,29 @@ TEST_CASE("Test VM", "[vm]") {
         REQUIRE(pathfd.value() < pathfd2.value());
     }
 
+    SECTION("Test faccessat()") {
+        auto task =
+            vm.load(build_path / "tests/syscall_tests/test_faccessat").value();
+
+        int exit_status = -1;
+        auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
+                                              std::array<std::uint64_t, 6> args,
+                                              std::uint64_t ret) {
+            if (syscall_id != SYS_exit) {
+                return;
+            }
+
+            exit_status = static_cast<int>(args[0]);
+        });
+        REQUIRE(result.has_value());
+
+        REQUIRE(vm.run(std::chrono::milliseconds(100),
+                       std::chrono::milliseconds(10))
+                    .has_value());
+
+        REQUIRE(exit_status == 0);
+    }
+
     SECTION("Test preadv() and pwritev()") {
         auto task =
             vm.load(build_path / "tests/syscall_tests/test_preadv_pwritev")
