@@ -12,11 +12,25 @@
 #include <outcome/outcome.hpp>
 #include <outcome/result.hpp>
 #include <set>
+#include <string>
+#include <vector>
 
 namespace outcome = OUTCOME_V2_NAMESPACE;
 
 namespace vlinux {
 namespace mm {
+class IPhysicalMemory {
+public:
+    virtual ~IPhysicalMemory() = default;
+
+public:
+    virtual outcome::result<std::vector<std::uint8_t>> read(
+        std::size_t addr, std::size_t bytes) = 0;
+    virtual outcome::result<std::string> read_string(std::size_t addr) = 0;
+    virtual outcome::result<void> write(std::size_t addr,
+                                        std::vector<std::uint8_t> data) = 0;
+};
+
 const std::size_t PAGE_SIZE = 4096;
 const std::uint64_t kIdleTaskCodeRegionStart = 0x1000;
 const std::uint64_t kIdleTaskCodeRegionLen = PAGE_SIZE;
