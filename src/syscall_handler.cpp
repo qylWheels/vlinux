@@ -1404,12 +1404,11 @@ public:
         }
 
         // Read pathname.
-        auto pathname_result =
-            helpers::read_string_from_vmem(context.uc, path_addr);
-        if (std::holds_alternative<int>(pathname_result)) {
-            return std::get<int>(pathname_result);
+        auto pathname_result = task->virtual_memory->read_string(path_addr);
+        if (!pathname_result) {
+            return -EFAULT;
         }
-        auto pathname = std::get<std::string>(pathname_result);
+        auto pathname = pathname_result.value();
 
         // Find parent inode of the pathname.
         auto parent_inode_result = helpers::retrieve_parent_of_path(
