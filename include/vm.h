@@ -26,6 +26,7 @@ public:
         std::vector<std::shared_ptr<Task>> children, Task::State state,
         std::uint64_t stack_top, std::uint64_t stack_bottom,
         std::shared_ptr<mm::VirtualMemoryAddressSpace> address_space,
+        std::shared_ptr<mm::IGuestVirtualMemory> virtual_memory,
         std::shared_ptr<mm::IGuestPageTable<const mm::PageTable::MapType&>>
             page_table,
         std::shared_ptr<File> cwd) {
@@ -33,9 +34,10 @@ public:
         OUTCOME_TRY(setup_task_ctx(ctx, rip));
         OUTCOME_TRY(add_task_ctx_to_context_manager(ctx));
         OUTCOME_TRY(auto task, create_task(ctx));
-        OUTCOME_TRY(setup_task_properties(
-            task, name, root_task, pid, tgid, parent, children, state,
-            stack_top, stack_bottom, address_space, page_table, cwd));
+        OUTCOME_TRY(setup_task_properties(task, name, root_task, pid, tgid,
+                                          parent, children, state, stack_top,
+                                          stack_bottom, address_space,
+                                          virtual_memory, page_table, cwd));
         OUTCOME_TRY(add_task_to_task_manager(task));
         OUTCOME_TRY(add_task_to_scheduler(task));
 
@@ -56,6 +58,7 @@ public:
         std::vector<std::shared_ptr<Task>> children, Task::State state,
         std::uint64_t stack_top, std::uint64_t stack_bottom,
         std::shared_ptr<mm::VirtualMemoryAddressSpace> address_space,
+        std::shared_ptr<mm::IGuestVirtualMemory> virtual_memory,
         std::shared_ptr<mm::IGuestPageTable<const mm::PageTable::MapType&>>
             page_table,
         std::shared_ptr<File> cwd)>

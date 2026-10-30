@@ -118,6 +118,7 @@ public:
                    Task::State state, std::uint64_t stack_top,
                    std::uint64_t stack_bottom,
                    std::shared_ptr<mm::VirtualMemoryAddressSpace> address_space,
+                   std::shared_ptr<mm::IGuestVirtualMemory> virtual_memory,
                    std::shared_ptr<
                        mm::IGuestPageTable<const mm::PageTable::MapType&>>
                        page_table,
@@ -132,6 +133,7 @@ public:
             task->stack_top = stack_top;
             task->stack_bottom = stack_bottom;
             task->address_space = address_space;
+            task->virtual_memory = virtual_memory;
             task->page_table = page_table;
             task->cwd = cwd;
             return outcome::success();
@@ -212,13 +214,17 @@ public:
             .vpages = {idle_task_vdesc},
         };
         auto idle_task_pagetable = std::make_shared<mm::PageTable>();
+        auto idle_task_virtual_memory =
+            std::make_shared<mm::UnicornGuestVirtualMemory>(
+                this->uc_, idle_task_pagetable);
         OUTCOME_TRY(idle_task_pagetable->map(idle_task_vdesc, idle_task_pdesc));
         OUTCOME_TRY(
             auto idle_task,
             this->task_initializer_.init_task(
                 mm::kIdleTaskCodeRegionStart, "idle", true, idle_task_pid,
                 idle_task_tgid, nullptr, {}, Task::State::Ready, 0, 0,
-                idle_address_space, idle_task_pagetable, nullptr));
+                idle_address_space, idle_task_virtual_memory,
+                idle_task_pagetable, nullptr));
 
         // Setup init task.
         OUTCOME_TRY(auto init_task_pid, this->pid_manager_.alloc_pid());
@@ -236,13 +242,17 @@ public:
             std::make_shared<mm::VirtualMemoryAddressSpace>();
         *init_address_space = {.vpages = {init_task_vdesc}};
         auto init_task_pagetable = std::make_shared<mm::PageTable>();
+        auto init_task_virtual_memory =
+            std::make_shared<mm::UnicornGuestVirtualMemory>(
+                this->uc_, init_task_pagetable);
         OUTCOME_TRY(init_task_pagetable->map(init_task_vdesc, init_task_pdesc));
         OUTCOME_TRY(
             auto init_task,
             this->task_initializer_.init_task(
                 mm::kInitTaskCodeRegionStart, "init", true, init_task_pid,
                 init_task_tgid, idle_task, {}, Task::State::Ready, 0, 0,
-                init_address_space, init_task_pagetable, nullptr));
+                init_address_space, init_task_virtual_memory,
+                init_task_pagetable, nullptr));
 
         // Set idle children to init task.
         idle_task->children.push_back(init_task);
@@ -380,6 +390,9 @@ outcome::result<std::shared_ptr<Task>> VM::load(
 
     auto address_space = std::make_shared<mm::VirtualMemoryAddressSpace>();
     auto page_table = std::make_shared<mm::PageTable>();
+    auto virtual_memory = std::make_shared<mm::UnicornGuestVirtualMemory>(
+        this->impl_->uc_, page_table);
+
     // Load segments.
     for (const auto& segment : reader.segments) {
         if (segment->get_type() != ELFIO::PT_LOAD) {
@@ -492,12 +505,13 @@ outcome::result<std::shared_ptr<Task>> VM::load(
     if (parent_it != this->impl_->tasks_.end()) {
         parent = *parent_it;
     }
-    OUTCOME_TRY(auto task, this->impl_->task_initializer_.init_task(
-                               reader.get_entry(), path.filename().string(),
-                               false, pid, tgid, parent, {}, Task::State::New,
-                               stack_page_vdesc->start_addr,
-                               stack_page_vdesc->start_addr + mm::PAGE_SIZE,
-                               address_space, page_table, root_dir_file));
+    OUTCOME_TRY(
+        auto task,
+        this->impl_->task_initializer_.init_task(
+            reader.get_entry(), path.filename().string(), false, pid, tgid,
+            parent, {}, Task::State::New, stack_page_vdesc->start_addr,
+            stack_page_vdesc->start_addr + mm::PAGE_SIZE, address_space,
+            virtual_memory, page_table, root_dir_file));
 
     // Set stack top.
     std::uint64_t rsp = stack_page_vdesc->start_addr + mm::PAGE_SIZE;
