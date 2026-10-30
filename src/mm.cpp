@@ -1,5 +1,6 @@
 #include "mm.h"
 
+#include <error.h>
 #include <unicorn/unicorn.h>
 
 #include <cstdint>
@@ -9,6 +10,55 @@
 
 namespace vlinux {
 namespace mm {
+class UnicornGuestPhysicalMemory::Impl {
+public:
+    uc_engine* uc;
+};
+
+UnicornGuestPhysicalMemory::UnicornGuestPhysicalMemory(uc_engine* uc)
+    : impl_(std::make_unique<Impl>()) {
+    impl_->uc = uc;
+}
+
+UnicornGuestPhysicalMemory::~UnicornGuestPhysicalMemory() = default;
+
+outcome::result<std::vector<std::uint8_t>> UnicornGuestPhysicalMemory::read(
+    std::size_t addr, std::size_t bytes) {
+    std::vector<std::uint8_t> data(bytes);
+    auto ret = ::uc_mem_read(impl_->uc, addr, data.data(), bytes);
+    if (ret != UC_ERR_OK) {
+        return make_error_code(ret);
+    }
+    return data;
+}
+
+outcome::result<std::string> UnicornGuestPhysicalMemory::read_string(
+    std::size_t addr) {
+    std::string result;
+    char c;
+    while (true) {
+        auto ret = ::uc_mem_read(impl_->uc, addr, &c, 1);
+        if (ret != UC_ERR_OK) {
+            return make_error_code(ret);
+        }
+        if (c == '\0') {
+            break;
+        }
+        result += c;
+        addr++;
+    }
+    return result;
+}
+
+outcome::result<void> UnicornGuestPhysicalMemory::write(
+    std::size_t addr, std::vector<std::uint8_t> data) {
+    auto ret = ::uc_mem_write(impl_->uc, addr, data.data(), data.size());
+    if (ret != UC_ERR_OK) {
+        return make_error_code(ret);
+    }
+    return outcome::success();
+}
+
 PhysicalPageAllocator::PhysicalPageAllocator(uc_engine* uc) : uc_(uc) {
     for (std::uint64_t addr = 0x3000; addr < 0x3000 + kMaxPageCount * PAGE_SIZE;
          addr += PAGE_SIZE) {

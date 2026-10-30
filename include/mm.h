@@ -50,6 +50,10 @@ public:
     virtual outcome::result<std::string> read_string(std::size_t addr) override;
     virtual outcome::result<void> write(
         std::size_t addr, std::vector<std::uint8_t> data) override;
+
+private:
+    class Impl;
+    std::unique_ptr<Impl> impl_;
 };
 
 const std::size_t PAGE_SIZE = 4096;
