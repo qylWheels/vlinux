@@ -140,7 +140,10 @@ public:
     virtual T all_maps() const = 0;
 };
 
-class PageTable {
+class PageTable
+    : public IGuestPageTable<
+          const std::map<std::shared_ptr<VirtualPageDescriptor>,
+                         std::shared_ptr<PhysicalPageDescriptor>>&> {
 public:
     PageTable();
     ~PageTable();
