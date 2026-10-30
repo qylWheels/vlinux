@@ -32,6 +32,26 @@ public:
                                         std::vector<std::uint8_t> data) = 0;
 };
 
+class UnicornGuestPhysicalMemory : public IGuestPhysicalMemory {
+public:
+    UnicornGuestPhysicalMemory(uc_engine* uc);
+    ~UnicornGuestPhysicalMemory();
+    UnicornGuestPhysicalMemory(const UnicornGuestPhysicalMemory& other) =
+        delete;
+    UnicornGuestPhysicalMemory& operator=(
+        const UnicornGuestPhysicalMemory& other) = delete;
+    UnicornGuestPhysicalMemory(UnicornGuestPhysicalMemory&& other) = delete;
+    UnicornGuestPhysicalMemory& operator=(UnicornGuestPhysicalMemory&& other) =
+        delete;
+
+public:
+    virtual outcome::result<std::vector<std::uint8_t>> read(
+        std::size_t addr, std::size_t bytes) override;
+    virtual outcome::result<std::string> read_string(std::size_t addr) override;
+    virtual outcome::result<void> write(
+        std::size_t addr, std::vector<std::uint8_t> data) override;
+};
+
 const std::size_t PAGE_SIZE = 4096;
 const std::uint64_t kIdleTaskCodeRegionStart = 0x1000;
 const std::uint64_t kIdleTaskCodeRegionLen = PAGE_SIZE;
