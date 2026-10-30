@@ -219,9 +219,8 @@ public:
 
 class UnicornGuestVirtualMemory : public IGuestVirtualMemory {
 public:
-    UnicornGuestVirtualMemory(
-        uc_engine* uc,
-        std::shared_ptr<IGuestPageTable<PageTable::MapType>> page_table);
+    UnicornGuestVirtualMemory(uc_engine* uc,
+                              std::shared_ptr<PageTable> page_table);
     ~UnicornGuestVirtualMemory();
     UnicornGuestVirtualMemory(const UnicornGuestVirtualMemory&) = delete;
     UnicornGuestVirtualMemory& operator=(const UnicornGuestVirtualMemory&) =

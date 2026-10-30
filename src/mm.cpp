@@ -220,12 +220,11 @@ PageTable::vdesc_to_pdesc(std::shared_ptr<VirtualPageDescriptor> vdesc) {
 class UnicornGuestVirtualMemory::Impl {
 public:
     uc_engine* uc;
-    std::shared_ptr<IGuestPageTable<PageTable::MapType>> page_table;
+    std::shared_ptr<PageTable> page_table;
 };
 
 UnicornGuestVirtualMemory::UnicornGuestVirtualMemory(
-    uc_engine* uc,
-    std::shared_ptr<IGuestPageTable<PageTable::MapType>> page_table)
+    uc_engine* uc, std::shared_ptr<PageTable> page_table)
     : impl_(std::make_unique<Impl>()) {
     impl_->uc = uc;
     impl_->page_table = page_table;
