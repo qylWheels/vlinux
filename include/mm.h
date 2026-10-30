@@ -145,6 +145,10 @@ class PageTable
           const std::map<std::shared_ptr<VirtualPageDescriptor>,
                          std::shared_ptr<PhysicalPageDescriptor>>&> {
 public:
+    using MapType = std::map<std::shared_ptr<VirtualPageDescriptor>,
+                             std::shared_ptr<PhysicalPageDescriptor>>;
+
+public:
     PageTable();
     ~PageTable();
 
@@ -167,16 +171,10 @@ public:
     std::optional<std::shared_ptr<PhysicalPageDescriptor>> vdesc_to_pdesc(
         std::shared_ptr<VirtualPageDescriptor> vdesc);
 
-    const std::map<std::shared_ptr<VirtualPageDescriptor>,
-                   std::shared_ptr<PhysicalPageDescriptor>>&
-    all_maps() const {
-        return this->map_;
-    }
+    const MapType& all_maps() const { return this->map_; }
 
 private:
-    std::map<std::shared_ptr<VirtualPageDescriptor>,
-             std::shared_ptr<PhysicalPageDescriptor>>
-        map_;
+    MapType map_;
 };
 
 // Start address of mmap.
