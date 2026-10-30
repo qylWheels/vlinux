@@ -41,7 +41,9 @@ TEST_CASE("Test PhysicalPageAllocator", "[physical_page_allocator]") {
 TEST_CASE("Test PageTable", "[page_table]") {
     uc_engine *uc;
     REQUIRE(::uc_open(UC_ARCH_X86, UC_MODE_64, &uc) == UC_ERR_OK);
-    vlinux::mm::PageTable pt;
+    vlinux::mm::PageTable pt_impl;
+    vlinux::mm::IGuestPageTable<const vlinux::mm::PageTable::MapType &> &pt =
+        pt_impl;
     vlinux::mm::PhysicalPageAllocator ppa_impl(uc);
     vlinux::mm::IGuestPhysicalPageAllocator &ppa = ppa_impl;
 

@@ -5,6 +5,7 @@
 #include <algorithm>
 
 #include "error.h"
+#include "mm.h"
 
 namespace vlinux {
 Scheduler::Scheduler(uc_engine *uc) : status_(Status::Stopped), uc_(uc) {}
@@ -178,7 +179,9 @@ void Scheduler::stop_schedule() { this->request_stop_ = true; }
 bool Scheduler::tlb_fill_callback(uc_engine *uc, uint64_t vaddr,
                                   uc_mem_type type, uc_tlb_entry *result,
                                   void *user_data) {
-    auto pgtable = static_cast<mm::PageTable *>(user_data);
+    auto pgtable =
+        static_cast<mm::IGuestPageTable<const mm::PageTable::MapType &> *>(
+            user_data);
 
     auto pa = pgtable->va_to_pa(vaddr);
     if (!pa.has_value()) {
