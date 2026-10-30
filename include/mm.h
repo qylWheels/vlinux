@@ -118,7 +118,10 @@ struct VirtualPageDescriptor {
     std::uint64_t perm;  // Use UC_PROT_*.
 };
 
-template <std::ranges::range T>
+template <typename T>
+concept const_range = std::ranges::range<const T>;
+
+template <const_range T>
 class IGuestPageTable {
 public:
     virtual ~IGuestPageTable() = default;
