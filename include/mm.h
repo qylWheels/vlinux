@@ -53,6 +53,19 @@ struct PhysicalPageDescriptor {
     }
 };
 
+class IGuestPhysicalPageAllocator {
+public:
+    virtual ~IGuestPhysicalPageAllocator() = default;
+
+public:
+    virtual outcome::result<std::shared_ptr<PhysicalPageDescriptor>>
+    alloc() = 0;
+    virtual outcome::result<std::shared_ptr<PhysicalPageDescriptor>> get_page(
+        std::shared_ptr<PhysicalPageDescriptor> desc) = 0;
+    virtual outcome::result<void> free(
+        std::shared_ptr<PhysicalPageDescriptor> desc) = 0;
+};
+
 class PhysicalPageAllocator {
     // [0, 0x1000): Reserved.
     // [0x1000, 0x2000): idle task. Desc not in this allocator.
