@@ -3,6 +3,7 @@
 #include <unicorn/unicorn.h>
 
 #include <algorithm>
+#include <outcome/try.hpp>
 
 #include "error.h"
 #include "mm.h"
@@ -118,18 +119,11 @@ outcome::result<void> Scheduler::start_schedule(
             return make_error_code(err);
         }
 
-        // Flush translation blocks.
-        err = ::uc_ctl_flush_tb(this->uc_);
-        if (err != UC_ERR_OK) {
-            this->status_ = Status::Stopped;
-            return make_error_code(err);
-        }
-
         // Flush TLB.
-        err = ::uc_ctl_flush_tlb(this->uc_);
-        if (err != UC_ERR_OK) {
+        auto result = task->virtual_memory->flush_tlb();
+        if (result.has_error()) {
             this->status_ = Status::Stopped;
-            return make_error_code(err);
+            return result.error();
         }
 
         // Schedule the task. i.e. run it.
