@@ -738,18 +738,11 @@ public:
         auto task = context.scheduler->current_task();
 
         // Read pathname.
-        std::string pathname;
-        for (int i = 0; i < PATH_MAX; ++i) {
-            char c;
-            if (::uc_vmem_read(context.uc, pathname_addr + i, UC_PROT_READ, &c,
-                               1) != UC_ERR_OK) {
-                return -EFAULT;
-            }
-            if (c == '\0') {
-                break;
-            }
-            pathname += c;
+        auto pathname_result = task->virtual_memory->read_string(pathname_addr);
+        if (!pathname_result) {
+            return -EFAULT;
         }
+        auto pathname = pathname_result.value();
 
         // Only check dirfd when pathname is relative.
         if (pathname[0] != '/') {
