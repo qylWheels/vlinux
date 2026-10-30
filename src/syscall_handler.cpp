@@ -411,8 +411,7 @@ private:
             vdesc_victims.push_back(*it);
 
             // Flush TLB and TB.
-            ::uc_ctl_flush_tlb(context.uc);
-            ::uc_ctl_flush_tb(context.uc);
+            (void)task->virtual_memory->flush_tlb();
 
             // Free physical page.
             (void)context.ppa->free(pdesc);
@@ -573,17 +572,20 @@ public:
             auto parent_ppage = parent->page_table->vdesc_to_pdesc(vdesc);
             if (parent_ppage.has_value()) {
                 std::vector<std::uint8_t> page_data(mm::PAGE_SIZE);
-                err =
-                    ::uc_mem_read(context.uc, parent_ppage.value()->start_addr,
-                                  page_data.data(), mm::PAGE_SIZE);
-                if (err != UC_ERR_OK) {
+
+                // Read parent page content.
+                auto read_result = context.gpm->read(
+                    parent_ppage.value()->start_addr, mm::PAGE_SIZE);
+                if (!read_result) {
                     cleanup();
                     return -ENOMEM;
                 }
-                err =
-                    ::uc_mem_write(context.uc, ppage_result.value()->start_addr,
-                                   page_data.data(), mm::PAGE_SIZE);
-                if (err != UC_ERR_OK) {
+                page_data = read_result.value();
+
+                // Write parent page content to child page.
+                auto write_result = context.gpm->write(
+                    ppage_result.value()->start_addr, page_data);
+                if (!write_result) {
                     cleanup();
                     return -ENOMEM;
                 }
