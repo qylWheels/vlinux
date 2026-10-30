@@ -13,6 +13,7 @@
 #include <cerrno>
 #include <cstddef>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <functional>
 #include <memory>
@@ -948,13 +949,17 @@ struct PreadvPwritevCommon {
         if (iovcnt < 0) return -EINVAL;
 
         // Read and check iovs.
+        auto iovs_result =
+            task->virtual_memory->read(iov_addr, iovcnt * sizeof(iovec));
+        if (!iovs_result) {
+            return -EFAULT;
+        }
+        auto iovs_bytes = iovs_result.value();
         std::vector<iovec> iovs(iovcnt);
         for (int i = 0; i < iovcnt; ++i) {
-            auto err = ::uc_vmem_read(context.uc, iov_addr + i * sizeof(iovec),
-                                      UC_PROT_READ, &iovs[i], sizeof(iovec));
-            if (err != 0) {
-                return -EFAULT;
-            }
+            iovec v;
+            std::memmove(&v, &iovs_bytes[i * sizeof(v)], sizeof(v));
+            iovs[i] = v;
         }
 
         // Transform linux iov to our iov.
