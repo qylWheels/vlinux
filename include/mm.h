@@ -66,7 +66,7 @@ public:
         std::shared_ptr<PhysicalPageDescriptor> desc) = 0;
 };
 
-class PhysicalPageAllocator {
+class PhysicalPageAllocator : public IGuestPhysicalPageAllocator {
     // [0, 0x1000): Reserved.
     // [0x1000, 0x2000): idle task. Desc not in this allocator.
     // [0x2000, 0x3000): init task. Desc not in this allocator.
