@@ -11,6 +11,7 @@
 #include <outcome/config.hpp>
 #include <outcome/outcome.hpp>
 #include <outcome/result.hpp>
+#include <ranges>
 #include <set>
 #include <string>
 #include <vector>
@@ -115,6 +116,25 @@ struct VirtualPageDescriptor {
     std::uint64_t start_addr;
     std::size_t len;
     std::uint64_t perm;  // Use UC_PROT_*.
+};
+
+template <std::ranges::range T>
+class IGuestPageTable {
+public:
+    virtual ~IGuestPageTable() = default;
+
+public:
+    virtual outcome::result<void> map(
+        std::shared_ptr<VirtualPageDescriptor> vdesc,
+        std::shared_ptr<PhysicalPageDescriptor> pdesc) = 0;
+    virtual outcome::result<void> unmap(
+        std::shared_ptr<VirtualPageDescriptor> vdesc) = 0;
+    virtual std::optional<std::uint64_t> va_to_pa(std::uint64_t va) = 0;
+    virtual std::optional<std::shared_ptr<VirtualPageDescriptor>> va_to_desc(
+        std::uint64_t va) = 0;
+    virtual std::optional<std::shared_ptr<PhysicalPageDescriptor>>
+    vdesc_to_pdesc(std::shared_ptr<VirtualPageDescriptor> vdesc) = 0;
+    virtual T all_maps() const = 0;
 };
 
 class PageTable {
