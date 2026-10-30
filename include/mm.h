@@ -180,6 +180,18 @@ private:
 // Start address of mmap.
 const std::uint64_t kStartMmap = 0x6000'0000;
 
+class IGuestVirtualMemory {
+public:
+    virtual ~IGuestVirtualMemory() = default;
+
+public:
+    virtual outcome::result<std::vector<std::uint8_t>> read(
+        std::size_t addr, std::size_t bytes) = 0;
+    virtual outcome::result<std::string> read_string(std::size_t addr) = 0;
+    virtual outcome::result<void> write(std::size_t addr,
+                                        std::vector<std::uint8_t> data) = 0;
+};
+
 // i.e mm_struct.
 struct VirtualMemoryAddressSpace {
     struct CompareVirtualAddress {
