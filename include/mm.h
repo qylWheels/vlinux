@@ -20,9 +20,9 @@ namespace outcome = OUTCOME_V2_NAMESPACE;
 
 namespace vlinux {
 namespace mm {
-class IPhysicalMemory {
+class IGuestPhysicalMemory {
 public:
-    virtual ~IPhysicalMemory() = default;
+    virtual ~IGuestPhysicalMemory() = default;
 
 public:
     virtual outcome::result<std::vector<std::uint8_t>> read(
