@@ -190,6 +190,7 @@ public:
     virtual outcome::result<std::string> read_string(std::size_t addr) = 0;
     virtual outcome::result<void> write(std::size_t addr,
                                         std::vector<std::uint8_t> data) = 0;
+    virtual outcome::result<void> flush_tlb() = 0;
 };
 
 // i.e mm_struct.
