@@ -213,6 +213,19 @@ public:
     virtual outcome::result<void> flush_tlb() = 0;
 };
 
+class UnicornGuestVirtualMemory : public IGuestVirtualMemory {
+public:
+    virtual ~UnicornGuestVirtualMemory() = default;
+
+public:
+    virtual outcome::result<std::vector<std::uint8_t>> read(
+        std::size_t addr, std::size_t bytes) override;
+    virtual outcome::result<std::string> read_string(std::size_t addr) override;
+    virtual outcome::result<void> write(
+        std::size_t addr, std::vector<std::uint8_t> data) override;
+    virtual outcome::result<void> flush_tlb() override;
+};
+
 // i.e mm_struct.
 struct VirtualMemoryAddressSpace {
     struct CompareVirtualAddress {
