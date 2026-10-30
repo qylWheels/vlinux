@@ -219,7 +219,14 @@ public:
 
 class UnicornGuestVirtualMemory : public IGuestVirtualMemory {
 public:
-    virtual ~UnicornGuestVirtualMemory() = default;
+    UnicornGuestVirtualMemory(uc_engine* uc,
+                              IGuestPageTable<PageTable::MapType>* page_table);
+    ~UnicornGuestVirtualMemory();
+    UnicornGuestVirtualMemory(const UnicornGuestVirtualMemory&) = delete;
+    UnicornGuestVirtualMemory& operator=(const UnicornGuestVirtualMemory&) =
+        delete;
+    UnicornGuestVirtualMemory(UnicornGuestVirtualMemory&&) = delete;
+    UnicornGuestVirtualMemory& operator=(UnicornGuestVirtualMemory&&) = delete;
 
 public:
     virtual outcome::result<std::vector<std::uint8_t>> read(
@@ -228,6 +235,10 @@ public:
     virtual outcome::result<void> write(
         std::size_t addr, std::vector<std::uint8_t> data) override;
     virtual outcome::result<void> flush_tlb() override;
+
+private:
+    class Impl;
+    std::unique_ptr<Impl> impl_;
 };
 
 // i.e mm_struct.

@@ -3,6 +3,8 @@
 #include <error.h>
 #include <unicorn/unicorn.h>
 
+#include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <optional>
@@ -214,5 +216,87 @@ PageTable::vdesc_to_pdesc(std::shared_ptr<VirtualPageDescriptor> vdesc) {
     }
     return it->second;
 }
+
+class UnicornGuestVirtualMemory::Impl {
+public:
+    uc_engine* uc;
+    IGuestPageTable<PageTable::MapType>* page_table;
+};
+
+UnicornGuestVirtualMemory::UnicornGuestVirtualMemory(
+    uc_engine* uc, IGuestPageTable<PageTable::MapType>* page_table)
+    : impl_(std::make_unique<Impl>()) {
+    impl_->uc = uc;
+    impl_->page_table = page_table;
+}
+
+UnicornGuestVirtualMemory::~UnicornGuestVirtualMemory() = default;
+
+outcome::result<std::vector<std::uint8_t>> UnicornGuestVirtualMemory::read(
+    std::size_t addr, std::size_t bytes) {
+    auto pa_opt = impl_->page_table->va_to_pa(addr);
+    if (!pa_opt.has_value()) {
+        return std::errc::bad_address;
+    }
+    auto pa = pa_opt.value();
+    std::vector<std::uint8_t> data(bytes);
+    auto ret = ::uc_mem_read(impl_->uc, pa, data.data(), bytes);
+    if (ret != UC_ERR_OK) {
+        return make_error_code(ret);
+    }
+    return data;
+}
+
+outcome::result<std::string> UnicornGuestVirtualMemory::read_string(
+    std::size_t addr) {
+    std::string result;
+    char c;
+    while (true) {
+        auto pa_opt = impl_->page_table->va_to_pa(addr);
+        if (!pa_opt.has_value()) {
+            return std::errc::bad_address;
+        }
+        auto pa = pa_opt.value();
+        auto ret = ::uc_mem_read(impl_->uc, pa, &c, 1);
+        if (ret != UC_ERR_OK) {
+            return make_error_code(ret);
+        }
+        if (c == '\0') {
+            break;
+        }
+        result += c;
+        addr++;
+    }
+    return result;
+}
+
+outcome::result<void> UnicornGuestVirtualMemory::write(
+    std::size_t addr, std::vector<std::uint8_t> data) {
+    auto addr_round_up = (addr + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+    auto pagecnt = addr_round_up / PAGE_SIZE;
+    std::size_t offset = 0;
+    for (auto i = 0; i < pagecnt; i++) {
+        auto pa_opt = impl_->page_table->va_to_pa(addr);
+        if (!pa_opt.has_value()) {
+            return std::errc::bad_address;
+        }
+        auto pa = pa_opt.value();
+        auto ret = ::uc_mem_write(impl_->uc, pa, data.data() + offset,
+                                  std::min(PAGE_SIZE, data.size() - offset));
+        if (ret != UC_ERR_OK) {
+            return make_error_code(ret);
+        }
+        addr += PAGE_SIZE;
+        offset += PAGE_SIZE;
+    }
+    return outcome::success();
+}
+
+outcome::result<void> UnicornGuestVirtualMemory::flush_tlb() {
+    uc_ctl_flush_tlb(impl_->uc);
+    uc_ctl_flush_tb(impl_->uc);
+    return outcome::success();
+}
+
 }  // namespace mm
 }  // namespace vlinux
