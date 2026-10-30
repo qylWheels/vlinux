@@ -544,6 +544,8 @@ public:
             *parent->address_space);
         task->address_space->vpages = {};
         task->page_table = std::make_shared<mm::PageTable>();
+        task->virtual_memory = std::make_shared<mm::UnicornGuestVirtualMemory>(
+            context.uc, task->page_table);
         std::vector<std::shared_ptr<mm::PhysicalPageDescriptor>> alloced_ppages;
         auto cleanup = [&]() {
             for (auto alloced_ppage : alloced_ppages) {
