@@ -166,9 +166,19 @@ TEST_CASE("Test Scheduler", "[scheduler]") {
         // Create tasks.
         auto task1 = std::make_shared<vlinux::Task>(ctx1);
         task1->ctx = ctx1;
+        auto task1_page_table = std::make_shared<vlinux::mm::PageTable>();
+        task1->page_table = task1_page_table;
+        task1->virtual_memory =
+            std::make_shared<vlinux::mm::UnicornGuestVirtualMemory>(
+                uc, task1_page_table);
         REQUIRE(scheduler.add_task(task1).has_value());
         auto task2 = std::make_shared<vlinux::Task>(ctx2);
         task2->ctx = ctx2;
+        auto task2_page_table = std::make_shared<vlinux::mm::PageTable>();
+        task2->page_table = task2_page_table;
+        task2->virtual_memory =
+            std::make_shared<vlinux::mm::UnicornGuestVirtualMemory>(
+                uc, task2_page_table);
         REQUIRE(scheduler.add_task(task2).has_value());
 
         // Start schedule.
