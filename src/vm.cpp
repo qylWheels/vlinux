@@ -68,6 +68,8 @@ public:
 
         this->scheduler_ = std::make_shared<Scheduler>(this->uc_);
         this->ppa_ = std::make_shared<mm::PhysicalPageAllocator>(this->uc_);
+        this->gpm_ =
+            std::make_shared<mm::UnicornGuestPhysicalMemory>(this->uc_);
         this->infinite_loop_code_ = static_cast<std::uint8_t*>(
             std::aligned_alloc(mm::PAGE_SIZE, mm::PAGE_SIZE));
         this->infinite_loop_code_[0] = 0xEB;
@@ -308,8 +310,8 @@ public:
         // Dispatch.
         auto task = self->scheduler_->current_task();
         std::uint64_t ret = self->syscall_handler_.dispatch(
-            {self->uc_, &self->pid_manager_, self->scheduler_, task, self->ppa_,
-             &self->tasks_,
+            {self->uc_, &self->pid_manager_, self->scheduler_, task, self->gpm_,
+             self->ppa_, &self->tasks_,
              [self](uc_context* ctx) -> outcome::result<void> {
                  return self->register_context(ctx);
              },
@@ -352,6 +354,7 @@ public:
     std::shared_ptr<Scheduler> scheduler_;
 
     // Memory-related fields.
+    std::shared_ptr<mm::IGuestPhysicalMemory> gpm_;
     std::shared_ptr<mm::IGuestPhysicalPageAllocator> ppa_;
 
     // Syscall-related fields.
