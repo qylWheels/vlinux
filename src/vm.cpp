@@ -340,7 +340,7 @@ public:
     std::shared_ptr<Scheduler> scheduler_;
 
     // Memory-related fields.
-    std::shared_ptr<mm::PhysicalPageAllocator> ppa_;
+    std::shared_ptr<mm::IGuestPhysicalPageAllocator> ppa_;
 
     // Syscall-related fields.
     syscall::SyscallHandler syscall_handler_;

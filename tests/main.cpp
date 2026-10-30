@@ -23,7 +23,8 @@
 TEST_CASE("Test PhysicalPageAllocator", "[physical_page_allocator]") {
     uc_engine *uc;
     REQUIRE(::uc_open(UC_ARCH_X86, UC_MODE_64, &uc) == UC_ERR_OK);
-    vlinux::mm::PhysicalPageAllocator ppa(uc);
+    vlinux::mm::PhysicalPageAllocator ppa_impl(uc);
+    vlinux::mm::IGuestPhysicalPageAllocator &ppa = ppa_impl;
 
     SECTION("Test alloc(), get_page() and free()") {
         auto pa_desc = ppa.alloc();
@@ -41,7 +42,8 @@ TEST_CASE("Test PageTable", "[page_table]") {
     uc_engine *uc;
     REQUIRE(::uc_open(UC_ARCH_X86, UC_MODE_64, &uc) == UC_ERR_OK);
     vlinux::mm::PageTable pt;
-    vlinux::mm::PhysicalPageAllocator ppa(uc);
+    vlinux::mm::PhysicalPageAllocator ppa_impl(uc);
+    vlinux::mm::IGuestPhysicalPageAllocator &ppa = ppa_impl;
 
     SECTION("Test map(), unmap(), va_to_pa() and va_to_desc()") {
         auto result = ppa.alloc();
@@ -761,7 +763,8 @@ TEST_CASE("Test VM", "[vm]") {
 
     SECTION("Test pread() and pwrite()") {
         auto task =
-            vm.load(build_path / "tests/syscall_tests/test_pread_pwrite").value();
+            vm.load(build_path / "tests/syscall_tests/test_pread_pwrite")
+                .value();
 
         int fd = -1, exit_status = -1;
         auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
@@ -798,7 +801,8 @@ TEST_CASE("Test VM", "[vm]") {
 
     SECTION("Test readv() and writev()") {
         auto task =
-            vm.load(build_path / "tests/syscall_tests/test_readv_writev").value();
+            vm.load(build_path / "tests/syscall_tests/test_readv_writev")
+                .value();
 
         int fd = -1, exit_status = -1;
         auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
