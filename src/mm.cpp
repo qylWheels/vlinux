@@ -293,8 +293,15 @@ outcome::result<void> UnicornGuestVirtualMemory::write(
 }
 
 outcome::result<void> UnicornGuestVirtualMemory::flush_tlb() {
-    uc_ctl_flush_tlb(impl_->uc);
-    uc_ctl_flush_tb(impl_->uc);
+    uc_err err;
+    err = uc_ctl_flush_tlb(impl_->uc);
+    if (err != UC_ERR_OK) {
+        return make_error_code(err);
+    }
+    err = uc_ctl_flush_tb(impl_->uc);
+    if (err != UC_ERR_OK) {
+        return make_error_code(err);
+    }
     return outcome::success();
 }
 
