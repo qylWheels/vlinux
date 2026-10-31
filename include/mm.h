@@ -232,10 +232,12 @@ public:
 
 public:
     virtual outcome::result<std::vector<std::uint8_t>> read(
-        std::size_t addr, std::size_t bytes) override;
-    virtual outcome::result<std::string> read_string(std::size_t addr) override;
-    virtual outcome::result<void> write(
-        std::size_t addr, std::vector<std::uint8_t> data) override;
+        std::size_t addr, std::size_t bytes, bool perm_check) override;
+    virtual outcome::result<std::string> read_string(std::size_t addr,
+                                                     bool perm_check) override;
+    virtual outcome::result<void> write(std::size_t addr,
+                                        std::vector<std::uint8_t> data,
+                                        bool perm_check) override;
     virtual outcome::result<void> flush_tlb() override;
 
 private:
