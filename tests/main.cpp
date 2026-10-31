@@ -210,13 +210,32 @@ TEST_CASE("Test VFS", "[vfs]") {
         auto inode_result = sb->alloc_inode(sb, vlinux::IINode::Type::File);
         REQUIRE(inode_result.has_value());
         auto inode = inode_result.value();
-        auto file = std::make_shared<vlinux::File>(inode, uc);
+        auto pgtable = std::make_shared<vlinux::mm::PageTable>();
+        auto gvm = std::make_shared<vlinux::mm::UnicornGuestVirtualMemory>(
+            uc, pgtable);
+        auto file = std::make_shared<vlinux::File>(inode, *gvm);
 
-        // Test write.
+        // Prepare data.
         char data[] = "Hello, world!";
         auto len = sizeof(data);
         REQUIRE(::uc_mem_map_ptr(uc, 0x1000, 4096, UC_PROT_READ, data) ==
                 UC_ERR_OK);
+        REQUIRE(pgtable
+                    ->map(std::make_shared<vlinux::mm::VirtualPageDescriptor>(
+                              0x1000, vlinux::mm::PAGE_SIZE,
+                              UC_PROT_READ | UC_PROT_WRITE),
+                          std::make_shared<vlinux::mm::PhysicalPageDescriptor>(
+                              0x1000, vlinux::mm::PAGE_SIZE, 1, 0))
+                    .has_value());
+        REQUIRE(pgtable
+                    ->map(std::make_shared<vlinux::mm::VirtualPageDescriptor>(
+                              0x8000, vlinux::mm::PAGE_SIZE,
+                              UC_PROT_READ | UC_PROT_WRITE),
+                          std::make_shared<vlinux::mm::PhysicalPageDescriptor>(
+                              0x8000, vlinux::mm::PAGE_SIZE, 1, 0))
+                    .has_value());
+
+        // Test write.
         vlinux::IoVector iov{0x1000, len};
         auto ret = file->pwritev({iov}, 0);
         REQUIRE(ret.has_value());
