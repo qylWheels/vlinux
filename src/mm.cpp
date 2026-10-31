@@ -242,14 +242,22 @@ UnicornGuestVirtualMemory::UnicornGuestVirtualMemory(
 UnicornGuestVirtualMemory::~UnicornGuestVirtualMemory() = default;
 
 outcome::result<std::vector<std::uint8_t>> UnicornGuestVirtualMemory::read(
-    std::size_t addr, std::size_t bytes) {
+    std::size_t addr, std::size_t bytes, bool perm_check) {
     std::vector<std::uint8_t> data(bytes);
     for (auto i = 0ull; i < bytes; i++) {
+        // Check if mapped.
         auto pa_opt = impl_->page_table->va_to_pa(addr + i);
         if (!pa_opt.has_value()) {
             return std::errc::bad_address;
         }
         auto pa = pa_opt.value();
+
+        // Check permissions.
+        if (perm_check && !impl_->check_permission(addr + i, UC_PROT_READ)) {
+            return std::errc::permission_denied;
+        }
+
+        // Read.
         auto ret = ::uc_mem_read(impl_->uc, pa, data.data() + i, 1);
         if (ret != UC_ERR_OK) {
             return make_error_code(ret);
