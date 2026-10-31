@@ -220,6 +220,16 @@ class UnicornGuestVirtualMemory::Impl {
 public:
     uc_engine* uc;
     std::shared_ptr<PageTable> page_table;
+
+public:
+    // va must be mapped.
+    bool check_permission(std::uint64_t va, std::uint8_t perm) {
+        auto vdesc = page_table->va_to_desc(va).value();
+        if ((vdesc->perm & perm) != perm) {
+            return false;
+        }
+        return true;
+    }
 };
 
 UnicornGuestVirtualMemory::UnicornGuestVirtualMemory(
