@@ -790,7 +790,7 @@ public:
             }
 
             auto inode = inode_result.value();
-            auto file = std::make_shared<File>(inode, context.uc);
+            auto file = std::make_shared<File>(inode, *task->virtual_memory);
             auto result = file->get();
             if (!result.has_value()) {
                 return -EIO;

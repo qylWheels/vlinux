@@ -495,7 +495,7 @@ outcome::result<std::shared_ptr<Task>> VM::load(
     auto root_dir_inode = this->impl_->mount_info_.curr_mount_of("/").value();
     OUTCOME_TRY(root_dir_inode->inc_mem_refcount());
     auto root_dir_file =
-        std::make_shared<File>(root_dir_inode, this->impl_->uc_);
+        std::make_shared<File>(root_dir_inode, *virtual_memory);
     OUTCOME_TRY(root_dir_file->get());
 
     // Create task.
