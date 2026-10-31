@@ -137,9 +137,16 @@ private:
 };
 
 struct VirtualPageDescriptor {
+    enum class Permission : std::uint8_t {
+        None = 0,
+        Read = 1 << 0,
+        Write = 1 << 1,
+        Exec = 1 << 2,
+    };
+
     std::uint64_t start_addr;
     std::size_t len;
-    std::uint64_t perm;  // Use UC_PROT_*.
+    std::uint64_t perm;  // Use Permission.
 };
 
 template <typename T>
