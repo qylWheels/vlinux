@@ -298,13 +298,21 @@ outcome::result<std::string> UnicornGuestVirtualMemory::read_string(
 }
 
 outcome::result<void> UnicornGuestVirtualMemory::write(
-    std::size_t addr, std::vector<std::uint8_t> data) {
+    std::size_t addr, std::vector<std::uint8_t> data, bool perm_check) {
     for (auto i = 0ull; i < data.size(); i++) {
+        // Check if mapped.
         auto pa_opt = impl_->page_table->va_to_pa(addr + i);
         if (!pa_opt.has_value()) {
             return std::errc::bad_address;
         }
         auto pa = pa_opt.value();
+
+        // Check permissions.
+        if (perm_check && !impl_->check_permission(addr + i, UC_PROT_WRITE)) {
+            return std::errc::permission_denied;
+        }
+
+        // Write.
         auto ret = ::uc_mem_write(impl_->uc, pa, data.data() + i, 1);
         if (ret != UC_ERR_OK) {
             return make_error_code(ret);
