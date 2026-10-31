@@ -26,8 +26,9 @@ outcome::result<std::size_t> File::preadv(std::vector<IoVector> iov,
         } else {
             len = std::min(v.len, data->size() - offset);
         }
-        if (::uc_vmem_write(this->uc_, v.base, UC_PROT_WRITE,
-                            data->data() + offset, len) != UC_ERR_OK) {
+        if (!gvm_->write(v.base, std::vector<std::uint8_t>(
+                                     data->begin() + offset,
+                                     data->begin() + offset + len))) {
             return std::errc::bad_address;
         }
         read_len += len;
@@ -52,9 +53,13 @@ outcome::result<std::size_t> File::pwritev(std::vector<IoVector> iov,
         if (data->size() < offset + v.len) {
             data->resize(offset + v.len);
         }
-        if (::uc_vmem_read(this->uc_, v.base, UC_PROT_READ,
-                           data->data() + offset, v.len) != UC_ERR_OK) {
-            return std::errc::bad_address;
+        auto read_result = gvm_->read(v.base, v.len);
+        if (!read_result) {
+            return read_result.error();
+        }
+        auto read_bytes = read_result.value();
+        for (auto i = 0; i < v.len; i++) {
+            data->at(offset + i) = read_bytes[i];
         }
         write_len += v.len;
         offset += v.len;
