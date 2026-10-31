@@ -12,6 +12,7 @@
 #include <array>
 #include <cerrno>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
@@ -179,9 +180,21 @@ public:
             auto vdesc = std::make_shared<mm::VirtualPageDescriptor>();
             vdesc->start_addr = mmap + i * mm::PAGE_SIZE;
             vdesc->len = mm::PAGE_SIZE;
-            vdesc->perm |= ((prot & PROT_READ) ? UC_PROT_READ : 0);
-            vdesc->perm |= ((prot & PROT_WRITE) ? UC_PROT_WRITE : 0);
-            vdesc->perm |= ((prot & PROT_EXEC) ? UC_PROT_EXEC : 0);
+            vdesc->perm |=
+                ((prot & PROT_READ)
+                     ? static_cast<std::uint8_t>(
+                           mm::VirtualPageDescriptor::Permission::Read)
+                     : 0);
+            vdesc->perm |=
+                ((prot & PROT_WRITE)
+                     ? static_cast<std::uint8_t>(
+                           mm::VirtualPageDescriptor::Permission::Write)
+                     : 0);
+            vdesc->perm |=
+                ((prot & PROT_EXEC)
+                     ? static_cast<std::uint8_t>(
+                           mm::VirtualPageDescriptor::Permission::Exec)
+                     : 0);
             auto result1 = task->page_table->map(vdesc, ppages[i]);
             auto result2 = task->address_space->vpages.insert(vdesc);
             if (result1.has_error() || !result2.second) {
@@ -301,9 +314,18 @@ public:
                 task->address_space->vpages.end(),
                 [i](auto vdesc) { return vdesc->start_addr == i; });
             std::uint64_t uc_prot = 0;
-            uc_prot |= ((prot & PROT_READ) ? UC_PROT_READ : 0);
-            uc_prot |= ((prot & PROT_WRITE) ? UC_PROT_WRITE : 0);
-            uc_prot |= ((prot & PROT_EXEC) ? UC_PROT_EXEC : 0);
+            uc_prot |= ((prot & PROT_READ)
+                            ? static_cast<std::uint8_t>(
+                                  mm::VirtualPageDescriptor::Permission::Read)
+                            : 0);
+            uc_prot |= ((prot & PROT_WRITE)
+                            ? static_cast<std::uint8_t>(
+                                  mm::VirtualPageDescriptor::Permission::Write)
+                            : 0);
+            uc_prot |= ((prot & PROT_EXEC)
+                            ? static_cast<std::uint8_t>(
+                                  mm::VirtualPageDescriptor::Permission::Exec)
+                            : 0);
             (*vdesc_it)->perm = uc_prot;
         }
 
@@ -353,7 +375,10 @@ private:
             auto vdesc = std::make_shared<mm::VirtualPageDescriptor>();
             vdesc->start_addr = task->address_space->brk + i * mm::PAGE_SIZE;
             vdesc->len = mm::PAGE_SIZE;
-            vdesc->perm = UC_PROT_READ | UC_PROT_WRITE;
+            vdesc->perm = static_cast<std::uint8_t>(
+                              mm::VirtualPageDescriptor::Permission::Read) |
+                          static_cast<std::uint8_t>(
+                              mm::VirtualPageDescriptor::Permission::Write);
             vdescs.push_back(vdesc);
 
             // Map virtual page.
