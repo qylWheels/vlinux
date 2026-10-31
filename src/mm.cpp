@@ -274,22 +274,16 @@ outcome::result<std::string> UnicornGuestVirtualMemory::read_string(
 
 outcome::result<void> UnicornGuestVirtualMemory::write(
     std::size_t addr, std::vector<std::uint8_t> data) {
-    auto addr_round_up = (addr + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
-    auto pagecnt = addr_round_up / PAGE_SIZE;
-    std::size_t offset = 0;
-    for (auto i = 0; i < pagecnt; i++) {
-        auto pa_opt = impl_->page_table->va_to_pa(addr);
+    for (auto i = 0ull; i < data.size(); i++) {
+        auto pa_opt = impl_->page_table->va_to_pa(addr + i);
         if (!pa_opt.has_value()) {
             return std::errc::bad_address;
         }
         auto pa = pa_opt.value();
-        auto ret = ::uc_mem_write(impl_->uc, pa, data.data() + offset,
-                                  std::min(PAGE_SIZE, data.size() - offset));
+        auto ret = ::uc_mem_write(impl_->uc, pa, data.data() + i, 1);
         if (ret != UC_ERR_OK) {
             return make_error_code(ret);
         }
-        addr += PAGE_SIZE;
-        offset += PAGE_SIZE;
     }
     return outcome::success();
 }
