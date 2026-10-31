@@ -313,20 +313,23 @@ public:
                 task->address_space->vpages.begin(),
                 task->address_space->vpages.end(),
                 [i](auto vdesc) { return vdesc->start_addr == i; });
-            std::uint64_t uc_prot = 0;
-            uc_prot |= ((prot & PROT_READ)
-                            ? static_cast<std::uint8_t>(
-                                  mm::VirtualPageDescriptor::Permission::Read)
-                            : 0);
-            uc_prot |= ((prot & PROT_WRITE)
-                            ? static_cast<std::uint8_t>(
-                                  mm::VirtualPageDescriptor::Permission::Write)
-                            : 0);
-            uc_prot |= ((prot & PROT_EXEC)
-                            ? static_cast<std::uint8_t>(
-                                  mm::VirtualPageDescriptor::Permission::Exec)
-                            : 0);
-            (*vdesc_it)->perm = uc_prot;
+            std::uint8_t vdesc_prot = 0;
+            vdesc_prot |=
+                ((prot & PROT_READ)
+                     ? static_cast<std::uint8_t>(
+                           mm::VirtualPageDescriptor::Permission::Read)
+                     : 0);
+            vdesc_prot |=
+                ((prot & PROT_WRITE)
+                     ? static_cast<std::uint8_t>(
+                           mm::VirtualPageDescriptor::Permission::Write)
+                     : 0);
+            vdesc_prot |=
+                ((prot & PROT_EXEC)
+                     ? static_cast<std::uint8_t>(
+                           mm::VirtualPageDescriptor::Permission::Exec)
+                     : 0);
+            (*vdesc_it)->perm = vdesc_prot;
         }
 
         return 0;
