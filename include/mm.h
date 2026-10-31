@@ -146,7 +146,7 @@ struct VirtualPageDescriptor {
 
     std::uint64_t start_addr;
     std::size_t len;
-    std::uint64_t perm;  // Use Permission.
+    std::uint8_t perm;  // Use Permission.
 };
 
 template <typename T>
