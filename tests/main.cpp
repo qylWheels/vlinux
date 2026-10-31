@@ -466,11 +466,23 @@ TEST_CASE("Test VM", "[vm]") {
 
             // Check protection flags of influenced pages.
             for (auto vdesc : vdescs) {
-                std::uint64_t uc_prot = 0;
-                uc_prot |= ((prot & PROT_READ) ? UC_PROT_READ : 0);
-                uc_prot |= ((prot & PROT_WRITE) ? UC_PROT_WRITE : 0);
-                uc_prot |= ((prot & PROT_EXEC) ? UC_PROT_EXEC : 0);
-                REQUIRE(vdesc->perm == uc_prot);
+                std::uint64_t perm = 0;
+                perm |= ((prot & PROT_READ)
+                             ? static_cast<std::uint8_t>(
+                                   vlinux::mm::VirtualPageDescriptor::
+                                       Permission::Read)
+                             : 0);
+                perm |= ((prot & PROT_WRITE)
+                             ? static_cast<std::uint8_t>(
+                                   vlinux::mm::VirtualPageDescriptor::
+                                       Permission::Write)
+                             : 0);
+                perm |= ((prot & PROT_EXEC)
+                             ? static_cast<std::uint8_t>(
+                                   vlinux::mm::VirtualPageDescriptor::
+                                       Permission::Exec)
+                             : 0);
+                REQUIRE(vdesc->perm == perm);
             }
         });
         REQUIRE(result.has_value());
