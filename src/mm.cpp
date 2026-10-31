@@ -267,15 +267,23 @@ outcome::result<std::vector<std::uint8_t>> UnicornGuestVirtualMemory::read(
 }
 
 outcome::result<std::string> UnicornGuestVirtualMemory::read_string(
-    std::size_t addr) {
+    std::size_t addr, bool perm_check) {
     std::string result;
     char c;
     while (true) {
+        // Check if mapped.
         auto pa_opt = impl_->page_table->va_to_pa(addr);
         if (!pa_opt.has_value()) {
             return std::errc::bad_address;
         }
         auto pa = pa_opt.value();
+
+        // Check permissions.
+        if (perm_check && !impl_->check_permission(addr, UC_PROT_READ)) {
+            return std::errc::permission_denied;
+        }
+
+        // Read.
         auto ret = ::uc_mem_read(impl_->uc, pa, &c, 1);
         if (ret != UC_ERR_OK) {
             return make_error_code(ret);
