@@ -41,9 +41,9 @@ TEST_CASE("Test PhysicalPageAllocator", "[physical_page_allocator]") {
 TEST_CASE("Test PageTable", "[page_table]") {
     uc_engine *uc;
     REQUIRE(::uc_open(UC_ARCH_X86, UC_MODE_64, &uc) == UC_ERR_OK);
-    vlinux::mm::PageTable pt_impl;
-    vlinux::mm::IGuestPageTable<const vlinux::mm::PageTable::MapType &> &pt =
-        pt_impl;
+    vlinux::mm::UnicornGuestPageTable pt_impl;
+    vlinux::mm::IGuestPageTable<
+        const vlinux::mm::UnicornGuestPageTable::MapType &> &pt = pt_impl;
     vlinux::mm::PhysicalPageAllocator ppa_impl(uc);
     vlinux::mm::IGuestPhysicalPageAllocator &ppa = ppa_impl;
 
@@ -166,7 +166,8 @@ TEST_CASE("Test Scheduler", "[scheduler]") {
         // Create tasks.
         auto task1 = std::make_shared<vlinux::Task>(ctx1);
         task1->ctx = ctx1;
-        auto task1_page_table = std::make_shared<vlinux::mm::PageTable>();
+        auto task1_page_table =
+            std::make_shared<vlinux::mm::UnicornGuestPageTable>();
         task1->page_table = task1_page_table;
         task1->virtual_memory =
             std::make_shared<vlinux::mm::UnicornGuestVirtualMemory>(
@@ -174,7 +175,8 @@ TEST_CASE("Test Scheduler", "[scheduler]") {
         REQUIRE(scheduler.add_task(task1).has_value());
         auto task2 = std::make_shared<vlinux::Task>(ctx2);
         task2->ctx = ctx2;
-        auto task2_page_table = std::make_shared<vlinux::mm::PageTable>();
+        auto task2_page_table =
+            std::make_shared<vlinux::mm::UnicornGuestPageTable>();
         task2->page_table = task2_page_table;
         task2->virtual_memory =
             std::make_shared<vlinux::mm::UnicornGuestVirtualMemory>(
@@ -210,7 +212,7 @@ TEST_CASE("Test VFS", "[vfs]") {
         auto inode_result = sb->alloc_inode(sb, vlinux::IINode::Type::File);
         REQUIRE(inode_result.has_value());
         auto inode = inode_result.value();
-        auto pgtable = std::make_shared<vlinux::mm::PageTable>();
+        auto pgtable = std::make_shared<vlinux::mm::UnicornGuestPageTable>();
         auto gvm = std::make_shared<vlinux::mm::UnicornGuestVirtualMemory>(
             uc, pgtable);
         auto file = std::make_shared<vlinux::File>(inode, *gvm);

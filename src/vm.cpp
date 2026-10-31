@@ -121,8 +121,8 @@ public:
                    std::uint64_t stack_bottom,
                    std::shared_ptr<mm::VirtualMemoryAddressSpace> address_space,
                    std::shared_ptr<mm::IGuestVirtualMemory> virtual_memory,
-                   std::shared_ptr<
-                       mm::IGuestPageTable<const mm::PageTable::MapType&>>
+                   std::shared_ptr<mm::IGuestPageTable<
+                       const mm::UnicornGuestPageTable::MapType&>>
                        page_table,
                    std::shared_ptr<File> cwd) -> outcome::result<void> {
             task->name = name;
@@ -215,7 +215,8 @@ public:
         *idle_address_space = {
             .vpages = {idle_task_vdesc},
         };
-        auto idle_task_pagetable = std::make_shared<mm::PageTable>();
+        auto idle_task_pagetable =
+            std::make_shared<mm::UnicornGuestPageTable>();
         auto idle_task_virtual_memory =
             std::make_shared<mm::UnicornGuestVirtualMemory>(
                 this->uc_, idle_task_pagetable);
@@ -243,7 +244,8 @@ public:
         std::shared_ptr<mm::VirtualMemoryAddressSpace> init_address_space =
             std::make_shared<mm::VirtualMemoryAddressSpace>();
         *init_address_space = {.vpages = {init_task_vdesc}};
-        auto init_task_pagetable = std::make_shared<mm::PageTable>();
+        auto init_task_pagetable =
+            std::make_shared<mm::UnicornGuestPageTable>();
         auto init_task_virtual_memory =
             std::make_shared<mm::UnicornGuestVirtualMemory>(
                 this->uc_, init_task_pagetable);
@@ -392,7 +394,7 @@ outcome::result<std::shared_ptr<Task>> VM::load(
     }
 
     auto address_space = std::make_shared<mm::VirtualMemoryAddressSpace>();
-    auto page_table = std::make_shared<mm::PageTable>();
+    auto page_table = std::make_shared<mm::UnicornGuestPageTable>();
     auto virtual_memory = std::make_shared<mm::UnicornGuestVirtualMemory>(
         this->impl_->uc_, page_table);
 

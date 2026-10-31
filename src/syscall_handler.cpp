@@ -544,7 +544,7 @@ public:
         task->address_space = std::make_shared<mm::VirtualMemoryAddressSpace>(
             *parent->address_space);
         task->address_space->vpages = {};
-        auto page_table = std::make_shared<mm::PageTable>();
+        auto page_table = std::make_shared<mm::UnicornGuestPageTable>();
         task->page_table = page_table;
         task->virtual_memory = std::make_shared<mm::UnicornGuestVirtualMemory>(
             context.uc, page_table);

@@ -103,7 +103,8 @@ public:
     std::uint64_t stack_bottom;
     std::shared_ptr<mm::VirtualMemoryAddressSpace> address_space;
     std::shared_ptr<mm::IGuestVirtualMemory> virtual_memory;
-    std::shared_ptr<mm::IGuestPageTable<const mm::PageTable::MapType&>>
+    std::shared_ptr<
+        mm::IGuestPageTable<const mm::UnicornGuestPageTable::MapType&>>
         page_table;
 
     // File system related fields.

@@ -155,11 +155,11 @@ outcome::result<void> PhysicalPageAllocator::free(
     return outcome::success();
 }
 
-PageTable::PageTable() = default;
+UnicornGuestPageTable::UnicornGuestPageTable() = default;
 
-PageTable::~PageTable() = default;
+UnicornGuestPageTable::~UnicornGuestPageTable() = default;
 
-outcome::result<void> PageTable::map(
+outcome::result<void> UnicornGuestPageTable::map(
     std::shared_ptr<VirtualPageDescriptor> va_desc,
     std::shared_ptr<PhysicalPageDescriptor> pa_desc) {
     if (va_desc == nullptr || pa_desc == nullptr) {
@@ -175,7 +175,7 @@ outcome::result<void> PageTable::map(
     return outcome::success();
 }
 
-outcome::result<void> PageTable::unmap(
+outcome::result<void> UnicornGuestPageTable::unmap(
     std::shared_ptr<VirtualPageDescriptor> va_desc) {
     if (va_desc == nullptr) {
         return std::errc::invalid_argument;
@@ -186,7 +186,7 @@ outcome::result<void> PageTable::unmap(
     return outcome::success();
 }
 
-std::optional<std::uint64_t> PageTable::va_to_pa(std::uint64_t va) {
+std::optional<std::uint64_t> UnicornGuestPageTable::va_to_pa(std::uint64_t va) {
     for (auto& [va_desc, pa_desc] : this->map_) {
         if (va_desc->start_addr <= va &&
             va < va_desc->start_addr + va_desc->len) {
@@ -196,8 +196,8 @@ std::optional<std::uint64_t> PageTable::va_to_pa(std::uint64_t va) {
     return std::nullopt;
 }
 
-std::optional<std::shared_ptr<VirtualPageDescriptor>> PageTable::va_to_desc(
-    std::uint64_t va) {
+std::optional<std::shared_ptr<VirtualPageDescriptor>>
+UnicornGuestPageTable::va_to_desc(std::uint64_t va) {
     for (const auto& [va_desc, pa_desc] : this->map_) {
         if (va_desc->start_addr <= va &&
             va < va_desc->start_addr + va_desc->len) {
@@ -208,7 +208,8 @@ std::optional<std::shared_ptr<VirtualPageDescriptor>> PageTable::va_to_desc(
 }
 
 std::optional<std::shared_ptr<PhysicalPageDescriptor>>
-PageTable::vdesc_to_pdesc(std::shared_ptr<VirtualPageDescriptor> vdesc) {
+UnicornGuestPageTable::vdesc_to_pdesc(
+    std::shared_ptr<VirtualPageDescriptor> vdesc) {
     auto it = this->map_.find(vdesc);
     if (it == this->map_.end()) {
         return std::nullopt;
@@ -219,7 +220,7 @@ PageTable::vdesc_to_pdesc(std::shared_ptr<VirtualPageDescriptor> vdesc) {
 class UnicornGuestVirtualMemory::Impl {
 public:
     uc_engine* uc;
-    std::shared_ptr<PageTable> page_table;
+    std::shared_ptr<UnicornGuestPageTable> page_table;
 
 public:
     // va must be mapped.
@@ -233,7 +234,7 @@ public:
 };
 
 UnicornGuestVirtualMemory::UnicornGuestVirtualMemory(
-    uc_engine* uc, std::shared_ptr<PageTable> page_table)
+    uc_engine* uc, std::shared_ptr<UnicornGuestPageTable> page_table)
     : impl_(std::make_unique<Impl>()) {
     impl_->uc = uc;
     impl_->page_table = page_table;

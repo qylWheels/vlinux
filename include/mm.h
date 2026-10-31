@@ -164,7 +164,7 @@ public:
     virtual T all_maps() const = 0;
 };
 
-class PageTable
+class UnicornGuestPageTable
     : public IGuestPageTable<
           const std::map<std::shared_ptr<VirtualPageDescriptor>,
                          std::shared_ptr<PhysicalPageDescriptor>>&> {
@@ -173,8 +173,8 @@ public:
                              std::shared_ptr<PhysicalPageDescriptor>>;
 
 public:
-    PageTable();
-    ~PageTable();
+    UnicornGuestPageTable();
+    ~UnicornGuestPageTable();
 
 public:
     // Va refers to virtual address of guest process.
@@ -221,8 +221,8 @@ public:
 
 class UnicornGuestVirtualMemory : public IGuestVirtualMemory {
 public:
-    UnicornGuestVirtualMemory(uc_engine* uc,
-                              std::shared_ptr<PageTable> page_table);
+    UnicornGuestVirtualMemory(
+        uc_engine* uc, std::shared_ptr<UnicornGuestPageTable> page_table);
     ~UnicornGuestVirtualMemory();
     UnicornGuestVirtualMemory(const UnicornGuestVirtualMemory&) = delete;
     UnicornGuestVirtualMemory& operator=(const UnicornGuestVirtualMemory&) =

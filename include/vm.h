@@ -27,7 +27,8 @@ public:
         std::uint64_t stack_top, std::uint64_t stack_bottom,
         std::shared_ptr<mm::VirtualMemoryAddressSpace> address_space,
         std::shared_ptr<mm::IGuestVirtualMemory> virtual_memory,
-        std::shared_ptr<mm::IGuestPageTable<const mm::PageTable::MapType&>>
+        std::shared_ptr<
+            mm::IGuestPageTable<const mm::UnicornGuestPageTable::MapType&>>
             page_table,
         std::shared_ptr<File> cwd) {
         OUTCOME_TRY(uc_context * ctx, create_task_ctx());
@@ -59,7 +60,8 @@ public:
         std::uint64_t stack_top, std::uint64_t stack_bottom,
         std::shared_ptr<mm::VirtualMemoryAddressSpace> address_space,
         std::shared_ptr<mm::IGuestVirtualMemory> virtual_memory,
-        std::shared_ptr<mm::IGuestPageTable<const mm::PageTable::MapType&>>
+        std::shared_ptr<
+            mm::IGuestPageTable<const mm::UnicornGuestPageTable::MapType&>>
             page_table,
         std::shared_ptr<File> cwd)>
         setup_task_properties;
