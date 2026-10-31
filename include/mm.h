@@ -151,13 +151,6 @@ public:
     virtual ~IGuestPageTable() = default;
 
 public:
-    enum class PagePermission : std::uint8_t {
-        Read = 1 << 0,
-        Write = 1 << 1,
-        Execute = 1 << 2
-    };
-
-public:
     virtual outcome::result<void> map(
         std::shared_ptr<VirtualPageDescriptor> vdesc,
         std::shared_ptr<PhysicalPageDescriptor> pdesc) = 0;
