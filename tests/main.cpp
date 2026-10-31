@@ -55,7 +55,11 @@ TEST_CASE("Test PageTable", "[page_table]") {
         auto va_desc = std::make_shared<vlinux::mm::VirtualPageDescriptor>();
         va_desc->start_addr = 0xbeef'0000;
         va_desc->len = vlinux::mm::PAGE_SIZE;
-        va_desc->perm = UC_PROT_READ | UC_PROT_WRITE;
+        va_desc->perm =
+            static_cast<std::uint8_t>(
+                vlinux::mm::VirtualPageDescriptor::Permission::Read) |
+            static_cast<std::uint8_t>(
+                vlinux::mm::VirtualPageDescriptor::Permission::Write);
 
         // Test map().
         REQUIRE(pt.map(va_desc, pa_desc).has_value());
@@ -225,14 +229,24 @@ TEST_CASE("Test VFS", "[vfs]") {
         REQUIRE(pgtable
                     ->map(std::make_shared<vlinux::mm::VirtualPageDescriptor>(
                               0x1000, vlinux::mm::PAGE_SIZE,
-                              UC_PROT_READ | UC_PROT_WRITE),
+                              static_cast<std::uint8_t>(
+                                  vlinux::mm::VirtualPageDescriptor::
+                                      Permission::Read) |
+                                  static_cast<std::uint8_t>(
+                                      vlinux::mm::VirtualPageDescriptor::
+                                          Permission::Write)),
                           std::make_shared<vlinux::mm::PhysicalPageDescriptor>(
                               0x1000, vlinux::mm::PAGE_SIZE, 1, 0))
                     .has_value());
         REQUIRE(pgtable
                     ->map(std::make_shared<vlinux::mm::VirtualPageDescriptor>(
                               0x8000, vlinux::mm::PAGE_SIZE,
-                              UC_PROT_READ | UC_PROT_WRITE),
+                              static_cast<std::uint8_t>(
+                                  vlinux::mm::VirtualPageDescriptor::
+                                      Permission::Read) |
+                                  static_cast<std::uint8_t>(
+                                      vlinux::mm::VirtualPageDescriptor::
+                                          Permission::Write)),
                           std::make_shared<vlinux::mm::PhysicalPageDescriptor>(
                               0x8000, vlinux::mm::PAGE_SIZE, 1, 0))
                     .has_value());
