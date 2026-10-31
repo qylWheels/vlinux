@@ -209,7 +209,11 @@ public:
         auto idle_task_vdesc = std::make_shared<mm::VirtualPageDescriptor>();
         idle_task_vdesc->start_addr = mm::kIdleTaskCodeRegionStart;
         idle_task_vdesc->len = mm::PAGE_SIZE;
-        idle_task_vdesc->perm = UC_PROT_READ | UC_PROT_EXEC;
+        idle_task_vdesc->perm =
+            static_cast<std::uint8_t>(
+                mm::VirtualPageDescriptor::Permission::Read) |
+            static_cast<std::uint8_t>(
+                mm::VirtualPageDescriptor::Permission::Exec);
         std::shared_ptr<mm::VirtualMemoryAddressSpace> idle_address_space =
             std::make_shared<mm::VirtualMemoryAddressSpace>();
         *idle_address_space = {
@@ -240,7 +244,11 @@ public:
         auto init_task_vdesc = std::make_shared<mm::VirtualPageDescriptor>();
         init_task_vdesc->start_addr = mm::kInitTaskCodeRegionStart;
         init_task_vdesc->len = mm::PAGE_SIZE;
-        init_task_vdesc->perm = UC_PROT_READ | UC_PROT_EXEC;
+        init_task_vdesc->perm =
+            static_cast<std::uint8_t>(
+                mm::VirtualPageDescriptor::Permission::Read) |
+            static_cast<std::uint8_t>(
+                mm::VirtualPageDescriptor::Permission::Exec);
         std::shared_ptr<mm::VirtualMemoryAddressSpace> init_address_space =
             std::make_shared<mm::VirtualMemoryAddressSpace>();
         *init_address_space = {.vpages = {init_task_vdesc}};
@@ -419,16 +427,19 @@ outcome::result<std::shared_ptr<Task>> VM::load(
         file.close();
 
         // Setup memory address area.
-        std::uint32_t perms = 0;
+        std::uint8_t perms = 0;
         auto segment_flags = segment->get_flags();
         if (segment_flags & ELFIO::PF_R) {
-            perms |= UC_PROT_READ;
+            perms |= static_cast<std::uint8_t>(
+                mm::VirtualPageDescriptor::Permission::Read);
         }
         if (segment_flags & ELFIO::PF_W) {
-            perms |= UC_PROT_WRITE;
+            perms |= static_cast<std::uint8_t>(
+                mm::VirtualPageDescriptor::Permission::Write);
         }
         if (segment_flags & ELFIO::PF_X) {
-            perms |= UC_PROT_EXEC;
+            perms |= static_cast<std::uint8_t>(
+                mm::VirtualPageDescriptor::Permission::Exec);
         }
         // If segment is not page-aligned, it starts at page_off of its first
         // page, so map [page_start, page_start + span).
@@ -487,7 +498,9 @@ outcome::result<std::shared_ptr<Task>> VM::load(
     auto stack_page_vdesc = std::make_shared<mm::VirtualPageDescriptor>();
     stack_page_vdesc->start_addr = 0xf000'0000;
     stack_page_vdesc->len = mm::PAGE_SIZE;
-    stack_page_vdesc->perm = UC_PROT_READ | UC_PROT_WRITE;
+    stack_page_vdesc->perm =
+        static_cast<std::uint8_t>(mm::VirtualPageDescriptor::Permission::Read) |
+        static_cast<std::uint8_t>(mm::VirtualPageDescriptor::Permission::Write);
     OUTCOME_TRY(page_table->map(stack_page_vdesc, stack_page_pdesc));
     if (!address_space->vpages.insert(stack_page_vdesc).second) {
         return std::errc::address_in_use;
