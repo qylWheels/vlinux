@@ -15,6 +15,8 @@
 #include <variant>
 #include <vector>
 
+#include "mm.h"
+
 namespace outcome = OUTCOME_V2_NAMESPACE;
 
 namespace vlinux {
@@ -157,8 +159,8 @@ private:
 
 class File {
 public:
-    File(std::shared_ptr<IINode> inode, uc_engine* uc)
-        : inode_(inode), uc_(uc) {}
+    File(std::shared_ptr<IINode> inode, mm::IGuestVirtualMemory& gvm)
+        : inode_(inode), gvm_(&gvm) {}
     ~File() = default;
     File(const File&) = delete;
     File& operator=(const File&) = delete;
@@ -210,7 +212,7 @@ public:
                                          std::int64_t offset);
 
 private:
-    uc_engine* uc_;
+    mm::IGuestVirtualMemory* gvm_;
     std::uint64_t refcount_ = 0;
     std::uint64_t flags_ = 0;  // Permissions.
     std::uint64_t offset_ = 0;

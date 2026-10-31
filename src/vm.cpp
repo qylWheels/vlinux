@@ -68,6 +68,8 @@ public:
 
         this->scheduler_ = std::make_shared<Scheduler>(this->uc_);
         this->ppa_ = std::make_shared<mm::PhysicalPageAllocator>(this->uc_);
+        this->gpm_ =
+            std::make_shared<mm::UnicornGuestPhysicalMemory>(this->uc_);
         this->infinite_loop_code_ = static_cast<std::uint8_t*>(
             std::aligned_alloc(mm::PAGE_SIZE, mm::PAGE_SIZE));
         this->infinite_loop_code_[0] = 0xEB;
@@ -118,7 +120,10 @@ public:
                    Task::State state, std::uint64_t stack_top,
                    std::uint64_t stack_bottom,
                    std::shared_ptr<mm::VirtualMemoryAddressSpace> address_space,
-                   std::shared_ptr<mm::PageTable> page_table,
+                   std::shared_ptr<mm::IGuestVirtualMemory> virtual_memory,
+                   std::shared_ptr<mm::IGuestPageTable<
+                       const mm::UnicornGuestPageTable::MapType&>>
+                       page_table,
                    std::shared_ptr<File> cwd) -> outcome::result<void> {
             task->name = name;
             task->root_task = root_task;
@@ -130,6 +135,7 @@ public:
             task->stack_top = stack_top;
             task->stack_bottom = stack_bottom;
             task->address_space = address_space;
+            task->virtual_memory = virtual_memory;
             task->page_table = page_table;
             task->cwd = cwd;
             return outcome::success();
@@ -203,20 +209,29 @@ public:
         auto idle_task_vdesc = std::make_shared<mm::VirtualPageDescriptor>();
         idle_task_vdesc->start_addr = mm::kIdleTaskCodeRegionStart;
         idle_task_vdesc->len = mm::PAGE_SIZE;
-        idle_task_vdesc->perm = UC_PROT_READ | UC_PROT_EXEC;
+        idle_task_vdesc->perm =
+            static_cast<std::uint8_t>(
+                mm::VirtualPageDescriptor::Permission::Read) |
+            static_cast<std::uint8_t>(
+                mm::VirtualPageDescriptor::Permission::Exec);
         std::shared_ptr<mm::VirtualMemoryAddressSpace> idle_address_space =
             std::make_shared<mm::VirtualMemoryAddressSpace>();
         *idle_address_space = {
             .vpages = {idle_task_vdesc},
         };
-        auto idle_task_pagetable = std::make_shared<mm::PageTable>();
+        auto idle_task_pagetable =
+            std::make_shared<mm::UnicornGuestPageTable>();
+        auto idle_task_virtual_memory =
+            std::make_shared<mm::UnicornGuestVirtualMemory>(
+                this->uc_, idle_task_pagetable);
         OUTCOME_TRY(idle_task_pagetable->map(idle_task_vdesc, idle_task_pdesc));
         OUTCOME_TRY(
             auto idle_task,
             this->task_initializer_.init_task(
                 mm::kIdleTaskCodeRegionStart, "idle", true, idle_task_pid,
                 idle_task_tgid, nullptr, {}, Task::State::Ready, 0, 0,
-                idle_address_space, idle_task_pagetable, nullptr));
+                idle_address_space, idle_task_virtual_memory,
+                idle_task_pagetable, nullptr));
 
         // Setup init task.
         OUTCOME_TRY(auto init_task_pid, this->pid_manager_.alloc_pid());
@@ -229,18 +244,27 @@ public:
         auto init_task_vdesc = std::make_shared<mm::VirtualPageDescriptor>();
         init_task_vdesc->start_addr = mm::kInitTaskCodeRegionStart;
         init_task_vdesc->len = mm::PAGE_SIZE;
-        init_task_vdesc->perm = UC_PROT_READ | UC_PROT_EXEC;
+        init_task_vdesc->perm =
+            static_cast<std::uint8_t>(
+                mm::VirtualPageDescriptor::Permission::Read) |
+            static_cast<std::uint8_t>(
+                mm::VirtualPageDescriptor::Permission::Exec);
         std::shared_ptr<mm::VirtualMemoryAddressSpace> init_address_space =
             std::make_shared<mm::VirtualMemoryAddressSpace>();
         *init_address_space = {.vpages = {init_task_vdesc}};
-        auto init_task_pagetable = std::make_shared<mm::PageTable>();
+        auto init_task_pagetable =
+            std::make_shared<mm::UnicornGuestPageTable>();
+        auto init_task_virtual_memory =
+            std::make_shared<mm::UnicornGuestVirtualMemory>(
+                this->uc_, init_task_pagetable);
         OUTCOME_TRY(init_task_pagetable->map(init_task_vdesc, init_task_pdesc));
         OUTCOME_TRY(
             auto init_task,
             this->task_initializer_.init_task(
                 mm::kInitTaskCodeRegionStart, "init", true, init_task_pid,
                 init_task_tgid, idle_task, {}, Task::State::Ready, 0, 0,
-                init_address_space, init_task_pagetable, nullptr));
+                init_address_space, init_task_virtual_memory,
+                init_task_pagetable, nullptr));
 
         // Set idle children to init task.
         idle_task->children.push_back(init_task);
@@ -296,8 +320,8 @@ public:
         // Dispatch.
         auto task = self->scheduler_->current_task();
         std::uint64_t ret = self->syscall_handler_.dispatch(
-            {self->uc_, &self->pid_manager_, self->scheduler_, task, self->ppa_,
-             &self->tasks_,
+            {self->uc_, &self->pid_manager_, self->scheduler_, task, self->gpm_,
+             self->ppa_, &self->tasks_,
              [self](uc_context* ctx) -> outcome::result<void> {
                  return self->register_context(ctx);
              },
@@ -340,7 +364,8 @@ public:
     std::shared_ptr<Scheduler> scheduler_;
 
     // Memory-related fields.
-    std::shared_ptr<mm::PhysicalPageAllocator> ppa_;
+    std::shared_ptr<mm::IGuestPhysicalMemory> gpm_;
+    std::shared_ptr<mm::IGuestPhysicalPageAllocator> ppa_;
 
     // Syscall-related fields.
     syscall::SyscallHandler syscall_handler_;
@@ -377,7 +402,10 @@ outcome::result<std::shared_ptr<Task>> VM::load(
     }
 
     auto address_space = std::make_shared<mm::VirtualMemoryAddressSpace>();
-    auto page_table = std::make_shared<mm::PageTable>();
+    auto page_table = std::make_shared<mm::UnicornGuestPageTable>();
+    auto virtual_memory = std::make_shared<mm::UnicornGuestVirtualMemory>(
+        this->impl_->uc_, page_table);
+
     // Load segments.
     for (const auto& segment : reader.segments) {
         if (segment->get_type() != ELFIO::PT_LOAD) {
@@ -399,16 +427,19 @@ outcome::result<std::shared_ptr<Task>> VM::load(
         file.close();
 
         // Setup memory address area.
-        std::uint32_t perms = 0;
+        std::uint8_t perms = 0;
         auto segment_flags = segment->get_flags();
         if (segment_flags & ELFIO::PF_R) {
-            perms |= UC_PROT_READ;
+            perms |= static_cast<std::uint8_t>(
+                mm::VirtualPageDescriptor::Permission::Read);
         }
         if (segment_flags & ELFIO::PF_W) {
-            perms |= UC_PROT_WRITE;
+            perms |= static_cast<std::uint8_t>(
+                mm::VirtualPageDescriptor::Permission::Write);
         }
         if (segment_flags & ELFIO::PF_X) {
-            perms |= UC_PROT_EXEC;
+            perms |= static_cast<std::uint8_t>(
+                mm::VirtualPageDescriptor::Permission::Exec);
         }
         // If segment is not page-aligned, it starts at page_off of its first
         // page, so map [page_start, page_start + span).
@@ -467,7 +498,9 @@ outcome::result<std::shared_ptr<Task>> VM::load(
     auto stack_page_vdesc = std::make_shared<mm::VirtualPageDescriptor>();
     stack_page_vdesc->start_addr = 0xf000'0000;
     stack_page_vdesc->len = mm::PAGE_SIZE;
-    stack_page_vdesc->perm = UC_PROT_READ | UC_PROT_WRITE;
+    stack_page_vdesc->perm =
+        static_cast<std::uint8_t>(mm::VirtualPageDescriptor::Permission::Read) |
+        static_cast<std::uint8_t>(mm::VirtualPageDescriptor::Permission::Write);
     OUTCOME_TRY(page_table->map(stack_page_vdesc, stack_page_pdesc));
     if (!address_space->vpages.insert(stack_page_vdesc).second) {
         return std::errc::address_in_use;
@@ -477,7 +510,7 @@ outcome::result<std::shared_ptr<Task>> VM::load(
     auto root_dir_inode = this->impl_->mount_info_.curr_mount_of("/").value();
     OUTCOME_TRY(root_dir_inode->inc_mem_refcount());
     auto root_dir_file =
-        std::make_shared<File>(root_dir_inode, this->impl_->uc_);
+        std::make_shared<File>(root_dir_inode, *virtual_memory);
     OUTCOME_TRY(root_dir_file->get());
 
     // Create task.
@@ -490,12 +523,13 @@ outcome::result<std::shared_ptr<Task>> VM::load(
     if (parent_it != this->impl_->tasks_.end()) {
         parent = *parent_it;
     }
-    OUTCOME_TRY(auto task, this->impl_->task_initializer_.init_task(
-                               reader.get_entry(), path.filename().string(),
-                               false, pid, tgid, parent, {}, Task::State::New,
-                               stack_page_vdesc->start_addr,
-                               stack_page_vdesc->start_addr + mm::PAGE_SIZE,
-                               address_space, page_table, root_dir_file));
+    OUTCOME_TRY(
+        auto task,
+        this->impl_->task_initializer_.init_task(
+            reader.get_entry(), path.filename().string(), false, pid, tgid,
+            parent, {}, Task::State::New, stack_page_vdesc->start_addr,
+            stack_page_vdesc->start_addr + mm::PAGE_SIZE, address_space,
+            virtual_memory, page_table, root_dir_file));
 
     // Set stack top.
     std::uint64_t rsp = stack_page_vdesc->start_addr + mm::PAGE_SIZE;

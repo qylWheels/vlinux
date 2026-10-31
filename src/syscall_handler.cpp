@@ -12,7 +12,9 @@
 #include <array>
 #include <cerrno>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <functional>
 #include <memory>
@@ -178,9 +180,21 @@ public:
             auto vdesc = std::make_shared<mm::VirtualPageDescriptor>();
             vdesc->start_addr = mmap + i * mm::PAGE_SIZE;
             vdesc->len = mm::PAGE_SIZE;
-            vdesc->perm |= ((prot & PROT_READ) ? UC_PROT_READ : 0);
-            vdesc->perm |= ((prot & PROT_WRITE) ? UC_PROT_WRITE : 0);
-            vdesc->perm |= ((prot & PROT_EXEC) ? UC_PROT_EXEC : 0);
+            vdesc->perm |=
+                ((prot & PROT_READ)
+                     ? static_cast<std::uint8_t>(
+                           mm::VirtualPageDescriptor::Permission::Read)
+                     : 0);
+            vdesc->perm |=
+                ((prot & PROT_WRITE)
+                     ? static_cast<std::uint8_t>(
+                           mm::VirtualPageDescriptor::Permission::Write)
+                     : 0);
+            vdesc->perm |=
+                ((prot & PROT_EXEC)
+                     ? static_cast<std::uint8_t>(
+                           mm::VirtualPageDescriptor::Permission::Exec)
+                     : 0);
             auto result1 = task->page_table->map(vdesc, ppages[i]);
             auto result2 = task->address_space->vpages.insert(vdesc);
             if (result1.has_error() || !result2.second) {
@@ -299,11 +313,23 @@ public:
                 task->address_space->vpages.begin(),
                 task->address_space->vpages.end(),
                 [i](auto vdesc) { return vdesc->start_addr == i; });
-            std::uint64_t uc_prot = 0;
-            uc_prot |= ((prot & PROT_READ) ? UC_PROT_READ : 0);
-            uc_prot |= ((prot & PROT_WRITE) ? UC_PROT_WRITE : 0);
-            uc_prot |= ((prot & PROT_EXEC) ? UC_PROT_EXEC : 0);
-            (*vdesc_it)->perm = uc_prot;
+            std::uint8_t vdesc_prot = 0;
+            vdesc_prot |=
+                ((prot & PROT_READ)
+                     ? static_cast<std::uint8_t>(
+                           mm::VirtualPageDescriptor::Permission::Read)
+                     : 0);
+            vdesc_prot |=
+                ((prot & PROT_WRITE)
+                     ? static_cast<std::uint8_t>(
+                           mm::VirtualPageDescriptor::Permission::Write)
+                     : 0);
+            vdesc_prot |=
+                ((prot & PROT_EXEC)
+                     ? static_cast<std::uint8_t>(
+                           mm::VirtualPageDescriptor::Permission::Exec)
+                     : 0);
+            (*vdesc_it)->perm = vdesc_prot;
         }
 
         return 0;
@@ -352,7 +378,10 @@ private:
             auto vdesc = std::make_shared<mm::VirtualPageDescriptor>();
             vdesc->start_addr = task->address_space->brk + i * mm::PAGE_SIZE;
             vdesc->len = mm::PAGE_SIZE;
-            vdesc->perm = UC_PROT_READ | UC_PROT_WRITE;
+            vdesc->perm = static_cast<std::uint8_t>(
+                              mm::VirtualPageDescriptor::Permission::Read) |
+                          static_cast<std::uint8_t>(
+                              mm::VirtualPageDescriptor::Permission::Write);
             vdescs.push_back(vdesc);
 
             // Map virtual page.
@@ -411,8 +440,7 @@ private:
             vdesc_victims.push_back(*it);
 
             // Flush TLB and TB.
-            ::uc_ctl_flush_tlb(context.uc);
-            ::uc_ctl_flush_tb(context.uc);
+            (void)task->virtual_memory->flush_tlb();
 
             // Free physical page.
             (void)context.ppa->free(pdesc);
@@ -544,7 +572,10 @@ public:
         task->address_space = std::make_shared<mm::VirtualMemoryAddressSpace>(
             *parent->address_space);
         task->address_space->vpages = {};
-        task->page_table = std::make_shared<mm::PageTable>();
+        auto page_table = std::make_shared<mm::UnicornGuestPageTable>();
+        task->page_table = page_table;
+        task->virtual_memory = std::make_shared<mm::UnicornGuestVirtualMemory>(
+            context.uc, page_table);
         std::vector<std::shared_ptr<mm::PhysicalPageDescriptor>> alloced_ppages;
         auto cleanup = [&]() {
             for (auto alloced_ppage : alloced_ppages) {
@@ -573,17 +604,20 @@ public:
             auto parent_ppage = parent->page_table->vdesc_to_pdesc(vdesc);
             if (parent_ppage.has_value()) {
                 std::vector<std::uint8_t> page_data(mm::PAGE_SIZE);
-                err =
-                    ::uc_mem_read(context.uc, parent_ppage.value()->start_addr,
-                                  page_data.data(), mm::PAGE_SIZE);
-                if (err != UC_ERR_OK) {
+
+                // Read parent page content.
+                auto read_result = context.gpm->read(
+                    parent_ppage.value()->start_addr, mm::PAGE_SIZE);
+                if (!read_result) {
                     cleanup();
                     return -ENOMEM;
                 }
-                err =
-                    ::uc_mem_write(context.uc, ppage_result.value()->start_addr,
-                                   page_data.data(), mm::PAGE_SIZE);
-                if (err != UC_ERR_OK) {
+                page_data = read_result.value();
+
+                // Write parent page content to child page.
+                auto write_result = context.gpm->write(
+                    ppage_result.value()->start_addr, page_data);
+                if (!write_result) {
                     cleanup();
                     return -ENOMEM;
                 }
@@ -733,18 +767,11 @@ public:
         auto task = context.scheduler->current_task();
 
         // Read pathname.
-        std::string pathname;
-        for (int i = 0; i < PATH_MAX; ++i) {
-            char c;
-            if (::uc_vmem_read(context.uc, pathname_addr + i, UC_PROT_READ, &c,
-                               1) != UC_ERR_OK) {
-                return -EFAULT;
-            }
-            if (c == '\0') {
-                break;
-            }
-            pathname += c;
+        auto pathname_result = task->virtual_memory->read_string(pathname_addr);
+        if (!pathname_result) {
+            return -EFAULT;
         }
+        auto pathname = pathname_result.value();
 
         // Only check dirfd when pathname is relative.
         if (pathname[0] != '/') {
@@ -791,7 +818,7 @@ public:
             }
 
             auto inode = inode_result.value();
-            auto file = std::make_shared<File>(inode, context.uc);
+            auto file = std::make_shared<File>(inode, *task->virtual_memory);
             auto result = file->get();
             if (!result.has_value()) {
                 return -EIO;
@@ -950,13 +977,17 @@ struct PreadvPwritevCommon {
         if (iovcnt < 0) return -EINVAL;
 
         // Read and check iovs.
+        auto iovs_result =
+            task->virtual_memory->read(iov_addr, iovcnt * sizeof(iovec));
+        if (!iovs_result) {
+            return -EFAULT;
+        }
+        auto iovs_bytes = iovs_result.value();
         std::vector<iovec> iovs(iovcnt);
         for (int i = 0; i < iovcnt; ++i) {
-            auto err = ::uc_vmem_read(context.uc, iov_addr + i * sizeof(iovec),
-                                      UC_PROT_READ, &iovs[i], sizeof(iovec));
-            if (err != 0) {
-                return -EFAULT;
-            }
+            iovec v;
+            std::memmove(&v, &iovs_bytes[i * sizeof(v)], sizeof(v));
+            iovs[i] = v;
         }
 
         // Transform linux iov to our iov.
@@ -1401,12 +1432,11 @@ public:
         }
 
         // Read pathname.
-        auto pathname_result =
-            helpers::read_string_from_vmem(context.uc, path_addr);
-        if (std::holds_alternative<int>(pathname_result)) {
-            return std::get<int>(pathname_result);
+        auto pathname_result = task->virtual_memory->read_string(path_addr);
+        if (!pathname_result) {
+            return -EFAULT;
         }
-        auto pathname = std::get<std::string>(pathname_result);
+        auto pathname = pathname_result.value();
 
         // Find parent inode of the pathname.
         auto parent_inode_result = helpers::retrieve_parent_of_path(

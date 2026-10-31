@@ -11,12 +11,51 @@
 #include <outcome/config.hpp>
 #include <outcome/outcome.hpp>
 #include <outcome/result.hpp>
+#include <ranges>
 #include <set>
+#include <string>
+#include <vector>
 
 namespace outcome = OUTCOME_V2_NAMESPACE;
 
 namespace vlinux {
 namespace mm {
+class IGuestPhysicalMemory {
+public:
+    virtual ~IGuestPhysicalMemory() = default;
+
+public:
+    virtual outcome::result<std::vector<std::uint8_t>> read(
+        std::size_t addr, std::size_t bytes) = 0;
+    virtual outcome::result<std::string> read_string(std::size_t addr) = 0;
+    virtual outcome::result<void> write(std::size_t addr,
+                                        std::vector<std::uint8_t> data) = 0;
+};
+
+class UnicornGuestPhysicalMemory : public IGuestPhysicalMemory {
+public:
+    UnicornGuestPhysicalMemory(uc_engine* uc);
+    ~UnicornGuestPhysicalMemory();
+    UnicornGuestPhysicalMemory(const UnicornGuestPhysicalMemory& other) =
+        delete;
+    UnicornGuestPhysicalMemory& operator=(
+        const UnicornGuestPhysicalMemory& other) = delete;
+    UnicornGuestPhysicalMemory(UnicornGuestPhysicalMemory&& other) = delete;
+    UnicornGuestPhysicalMemory& operator=(UnicornGuestPhysicalMemory&& other) =
+        delete;
+
+public:
+    virtual outcome::result<std::vector<std::uint8_t>> read(
+        std::size_t addr, std::size_t bytes) override;
+    virtual outcome::result<std::string> read_string(std::size_t addr) override;
+    virtual outcome::result<void> write(
+        std::size_t addr, std::vector<std::uint8_t> data) override;
+
+private:
+    class Impl;
+    std::unique_ptr<Impl> impl_;
+};
+
 const std::size_t PAGE_SIZE = 4096;
 const std::uint64_t kIdleTaskCodeRegionStart = 0x1000;
 const std::uint64_t kIdleTaskCodeRegionLen = PAGE_SIZE;
@@ -39,7 +78,20 @@ struct PhysicalPageDescriptor {
     }
 };
 
-class PhysicalPageAllocator {
+class IGuestPhysicalPageAllocator {
+public:
+    virtual ~IGuestPhysicalPageAllocator() = default;
+
+public:
+    virtual outcome::result<std::shared_ptr<PhysicalPageDescriptor>>
+    alloc() = 0;
+    virtual outcome::result<std::shared_ptr<PhysicalPageDescriptor>> get_page(
+        std::shared_ptr<PhysicalPageDescriptor> desc) = 0;
+    virtual outcome::result<void> free(
+        std::shared_ptr<PhysicalPageDescriptor> desc) = 0;
+};
+
+class PhysicalPageAllocator : public IGuestPhysicalPageAllocator {
     // [0, 0x1000): Reserved.
     // [0x1000, 0x2000): idle task. Desc not in this allocator.
     // [0x2000, 0x3000): init task. Desc not in this allocator.
@@ -85,15 +137,51 @@ private:
 };
 
 struct VirtualPageDescriptor {
+    enum class Permission : std::uint8_t {
+        None = 0,
+        Read = 1 << 0,
+        Write = 1 << 1,
+        Exec = 1 << 2,
+    };
+
     std::uint64_t start_addr;
     std::size_t len;
-    std::uint64_t perm;  // Use UC_PROT_*.
+    std::uint8_t perm;  // Use Permission.
 };
 
-class PageTable {
+template <typename T>
+concept const_range = std::ranges::range<const T>;
+
+template <const_range T>
+class IGuestPageTable {
 public:
-    PageTable();
-    ~PageTable();
+    virtual ~IGuestPageTable() = default;
+
+public:
+    virtual outcome::result<void> map(
+        std::shared_ptr<VirtualPageDescriptor> vdesc,
+        std::shared_ptr<PhysicalPageDescriptor> pdesc) = 0;
+    virtual outcome::result<void> unmap(
+        std::shared_ptr<VirtualPageDescriptor> vdesc) = 0;
+    virtual std::optional<std::uint64_t> va_to_pa(std::uint64_t va) = 0;
+    virtual std::optional<std::shared_ptr<VirtualPageDescriptor>> va_to_desc(
+        std::uint64_t va) = 0;
+    virtual std::optional<std::shared_ptr<PhysicalPageDescriptor>>
+    vdesc_to_pdesc(std::shared_ptr<VirtualPageDescriptor> vdesc) = 0;
+    virtual T all_maps() const = 0;
+};
+
+class UnicornGuestPageTable
+    : public IGuestPageTable<
+          const std::map<std::shared_ptr<VirtualPageDescriptor>,
+                         std::shared_ptr<PhysicalPageDescriptor>>&> {
+public:
+    using MapType = std::map<std::shared_ptr<VirtualPageDescriptor>,
+                             std::shared_ptr<PhysicalPageDescriptor>>;
+
+public:
+    UnicornGuestPageTable();
+    ~UnicornGuestPageTable();
 
 public:
     // Va refers to virtual address of guest process.
@@ -114,20 +202,55 @@ public:
     std::optional<std::shared_ptr<PhysicalPageDescriptor>> vdesc_to_pdesc(
         std::shared_ptr<VirtualPageDescriptor> vdesc);
 
-    const std::map<std::shared_ptr<VirtualPageDescriptor>,
-                   std::shared_ptr<PhysicalPageDescriptor>>&
-    all_maps() const {
-        return this->map_;
-    }
+    const MapType& all_maps() const { return this->map_; }
 
 private:
-    std::map<std::shared_ptr<VirtualPageDescriptor>,
-             std::shared_ptr<PhysicalPageDescriptor>>
-        map_;
+    MapType map_;
 };
 
 // Start address of mmap.
 const std::uint64_t kStartMmap = 0x6000'0000;
+
+class IGuestVirtualMemory {
+public:
+    virtual ~IGuestVirtualMemory() = default;
+
+public:
+    virtual outcome::result<std::vector<std::uint8_t>> read(
+        std::size_t addr, std::size_t bytes, bool perm_check = true) = 0;
+    virtual outcome::result<std::string> read_string(
+        std::size_t addr, bool perm_check = true) = 0;
+    virtual outcome::result<void> write(std::size_t addr,
+                                        std::vector<std::uint8_t> data,
+                                        bool perm_check = true) = 0;
+    virtual outcome::result<void> flush_tlb() = 0;
+};
+
+class UnicornGuestVirtualMemory : public IGuestVirtualMemory {
+public:
+    UnicornGuestVirtualMemory(
+        uc_engine* uc, std::shared_ptr<UnicornGuestPageTable> page_table);
+    ~UnicornGuestVirtualMemory();
+    UnicornGuestVirtualMemory(const UnicornGuestVirtualMemory&) = delete;
+    UnicornGuestVirtualMemory& operator=(const UnicornGuestVirtualMemory&) =
+        delete;
+    UnicornGuestVirtualMemory(UnicornGuestVirtualMemory&&) = delete;
+    UnicornGuestVirtualMemory& operator=(UnicornGuestVirtualMemory&&) = delete;
+
+public:
+    virtual outcome::result<std::vector<std::uint8_t>> read(
+        std::size_t addr, std::size_t bytes, bool perm_check) override;
+    virtual outcome::result<std::string> read_string(std::size_t addr,
+                                                     bool perm_check) override;
+    virtual outcome::result<void> write(std::size_t addr,
+                                        std::vector<std::uint8_t> data,
+                                        bool perm_check) override;
+    virtual outcome::result<void> flush_tlb() override;
+
+private:
+    class Impl;
+    std::unique_ptr<Impl> impl_;
+};
 
 // i.e mm_struct.
 struct VirtualMemoryAddressSpace {

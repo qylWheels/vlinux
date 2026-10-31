@@ -1,7 +1,9 @@
 #include "mm.h"
 
+#include <error.h>
 #include <unicorn/unicorn.h>
 
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <optional>
@@ -9,6 +11,55 @@
 
 namespace vlinux {
 namespace mm {
+class UnicornGuestPhysicalMemory::Impl {
+public:
+    uc_engine* uc;
+};
+
+UnicornGuestPhysicalMemory::UnicornGuestPhysicalMemory(uc_engine* uc)
+    : impl_(std::make_unique<Impl>()) {
+    impl_->uc = uc;
+}
+
+UnicornGuestPhysicalMemory::~UnicornGuestPhysicalMemory() = default;
+
+outcome::result<std::vector<std::uint8_t>> UnicornGuestPhysicalMemory::read(
+    std::size_t addr, std::size_t bytes) {
+    std::vector<std::uint8_t> data(bytes);
+    auto ret = ::uc_mem_read(impl_->uc, addr, data.data(), bytes);
+    if (ret != UC_ERR_OK) {
+        return make_error_code(ret);
+    }
+    return data;
+}
+
+outcome::result<std::string> UnicornGuestPhysicalMemory::read_string(
+    std::size_t addr) {
+    std::string result;
+    char c;
+    while (true) {
+        auto ret = ::uc_mem_read(impl_->uc, addr, &c, 1);
+        if (ret != UC_ERR_OK) {
+            return make_error_code(ret);
+        }
+        if (c == '\0') {
+            break;
+        }
+        result += c;
+        addr++;
+    }
+    return result;
+}
+
+outcome::result<void> UnicornGuestPhysicalMemory::write(
+    std::size_t addr, std::vector<std::uint8_t> data) {
+    auto ret = ::uc_mem_write(impl_->uc, addr, data.data(), data.size());
+    if (ret != UC_ERR_OK) {
+        return make_error_code(ret);
+    }
+    return outcome::success();
+}
+
 PhysicalPageAllocator::PhysicalPageAllocator(uc_engine* uc) : uc_(uc) {
     for (std::uint64_t addr = 0x3000; addr < 0x3000 + kMaxPageCount * PAGE_SIZE;
          addr += PAGE_SIZE) {
@@ -104,11 +155,11 @@ outcome::result<void> PhysicalPageAllocator::free(
     return outcome::success();
 }
 
-PageTable::PageTable() = default;
+UnicornGuestPageTable::UnicornGuestPageTable() = default;
 
-PageTable::~PageTable() = default;
+UnicornGuestPageTable::~UnicornGuestPageTable() = default;
 
-outcome::result<void> PageTable::map(
+outcome::result<void> UnicornGuestPageTable::map(
     std::shared_ptr<VirtualPageDescriptor> va_desc,
     std::shared_ptr<PhysicalPageDescriptor> pa_desc) {
     if (va_desc == nullptr || pa_desc == nullptr) {
@@ -124,7 +175,7 @@ outcome::result<void> PageTable::map(
     return outcome::success();
 }
 
-outcome::result<void> PageTable::unmap(
+outcome::result<void> UnicornGuestPageTable::unmap(
     std::shared_ptr<VirtualPageDescriptor> va_desc) {
     if (va_desc == nullptr) {
         return std::errc::invalid_argument;
@@ -135,7 +186,7 @@ outcome::result<void> PageTable::unmap(
     return outcome::success();
 }
 
-std::optional<std::uint64_t> PageTable::va_to_pa(std::uint64_t va) {
+std::optional<std::uint64_t> UnicornGuestPageTable::va_to_pa(std::uint64_t va) {
     for (auto& [va_desc, pa_desc] : this->map_) {
         if (va_desc->start_addr <= va &&
             va < va_desc->start_addr + va_desc->len) {
@@ -145,8 +196,8 @@ std::optional<std::uint64_t> PageTable::va_to_pa(std::uint64_t va) {
     return std::nullopt;
 }
 
-std::optional<std::shared_ptr<VirtualPageDescriptor>> PageTable::va_to_desc(
-    std::uint64_t va) {
+std::optional<std::shared_ptr<VirtualPageDescriptor>>
+UnicornGuestPageTable::va_to_desc(std::uint64_t va) {
     for (const auto& [va_desc, pa_desc] : this->map_) {
         if (va_desc->start_addr <= va &&
             va < va_desc->start_addr + va_desc->len) {
@@ -157,12 +208,132 @@ std::optional<std::shared_ptr<VirtualPageDescriptor>> PageTable::va_to_desc(
 }
 
 std::optional<std::shared_ptr<PhysicalPageDescriptor>>
-PageTable::vdesc_to_pdesc(std::shared_ptr<VirtualPageDescriptor> vdesc) {
+UnicornGuestPageTable::vdesc_to_pdesc(
+    std::shared_ptr<VirtualPageDescriptor> vdesc) {
     auto it = this->map_.find(vdesc);
     if (it == this->map_.end()) {
         return std::nullopt;
     }
     return it->second;
 }
+
+class UnicornGuestVirtualMemory::Impl {
+public:
+    uc_engine* uc;
+    std::shared_ptr<UnicornGuestPageTable> page_table;
+
+public:
+    // va must be mapped.
+    bool check_permission(std::uint64_t va, std::uint8_t perm) {
+        auto vdesc = page_table->va_to_desc(va).value();
+        if ((vdesc->perm & perm) != perm) {
+            return false;
+        }
+        return true;
+    }
+};
+
+UnicornGuestVirtualMemory::UnicornGuestVirtualMemory(
+    uc_engine* uc, std::shared_ptr<UnicornGuestPageTable> page_table)
+    : impl_(std::make_unique<Impl>()) {
+    impl_->uc = uc;
+    impl_->page_table = page_table;
+}
+
+UnicornGuestVirtualMemory::~UnicornGuestVirtualMemory() = default;
+
+outcome::result<std::vector<std::uint8_t>> UnicornGuestVirtualMemory::read(
+    std::size_t addr, std::size_t bytes, bool perm_check) {
+    std::vector<std::uint8_t> data(bytes);
+    for (auto i = 0ull; i < bytes; i++) {
+        // Check if mapped.
+        auto pa_opt = impl_->page_table->va_to_pa(addr + i);
+        if (!pa_opt.has_value()) {
+            return std::errc::bad_address;
+        }
+        auto pa = pa_opt.value();
+
+        // Check permissions.
+        if (perm_check && !impl_->check_permission(addr + i, UC_PROT_READ)) {
+            return std::errc::permission_denied;
+        }
+
+        // Read.
+        auto ret = ::uc_mem_read(impl_->uc, pa, data.data() + i, 1);
+        if (ret != UC_ERR_OK) {
+            return make_error_code(ret);
+        }
+    }
+    return data;
+}
+
+outcome::result<std::string> UnicornGuestVirtualMemory::read_string(
+    std::size_t addr, bool perm_check) {
+    std::string result;
+    char c;
+    while (true) {
+        // Check if mapped.
+        auto pa_opt = impl_->page_table->va_to_pa(addr);
+        if (!pa_opt.has_value()) {
+            return std::errc::bad_address;
+        }
+        auto pa = pa_opt.value();
+
+        // Check permissions.
+        if (perm_check && !impl_->check_permission(addr, UC_PROT_READ)) {
+            return std::errc::permission_denied;
+        }
+
+        // Read.
+        auto ret = ::uc_mem_read(impl_->uc, pa, &c, 1);
+        if (ret != UC_ERR_OK) {
+            return make_error_code(ret);
+        }
+        if (c == '\0') {
+            break;
+        }
+        result += c;
+        addr++;
+    }
+    return result;
+}
+
+outcome::result<void> UnicornGuestVirtualMemory::write(
+    std::size_t addr, std::vector<std::uint8_t> data, bool perm_check) {
+    for (auto i = 0ull; i < data.size(); i++) {
+        // Check if mapped.
+        auto pa_opt = impl_->page_table->va_to_pa(addr + i);
+        if (!pa_opt.has_value()) {
+            return std::errc::bad_address;
+        }
+        auto pa = pa_opt.value();
+
+        // Check permissions.
+        if (perm_check && !impl_->check_permission(addr + i, UC_PROT_WRITE)) {
+            return std::errc::permission_denied;
+        }
+
+        // Write.
+        auto ret = ::uc_mem_write(impl_->uc, pa, data.data() + i, 1);
+        if (ret != UC_ERR_OK) {
+            return make_error_code(ret);
+        }
+    }
+    return outcome::success();
+}
+
+outcome::result<void> UnicornGuestVirtualMemory::flush_tlb() {
+    uc_err err;
+    err = uc_ctl_flush_tlb(impl_->uc);
+    if (err != UC_ERR_OK) {
+        return make_error_code(err);
+    }
+    err = uc_ctl_flush_tb(impl_->uc);
+    if (err != UC_ERR_OK) {
+        return make_error_code(err);
+    }
+    return outcome::success();
+}
+
 }  // namespace mm
 }  // namespace vlinux

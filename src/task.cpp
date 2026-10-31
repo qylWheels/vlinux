@@ -3,8 +3,10 @@
 #include <unicorn/unicorn.h>
 
 #include <algorithm>
+#include <outcome/try.hpp>
 
 #include "error.h"
+#include "mm.h"
 
 namespace vlinux {
 Scheduler::Scheduler(uc_engine *uc) : status_(Status::Stopped), uc_(uc) {}
@@ -117,18 +119,11 @@ outcome::result<void> Scheduler::start_schedule(
             return make_error_code(err);
         }
 
-        // Flush translation blocks.
-        err = ::uc_ctl_flush_tb(this->uc_);
-        if (err != UC_ERR_OK) {
-            this->status_ = Status::Stopped;
-            return make_error_code(err);
-        }
-
         // Flush TLB.
-        err = ::uc_ctl_flush_tlb(this->uc_);
-        if (err != UC_ERR_OK) {
+        auto result = task->virtual_memory->flush_tlb();
+        if (result.has_error()) {
             this->status_ = Status::Stopped;
-            return make_error_code(err);
+            return result.error();
         }
 
         // Schedule the task. i.e. run it.
@@ -178,7 +173,9 @@ void Scheduler::stop_schedule() { this->request_stop_ = true; }
 bool Scheduler::tlb_fill_callback(uc_engine *uc, uint64_t vaddr,
                                   uc_mem_type type, uc_tlb_entry *result,
                                   void *user_data) {
-    auto pgtable = static_cast<mm::PageTable *>(user_data);
+    auto pgtable = static_cast<
+        mm::IGuestPageTable<const mm::UnicornGuestPageTable::MapType &> *>(
+        user_data);
 
     auto pa = pgtable->va_to_pa(vaddr);
     if (!pa.has_value()) {
@@ -194,7 +191,9 @@ bool Scheduler::tlb_fill_callback(uc_engine *uc, uint64_t vaddr,
 
     switch (type) {
         case UC_MEM_READ: {
-            if (va_desc.value()->perm & UC_PROT_READ) {
+            if (va_desc.value()->perm &
+                static_cast<std::uint8_t>(
+                    mm::VirtualPageDescriptor::Permission::Read)) {
                 result->perms = UC_PROT_READ;
             } else {
                 return false;
@@ -202,7 +201,9 @@ bool Scheduler::tlb_fill_callback(uc_engine *uc, uint64_t vaddr,
             break;
         }
         case UC_MEM_WRITE: {
-            if (va_desc.value()->perm & UC_PROT_WRITE) {
+            if (va_desc.value()->perm &
+                static_cast<std::uint8_t>(
+                    mm::VirtualPageDescriptor::Permission::Write)) {
                 result->perms = UC_PROT_WRITE;
             } else {
                 return false;
@@ -210,7 +211,9 @@ bool Scheduler::tlb_fill_callback(uc_engine *uc, uint64_t vaddr,
             break;
         }
         case UC_MEM_FETCH: {
-            if (va_desc.value()->perm & UC_PROT_EXEC) {
+            if (va_desc.value()->perm &
+                static_cast<std::uint8_t>(
+                    mm::VirtualPageDescriptor::Permission::Exec)) {
                 result->perms = UC_PROT_EXEC;
             } else {
                 return false;

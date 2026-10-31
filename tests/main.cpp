@@ -23,7 +23,8 @@
 TEST_CASE("Test PhysicalPageAllocator", "[physical_page_allocator]") {
     uc_engine *uc;
     REQUIRE(::uc_open(UC_ARCH_X86, UC_MODE_64, &uc) == UC_ERR_OK);
-    vlinux::mm::PhysicalPageAllocator ppa(uc);
+    vlinux::mm::PhysicalPageAllocator ppa_impl(uc);
+    vlinux::mm::IGuestPhysicalPageAllocator &ppa = ppa_impl;
 
     SECTION("Test alloc(), get_page() and free()") {
         auto pa_desc = ppa.alloc();
@@ -40,8 +41,11 @@ TEST_CASE("Test PhysicalPageAllocator", "[physical_page_allocator]") {
 TEST_CASE("Test PageTable", "[page_table]") {
     uc_engine *uc;
     REQUIRE(::uc_open(UC_ARCH_X86, UC_MODE_64, &uc) == UC_ERR_OK);
-    vlinux::mm::PageTable pt;
-    vlinux::mm::PhysicalPageAllocator ppa(uc);
+    vlinux::mm::UnicornGuestPageTable pt_impl;
+    vlinux::mm::IGuestPageTable<
+        const vlinux::mm::UnicornGuestPageTable::MapType &> &pt = pt_impl;
+    vlinux::mm::PhysicalPageAllocator ppa_impl(uc);
+    vlinux::mm::IGuestPhysicalPageAllocator &ppa = ppa_impl;
 
     SECTION("Test map(), unmap(), va_to_pa() and va_to_desc()") {
         auto result = ppa.alloc();
@@ -51,7 +55,11 @@ TEST_CASE("Test PageTable", "[page_table]") {
         auto va_desc = std::make_shared<vlinux::mm::VirtualPageDescriptor>();
         va_desc->start_addr = 0xbeef'0000;
         va_desc->len = vlinux::mm::PAGE_SIZE;
-        va_desc->perm = UC_PROT_READ | UC_PROT_WRITE;
+        va_desc->perm =
+            static_cast<std::uint8_t>(
+                vlinux::mm::VirtualPageDescriptor::Permission::Read) |
+            static_cast<std::uint8_t>(
+                vlinux::mm::VirtualPageDescriptor::Permission::Write);
 
         // Test map().
         REQUIRE(pt.map(va_desc, pa_desc).has_value());
@@ -162,9 +170,21 @@ TEST_CASE("Test Scheduler", "[scheduler]") {
         // Create tasks.
         auto task1 = std::make_shared<vlinux::Task>(ctx1);
         task1->ctx = ctx1;
+        auto task1_page_table =
+            std::make_shared<vlinux::mm::UnicornGuestPageTable>();
+        task1->page_table = task1_page_table;
+        task1->virtual_memory =
+            std::make_shared<vlinux::mm::UnicornGuestVirtualMemory>(
+                uc, task1_page_table);
         REQUIRE(scheduler.add_task(task1).has_value());
         auto task2 = std::make_shared<vlinux::Task>(ctx2);
         task2->ctx = ctx2;
+        auto task2_page_table =
+            std::make_shared<vlinux::mm::UnicornGuestPageTable>();
+        task2->page_table = task2_page_table;
+        task2->virtual_memory =
+            std::make_shared<vlinux::mm::UnicornGuestVirtualMemory>(
+                uc, task2_page_table);
         REQUIRE(scheduler.add_task(task2).has_value());
 
         // Start schedule.
@@ -196,13 +216,42 @@ TEST_CASE("Test VFS", "[vfs]") {
         auto inode_result = sb->alloc_inode(sb, vlinux::IINode::Type::File);
         REQUIRE(inode_result.has_value());
         auto inode = inode_result.value();
-        auto file = std::make_shared<vlinux::File>(inode, uc);
+        auto pgtable = std::make_shared<vlinux::mm::UnicornGuestPageTable>();
+        auto gvm = std::make_shared<vlinux::mm::UnicornGuestVirtualMemory>(
+            uc, pgtable);
+        auto file = std::make_shared<vlinux::File>(inode, *gvm);
 
-        // Test write.
+        // Prepare data.
         char data[] = "Hello, world!";
         auto len = sizeof(data);
         REQUIRE(::uc_mem_map_ptr(uc, 0x1000, 4096, UC_PROT_READ, data) ==
                 UC_ERR_OK);
+        REQUIRE(pgtable
+                    ->map(std::make_shared<vlinux::mm::VirtualPageDescriptor>(
+                              0x1000, vlinux::mm::PAGE_SIZE,
+                              static_cast<std::uint8_t>(
+                                  vlinux::mm::VirtualPageDescriptor::
+                                      Permission::Read) |
+                                  static_cast<std::uint8_t>(
+                                      vlinux::mm::VirtualPageDescriptor::
+                                          Permission::Write)),
+                          std::make_shared<vlinux::mm::PhysicalPageDescriptor>(
+                              0x1000, vlinux::mm::PAGE_SIZE, 1, 0))
+                    .has_value());
+        REQUIRE(pgtable
+                    ->map(std::make_shared<vlinux::mm::VirtualPageDescriptor>(
+                              0x8000, vlinux::mm::PAGE_SIZE,
+                              static_cast<std::uint8_t>(
+                                  vlinux::mm::VirtualPageDescriptor::
+                                      Permission::Read) |
+                                  static_cast<std::uint8_t>(
+                                      vlinux::mm::VirtualPageDescriptor::
+                                          Permission::Write)),
+                          std::make_shared<vlinux::mm::PhysicalPageDescriptor>(
+                              0x8000, vlinux::mm::PAGE_SIZE, 1, 0))
+                    .has_value());
+
+        // Test write.
         vlinux::IoVector iov{0x1000, len};
         auto ret = file->pwritev({iov}, 0);
         REQUIRE(ret.has_value());
@@ -417,11 +466,23 @@ TEST_CASE("Test VM", "[vm]") {
 
             // Check protection flags of influenced pages.
             for (auto vdesc : vdescs) {
-                std::uint64_t uc_prot = 0;
-                uc_prot |= ((prot & PROT_READ) ? UC_PROT_READ : 0);
-                uc_prot |= ((prot & PROT_WRITE) ? UC_PROT_WRITE : 0);
-                uc_prot |= ((prot & PROT_EXEC) ? UC_PROT_EXEC : 0);
-                REQUIRE(vdesc->perm == uc_prot);
+                std::uint64_t perm = 0;
+                perm |= ((prot & PROT_READ)
+                             ? static_cast<std::uint8_t>(
+                                   vlinux::mm::VirtualPageDescriptor::
+                                       Permission::Read)
+                             : 0);
+                perm |= ((prot & PROT_WRITE)
+                             ? static_cast<std::uint8_t>(
+                                   vlinux::mm::VirtualPageDescriptor::
+                                       Permission::Write)
+                             : 0);
+                perm |= ((prot & PROT_EXEC)
+                             ? static_cast<std::uint8_t>(
+                                   vlinux::mm::VirtualPageDescriptor::
+                                       Permission::Exec)
+                             : 0);
+                REQUIRE(vdesc->perm == perm);
             }
         });
         REQUIRE(result.has_value());
@@ -761,7 +822,8 @@ TEST_CASE("Test VM", "[vm]") {
 
     SECTION("Test pread() and pwrite()") {
         auto task =
-            vm.load(build_path / "tests/syscall_tests/test_pread_pwrite").value();
+            vm.load(build_path / "tests/syscall_tests/test_pread_pwrite")
+                .value();
 
         int fd = -1, exit_status = -1;
         auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
@@ -798,7 +860,8 @@ TEST_CASE("Test VM", "[vm]") {
 
     SECTION("Test readv() and writev()") {
         auto task =
-            vm.load(build_path / "tests/syscall_tests/test_readv_writev").value();
+            vm.load(build_path / "tests/syscall_tests/test_readv_writev")
+                .value();
 
         int fd = -1, exit_status = -1;
         auto result = vm.add_syscall_hook([&](std::uint64_t syscall_id,
