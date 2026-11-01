@@ -1,15 +1,18 @@
 #include "syscall_handler.h"
 
+#include <asm/prctl.h>
 #include <bits/types/struct_iovec.h>
 #include <fcntl.h>
 #include <linux/limits.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #include <unicorn/unicorn.h>
+#include <unicorn/x86.h>
 #include <unistd.h>
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cerrno>
 #include <cstddef>
 #include <cstdint>
@@ -1467,6 +1470,63 @@ public:
     }
 };
 
+class SysArchPrctlHandler {
+private:
+    SysArchPrctlHandler() = default;
+    ~SysArchPrctlHandler() = default;
+    SysArchPrctlHandler(const SysArchPrctlHandler&) = delete;
+    SysArchPrctlHandler& operator=(const SysArchPrctlHandler&) = delete;
+    SysArchPrctlHandler(SysArchPrctlHandler&&) = delete;
+    SysArchPrctlHandler& operator=(SysArchPrctlHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        std::uint64_t op = args[0];
+        std::uint64_t addr = args[1];
+
+        auto task = context.scheduler->current_task();
+
+        // Check op.
+        if (op != ARCH_SET_FS && op != ARCH_GET_FS) return -EINVAL;
+
+        switch (op) {
+            case ARCH_SET_FS: {
+                auto ret = ::uc_reg_write(context.uc, UC_X86_REG_FS, &addr);
+                if (ret != UC_ERR_OK) std::abort();  // Unreachable.
+                return 0;
+            }
+            case ARCH_GET_FS: {
+                // Read FS register.
+                std::uint64_t fs;
+                auto ret = ::uc_reg_read(context.uc, UC_X86_REG_FS, &fs);
+                if (ret != UC_ERR_OK) std::abort();  // Unreachable.
+
+                // Write result to addr.
+                auto bytes_arr =
+                    std::bit_cast<std::array<std::uint8_t, sizeof(fs)>>(fs);
+                auto bytes_vec = std::vector<std::uint8_t>(bytes_arr.begin(),
+                                                           bytes_arr.end());
+                if (std::endian::native != std::endian::little) {
+                    std::ranges::reverse(bytes_vec);
+                }
+                auto write_result =
+                    task->virtual_memory->write(addr, bytes_vec);
+                if (!write_result) {
+                    return -EFAULT;
+                }
+
+                return 0;
+            }
+            default: {
+                std::abort();  // Unreachable.
+            }
+        }
+
+        std::abort();  // Unreachable.
+    }
+};
+
 class SyscallHandler::Impl {
 public:
     Impl() = default;
@@ -1553,6 +1613,9 @@ std::uint64_t SyscallHandler::dispatch(Context context,
             break;
         case SYS_pwrite64:
             ret = SysPwrite64Handler::handle(context, args);
+            break;
+        case SYS_arch_prctl:
+            ret = SysArchPrctlHandler::handle(context, args);
             break;
         default:
             ret = 0;  // Pretend that we have handled it.
