@@ -1492,14 +1492,16 @@ public:
 
         switch (op) {
             case ARCH_SET_FS: {
-                auto ret = ::uc_reg_write(context.uc, UC_X86_REG_FS, &addr);
+                auto ret = ::uc_reg_write(context.uc, UC_X86_REG_FS_BASE,
+                                          &addr);
                 if (ret != UC_ERR_OK) std::abort();  // Unreachable.
                 return 0;
             }
             case ARCH_GET_FS: {
-                // Read FS register.
+                // Read FS base register.
                 std::uint64_t fs;
-                auto ret = ::uc_reg_read(context.uc, UC_X86_REG_FS, &fs);
+                auto ret =
+                    ::uc_reg_read(context.uc, UC_X86_REG_FS_BASE, &fs);
                 if (ret != UC_ERR_OK) std::abort();  // Unreachable.
 
                 // Write result to addr.
