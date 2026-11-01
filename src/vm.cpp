@@ -494,16 +494,23 @@ outcome::result<std::shared_ptr<Task>> VM::load(
     address_space->brk = address_space->start_brk;
 
     // Allocate stack memory.
-    OUTCOME_TRY(auto stack_page_pdesc, this->impl_->ppa_->alloc());
-    auto stack_page_vdesc = std::make_shared<mm::VirtualPageDescriptor>();
-    stack_page_vdesc->start_addr = 0xf000'0000;
-    stack_page_vdesc->len = mm::PAGE_SIZE;
-    stack_page_vdesc->perm =
-        static_cast<std::uint8_t>(mm::VirtualPageDescriptor::Permission::Read) |
-        static_cast<std::uint8_t>(mm::VirtualPageDescriptor::Permission::Write);
-    OUTCOME_TRY(page_table->map(stack_page_vdesc, stack_page_pdesc));
-    if (!address_space->vpages.insert(stack_page_vdesc).second) {
-        return std::errc::address_in_use;
+    auto stack_page_count = 16;
+    std::vector<std::shared_ptr<mm::VirtualPageDescriptor>> stack_pages;
+    for (auto i = 0; i < stack_page_count; i++) {
+        OUTCOME_TRY(auto stack_page_pdesc, this->impl_->ppa_->alloc());
+        auto stack_page_vdesc = std::make_shared<mm::VirtualPageDescriptor>();
+        stack_page_vdesc->start_addr = 0xf000'0000 + i * mm::PAGE_SIZE;
+        stack_page_vdesc->len = mm::PAGE_SIZE;
+        stack_page_vdesc->perm =
+            static_cast<std::uint8_t>(
+                mm::VirtualPageDescriptor::Permission::Read) |
+            static_cast<std::uint8_t>(
+                mm::VirtualPageDescriptor::Permission::Write);
+        OUTCOME_TRY(page_table->map(stack_page_vdesc, stack_page_pdesc));
+        if (!address_space->vpages.insert(stack_page_vdesc).second) {
+            return std::errc::address_in_use;
+        }
+        stack_pages.push_back(stack_page_vdesc);
     }
 
     // Open "/" as its current working directory.
