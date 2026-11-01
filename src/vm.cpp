@@ -534,12 +534,12 @@ outcome::result<std::shared_ptr<Task>> VM::load(
         auto task,
         this->impl_->task_initializer_.init_task(
             reader.get_entry(), path.filename().string(), false, pid, tgid,
-            parent, {}, Task::State::New, stack_page_vdesc->start_addr,
-            stack_page_vdesc->start_addr + mm::PAGE_SIZE, address_space,
+            parent, {}, Task::State::New, stack_pages.front()->start_addr,
+            stack_pages.back()->start_addr + mm::PAGE_SIZE, address_space,
             virtual_memory, page_table, root_dir_file));
 
     // Set stack top.
-    std::uint64_t rsp = stack_page_vdesc->start_addr + mm::PAGE_SIZE;
+    std::uint64_t rsp = stack_pages.back()->start_addr + mm::PAGE_SIZE;
     err = ::uc_context_reg_write(task->ctx, UC_X86_REG_RSP, &rsp);
     if (err != UC_ERR_OK) {
         return make_error_code(err);
