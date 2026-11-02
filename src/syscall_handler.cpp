@@ -670,6 +670,45 @@ private:
 public:
     static std::uint64_t handle(SyscallHandler::Context context,
                                 std::array<std::uint64_t, 6> args) {
+        auto pathname_addr = args[0];
+        auto argv_addr = args[1];
+        auto envp_addr = args[2];
+
+        auto task = context.scheduler->current_task();
+
+        // Read pathname.
+        auto pathname_result = task->virtual_memory->read_string(pathname_addr);
+        if (!pathname_result) return -EFAULT;
+        auto pathname = pathname_result.value();
+
+        // Read pointer array.
+        auto read_pointer_array = [&task](std::uint64_t addr)
+            -> std::variant<std::vector<std::uint64_t>, int> {
+            std::vector<std::uint64_t> result;
+            for (std::uint64_t i = 0; /* void */; i++) {
+                constexpr auto len = sizeof(std::uint64_t);
+                auto read_result =
+                    task->virtual_memory->read(addr + i * len, len);
+                if (!read_result) return -EFAULT;
+                auto arg_addr =
+                    std::bit_cast<std::uint64_t>(std::span<std::uint8_t, len>(
+                        read_result.value().data(), len));
+                result.push_back(arg_addr);
+            }
+            return result;
+        };
+
+        // Read argv[].
+        auto arg_addrs_result = read_pointer_array(argv_addr);
+        if (std::holds_alternative<int>(arg_addrs_result)) return -EFAULT;
+        auto arg_addrs = std::get<std::vector<std::uint64_t>>(arg_addrs_result);
+
+        // Read envp[].
+        auto envp_addrs_result = read_pointer_array(envp_addr);
+        if (std::holds_alternative<int>(envp_addrs_result)) return -EFAULT;
+        auto envp_addrs =
+            std::get<std::vector<std::uint64_t>>(envp_addrs_result);
+
         return 0;
     }
 };
