@@ -683,13 +683,13 @@ public:
 
         // Read pointer array.
         auto read_pointer_array = [&task](std::uint64_t addr)
-            -> std::variant<std::vector<std::uint64_t>, int> {
+            -> outcome::result<std::vector<std::uint64_t>> {
             std::vector<std::uint64_t> result;
             for (std::uint64_t i = 0; /* void */; i++) {
                 constexpr auto len = sizeof(std::uint64_t);
                 auto read_result =
                     task->virtual_memory->read(addr + i * len, len);
-                if (!read_result) return -EFAULT;
+                if (!read_result) return std::errc::bad_address;
                 auto arg_addr =
                     std::bit_cast<std::uint64_t>(std::span<std::uint8_t, len>(
                         read_result.value().data(), len));
@@ -700,14 +700,13 @@ public:
 
         // Read argv[].
         auto arg_addrs_result = read_pointer_array(argv_addr);
-        if (std::holds_alternative<int>(arg_addrs_result)) return -EFAULT;
-        auto arg_addrs = std::get<std::vector<std::uint64_t>>(arg_addrs_result);
+        if (!arg_addrs_result) return -EFAULT;
+        auto arg_addrs = arg_addrs_result.value();
 
         // Read envp[].
         auto envp_addrs_result = read_pointer_array(envp_addr);
-        if (std::holds_alternative<int>(envp_addrs_result)) return -EFAULT;
-        auto envp_addrs =
-            std::get<std::vector<std::uint64_t>>(envp_addrs_result);
+        if (!envp_addrs_result) return -EFAULT;
+        auto envp_addrs = envp_addrs_result.value();
 
         // Read arg strings.
         std::vector<std::string> arg_strings;
