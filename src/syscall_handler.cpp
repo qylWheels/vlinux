@@ -709,6 +709,24 @@ public:
         auto envp_addrs =
             std::get<std::vector<std::uint64_t>>(envp_addrs_result);
 
+        // Read arg strings.
+        std::vector<std::string> arg_strings;
+        for (const auto arg_addr : arg_addrs) {
+            auto arg_result = task->virtual_memory->read_string(arg_addr);
+            if (!arg_result) return -EFAULT;
+            auto arg = arg_result.value();
+            arg_strings.push_back(arg);
+        }
+
+        // Read env strings.
+        std::vector<std::string> env_strings;
+        for (const auto env_addr : envp_addrs) {
+            auto env_result = task->virtual_memory->read_string(env_addr);
+            if (!env_result) return -EFAULT;
+            auto env = env_result.value();
+            env_strings.push_back(env);
+        }
+
         return 0;
     }
 };
