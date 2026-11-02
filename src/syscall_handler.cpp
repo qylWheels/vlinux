@@ -658,6 +658,22 @@ public:
     }
 };
 
+class SysExecveHandler {
+private:
+    SysExecveHandler() = default;
+    ~SysExecveHandler() = default;
+    SysExecveHandler(const SysExecveHandler&) = delete;
+    SysExecveHandler& operator=(const SysExecveHandler&) = delete;
+    SysExecveHandler(SysExecveHandler&&) = delete;
+    SysExecveHandler& operator=(SysExecveHandler&&) = delete;
+
+public:
+    static std::uint64_t handle(SyscallHandler::Context context,
+                                std::array<std::uint64_t, 6> args) {
+        return 0;
+    }
+};
+
 class SysExitHandler {
 public:
     SysExitHandler() = default;
@@ -1492,16 +1508,15 @@ public:
 
         switch (op) {
             case ARCH_SET_FS: {
-                auto ret = ::uc_reg_write(context.uc, UC_X86_REG_FS_BASE,
-                                          &addr);
+                auto ret =
+                    ::uc_reg_write(context.uc, UC_X86_REG_FS_BASE, &addr);
                 if (ret != UC_ERR_OK) std::abort();  // Unreachable.
                 return 0;
             }
             case ARCH_GET_FS: {
                 // Read FS base register.
                 std::uint64_t fs;
-                auto ret =
-                    ::uc_reg_read(context.uc, UC_X86_REG_FS_BASE, &fs);
+                auto ret = ::uc_reg_read(context.uc, UC_X86_REG_FS_BASE, &fs);
                 if (ret != UC_ERR_OK) std::abort();  // Unreachable.
 
                 // Write result to addr.
@@ -1567,6 +1582,9 @@ std::uint64_t SyscallHandler::dispatch(Context context,
             break;
         case SYS_fork:
             ret = SysForkHandler::handle(context, args);
+            break;
+        case SYS_execve:
+            ret = SysExecveHandler::handle(context, args);
             break;
         case SYS_exit:
             ret = SysExitHandler::handle(context, args);
