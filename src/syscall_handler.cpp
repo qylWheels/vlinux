@@ -693,6 +693,7 @@ public:
                 auto arg_addr =
                     std::bit_cast<std::uint64_t>(std::span<std::uint8_t, len>(
                         read_result.value().data(), len));
+                if (arg_addr == 0) break;
                 result.push_back(arg_addr);
             }
             return result;
