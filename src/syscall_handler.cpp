@@ -733,10 +733,10 @@ public:
             (void)context.ppa->free(p);
         }
 
-        // Close files that are not set O_CLOEXEC.
+        // Close files that are set O_CLOEXEC.
         for (auto& f : task->files) {
             if (!f.has_value()) continue;
-            if (f.value()->flags() & O_CLOEXEC) continue;
+            if (!(f.value()->flags() & O_CLOEXEC)) continue;
             f = std::nullopt;
         }
 
