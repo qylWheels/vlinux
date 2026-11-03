@@ -727,6 +727,19 @@ public:
             env_strings.push_back(env);
         }
 
+        // Clear memory.
+        for (const auto& [v, p] : task->page_table->all_maps()) {
+            (void)task->page_table->unmap(v);
+            (void)context.ppa->free(p);
+        }
+
+        // Close files that are not set O_CLOEXEC.
+        for (auto& f : task->files) {
+            if (!f.has_value()) continue;
+            if (f.value()->flags() & O_CLOEXEC) continue;
+            f = std::nullopt;
+        }
+
         return 0;
     }
 };
