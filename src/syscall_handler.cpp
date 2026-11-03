@@ -123,6 +123,29 @@ std::variant<std::shared_ptr<IINode>, int> retrieve_parent_of_path(
 
     return curr_inode;
 }
+
+outcome::result<std::shared_ptr<IINode>> retrieve_path(
+    Task& task, MountInfo& mount_info, int dirfd, std::string_view pathname) {
+    // Get parent inode of target file.
+    auto parent_result =
+        retrieve_parent_of_path(task, mount_info, dirfd, pathname);
+    if (std::holds_alternative<int>(parent_result))
+        return std::errc::no_such_file_or_directory;
+    auto parent = std::get<std::shared_ptr<IINode>>(parent_result);
+
+    // Get target inode.
+    auto path = std::filesystem::path(pathname);
+    if (pathname == "/") {
+        // "/"'s parent is itself.
+        return parent;
+    }
+    auto target_result = parent->lookup(path.filename());
+    if (!target_result.has_value()) {
+        return std::errc::no_such_file_or_directory;
+    }
+
+    return target_result.value();
+}
 }  // namespace helpers
 
 class SysMmapHandler {
