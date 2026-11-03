@@ -18,6 +18,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <elfio/elfio.hpp>
 #include <filesystem>
 #include <functional>
 #include <memory>
@@ -25,6 +26,7 @@
 #include <outcome/result.hpp>
 #include <outcome/try.hpp>
 #include <ranges>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -762,6 +764,25 @@ public:
             if (!(f.value()->flags() & O_CLOEXEC)) continue;
             f = std::nullopt;
         }
+
+        // Get ELF file content.
+        auto file_inode_result = helpers::retrieve_path(
+            *task, *context.mount_info, AT_FDCWD, pathname);
+        if (!file_inode_result) return -ENOENT;
+        auto file_inode = file_inode_result.value();
+        auto file_content_result = file_inode->data();
+        auto file_content = file_content_result.value();
+        if (!std::holds_alternative<IINode::NormalFileContent>(*file_content))
+            return -EACCES;
+        auto file_content_bytes =
+            std::get<IINode::NormalFileContent>(*file_content);
+
+        // Load ELF file into parser.
+        auto file_content_bytes_str =
+            std::string(file_content_bytes.begin(), file_content_bytes.end());
+        std::istringstream s(file_content_bytes_str);
+        ELFIO::elfio reader;
+        if (!reader.load(s)) return -ENOEXEC;
 
         return 0;
     }
