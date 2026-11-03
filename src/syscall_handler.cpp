@@ -784,6 +784,83 @@ public:
         ELFIO::elfio reader;
         if (!reader.load(s)) return -ENOEXEC;
 
+        // Load segments.
+        for (const auto& seg : reader.segments) {
+            // We only care about LOAD segments.
+            if (seg->get_type() != ELFIO::PT_LOAD) continue;
+
+            // Get segment information.
+            auto file_offset = seg->get_offset();
+            auto file_size = seg->get_file_size();
+            auto virtual_address = seg->get_virtual_address();
+            auto virtual_size = seg->get_memory_size();
+
+            // Read the segment data from the file.
+            std::vector<char> file_data;
+            file_data.assign(
+                file_content_bytes.begin() + file_offset,
+                file_content_bytes.begin() + file_offset + file_size);
+
+            // Setup memory address area.
+            std::uint8_t perms = 0;
+            auto segment_flags = seg->get_flags();
+            if (segment_flags & ELFIO::PF_R) {
+                perms |= static_cast<std::uint8_t>(
+                    mm::VirtualPageDescriptor::Permission::Read);
+            }
+            if (segment_flags & ELFIO::PF_W) {
+                perms |= static_cast<std::uint8_t>(
+                    mm::VirtualPageDescriptor::Permission::Write);
+            }
+            if (segment_flags & ELFIO::PF_X) {
+                perms |= static_cast<std::uint8_t>(
+                    mm::VirtualPageDescriptor::Permission::Exec);
+            }
+            // If segment is not page-aligned, it starts at page_off of its
+            // first page, so map [page_start, page_start + span).
+            std::uint64_t page_start = virtual_address & ~(mm::PAGE_SIZE - 1);
+            std::uint64_t page_off = virtual_address - page_start;
+            std::uint64_t span = page_off + virtual_size;
+            for (std::uint64_t i = 0; i < span; i += mm::PAGE_SIZE) {
+                // Allocate a physical page.
+                auto pdesc_result = context.ppa->alloc();
+                if (!pdesc_result) return -ENOMEM;
+                auto pdesc = pdesc_result.value();
+
+                // Map the virtual page to the physical page.
+                auto vdesc = std::make_shared<mm::VirtualPageDescriptor>();
+                vdesc->start_addr = page_start + i;
+                vdesc->len = mm::PAGE_SIZE;
+                vdesc->perm = perms;
+                auto map_result = task->page_table->map(vdesc, pdesc);
+                if (!map_result) return -ENOMEM;
+
+                // Add the virtual page descriptor to address space.
+                if (!task->address_space->vpages.insert(vdesc).second) {
+                    return -ENOEXEC;
+                }
+
+                // Prepare the page content.
+                std::vector<char> mem_data(mm::PAGE_SIZE, 0);
+                // Segment byte #src lands at dst of this page.
+                std::uint64_t src = i > page_off ? i - page_off : 0;
+                std::uint64_t dst = i > page_off ? 0 : page_off - i;
+                if (src < file_size) {  // The page has file-backed bytes.
+                    std::uint64_t left = file_size - src;
+                    std::uint64_t room = mm::PAGE_SIZE - dst;
+                    std::uint64_t len = left > room ? room : left;
+                    std::copy_n(file_data.begin() + src, len,
+                                mem_data.begin() + dst);
+                }
+
+                // Write data to page.
+                auto write_result = task->virtual_memory->write(
+                    vdesc->start_addr, std::vector<std::uint8_t>(
+                                           mem_data.begin(), mem_data.end()));
+                if (!write_result) std::abort();  // Unreachable.
+            }
+        }
+
         return 0;
     }
 };
