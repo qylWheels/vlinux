@@ -870,6 +870,30 @@ public:
             (*highest_page_it)->start_addr + (*highest_page_it)->len;
         task->address_space->brk = task->address_space->start_brk;
 
+        // Allocate stack memory.
+        auto stack_page_count = 16;
+        std::vector<std::shared_ptr<mm::VirtualPageDescriptor>> stack_pages;
+        for (auto i = 0; i < stack_page_count; i++) {
+            auto stack_page_pdesc_result = context.ppa->alloc();
+            if (!stack_page_pdesc_result) return -ENOMEM;
+            auto stack_page_pdesc = stack_page_pdesc_result.value();
+            auto stack_page_vdesc =
+                std::make_shared<mm::VirtualPageDescriptor>();
+            stack_page_vdesc->start_addr = 0xf000'0000 + i * mm::PAGE_SIZE;
+            stack_page_vdesc->len = mm::PAGE_SIZE;
+            stack_page_vdesc->perm =
+                static_cast<std::uint8_t>(
+                    mm::VirtualPageDescriptor::Permission::Read) |
+                static_cast<std::uint8_t>(
+                    mm::VirtualPageDescriptor::Permission::Write);
+            auto map_result =
+                task->page_table->map(stack_page_vdesc, stack_page_pdesc);
+            if (!map_result) return -ENOEXEC;
+            if (!task->address_space->vpages.insert(stack_page_vdesc).second)
+                return -ENOEXEC;
+            stack_pages.push_back(stack_page_vdesc);
+        }
+
         return 0;
     }
 };
