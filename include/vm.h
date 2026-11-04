@@ -81,6 +81,19 @@ public:
     VM& operator=(VM&& other) = delete;
 
 public:
+    struct Config {
+        // Host directory assigning to guest root directory.
+        std::filesystem::path rootdir;
+        // Host program to execute.
+        std::filesystem::path prog;
+        // Where should prog be mapped to guest filesystem.
+        std::filesystem::path prog_guest_path;
+        // Arguments to prog.
+        std::vector<std::string> args;
+        // Environment variables to pass to prog.
+        std::vector<std::string> env;
+    };
+
     struct Result {
         std::map<std::shared_ptr<Task>, std::vector<Task::Syscall>>
             behav_of_tasks_;
