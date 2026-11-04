@@ -132,9 +132,8 @@ outcome::result<std::shared_ptr<IINode>> retrieve_path(
     // Get parent inode of target file.
     auto parent_result =
         retrieve_parent_of_path(task, mount_info, dirfd, pathname);
-    if (std::holds_alternative<int>(parent_result))
-        return std::errc::no_such_file_or_directory;
-    auto parent = std::get<std::shared_ptr<IINode>>(parent_result);
+    if (!parent_result) return parent_result;
+    auto parent = parent_result.value();
 
     // Get target inode.
     auto path = std::filesystem::path(pathname);
