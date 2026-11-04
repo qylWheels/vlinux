@@ -935,6 +935,19 @@ public:
             task->stack_bottom - stack_content.size(), stack_content);
         if (!write_result) return -ENOEXEC;
 
+        // Open parent directory as its current working directory.
+        auto cwd_inode_result = helpers::retrieve_parent_of_path(
+            *task, *context.mount_info, AT_FDCWD, pathname);
+        if (!cwd_inode_result) return -ENOENT;
+        auto cwd_inode = cwd_inode_result.value();
+        auto inc_result = cwd_inode->inc_mem_refcount();
+        if (!inc_result) return -EIO;
+        auto cwd_file =
+            std::make_shared<File>(cwd_inode, *task->virtual_memory);
+        auto get_result = cwd_file->get();
+        if (!get_result) return -EIO;
+        task->cwd = cwd_file;
+
         return 0;
     }
 };
