@@ -72,7 +72,7 @@ std::variant<std::string, int> read_string_from_vmem(::uc_engine* uc,
     return pathname;
 }
 
-std::variant<std::shared_ptr<IINode>, int> retrieve_parent_of_path(
+outcome::result<std::shared_ptr<IINode>> retrieve_parent_of_path(
     Task& task, MountInfo& mount_info, int dirfd, std::string_view pathname) {
     // Get inode:
     // 1. referred by dirfd if pathname is relative.
@@ -87,7 +87,7 @@ std::variant<std::shared_ptr<IINode>, int> retrieve_parent_of_path(
         } else {
             cwd_file_opt = task.files[dirfd];
             if (!cwd_file_opt.has_value()) {
-                return -EBADF;
+                return std::errc::bad_file_descriptor;
             }
             cwd_inode_opt = cwd_file_opt.value()->inode();
         }
@@ -99,7 +99,7 @@ std::variant<std::shared_ptr<IINode>, int> retrieve_parent_of_path(
     assert(cwd_inode_opt.has_value());
     auto cwd_inode = cwd_inode_opt.value();
     if (cwd_inode->type() != IINode::Type::Directory) {
-        return -ENOTDIR;
+        return std::errc::not_a_directory;
     }
 
     // Lookup parent inode of target file.
@@ -115,12 +115,12 @@ std::variant<std::shared_ptr<IINode>, int> retrieve_parent_of_path(
         } else {
             auto inode_result = curr_inode->lookup(component);
             if (!inode_result.has_value()) {
-                return -ENOENT;
+                return std::errc::no_such_file_or_directory;
             }
             curr_inode = inode_result.value();
         }
         if (curr_inode->type() != IINode::Type::Directory) {
-            return -ENOTDIR;
+            return std::errc::not_a_directory;
         }
     }
 
