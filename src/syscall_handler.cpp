@@ -1722,11 +1722,8 @@ public:
         // Find parent inode of the pathname.
         auto parent_inode_result = helpers::retrieve_parent_of_path(
             *task, *context.mount_info, dirfd, pathname);
-        if (std::holds_alternative<int>(parent_inode_result)) {
-            return std::get<int>(parent_inode_result);
-        }
-        auto parent_inode =
-            std::get<std::shared_ptr<IINode>>(parent_inode_result);
+        if (!parent_inode_result) return -ENOENT;
+        auto parent_inode = parent_inode_result.value();
 
         // Lookup inode of pathname.
         outcome::result<std::shared_ptr<IINode>> inode_result =
