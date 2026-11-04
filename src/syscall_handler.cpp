@@ -1070,11 +1070,8 @@ public:
 
         auto parent_inode_of_path_result = helpers::retrieve_parent_of_path(
             *task, *context.mount_info, dirfd, pathname);
-        if (std::holds_alternative<int>(parent_inode_of_path_result)) {
-            return std::get<int>(parent_inode_of_path_result);
-        }
-        auto parent_inode_of_path =
-            std::get<std::shared_ptr<IINode>>(parent_inode_of_path_result);
+        if (!parent_inode_of_path_result) return -ENOENT;
+        auto parent_inode_of_path = parent_inode_of_path_result.value();
         auto path = std::filesystem::path{pathname};
 
         // Plain open.
