@@ -935,6 +935,11 @@ public:
             task->stack_bottom - stack_content.size(), stack_content);
         if (!write_result) return -ENOEXEC;
 
+        // Set stack top.
+        std::uint64_t rsp = task->stack_bottom - stack_content.size();
+        auto err = ::uc_context_reg_write(task->ctx, UC_X86_REG_RSP, &rsp);
+        if (err != UC_ERR_OK) std::abort();  // Should not happen.
+
         // Open parent directory as its current working directory.
         auto cwd_inode_result = helpers::retrieve_parent_of_path(
             *task, *context.mount_info, AT_FDCWD, pathname);
