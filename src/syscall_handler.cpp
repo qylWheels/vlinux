@@ -3,6 +3,7 @@
 #include <asm/prctl.h>
 #include <bits/types/struct_iovec.h>
 #include <fcntl.h>
+#include <fmt/ranges.h>
 #include <linux/limits.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
@@ -893,6 +894,42 @@ public:
                 return -ENOEXEC;
             stack_pages.push_back(stack_page_vdesc);
         }
+
+        // Prepare stack content with auxv, envp, argv, argc.
+        std::vector<std::uint8_t> stack_content;
+        // TODO: Prepare auxv.
+
+        // Prepare argc.
+        std::uint64_t argc = arg_strings.size();
+        auto argc_bytes =
+            std::bit_cast<std::array<std::uint8_t, sizeof(argc)>>(argc);
+        stack_content.insert(stack_content.end(), argc_bytes.begin(),
+                             argc_bytes.end());
+
+        auto addr_vec_to_byte_vec = [](std::vector<std::uint64_t> addr_vec) {
+            auto addrs_bytes_it =
+                addr_vec | std::views::transform([](auto addr) {
+                    return std::bit_cast<
+                        std::array<std::uint8_t, sizeof(addr)>>(addr);
+                }) |
+                std::views::join | std::views::common;
+            return std::vector<std::uint8_t>(addrs_bytes_it.begin(),
+                                             addrs_bytes_it.end());
+        };
+
+        // Prepare argv and envp.
+        auto arg_addrs_bytes = addr_vec_to_byte_vec(arg_addrs);
+        stack_content.insert(stack_content.end(), arg_addrs_bytes.begin(),
+                             arg_addrs_bytes.end());
+        auto env_addrs_bytes = addr_vec_to_byte_vec(envp_addrs);
+        stack_content.insert(stack_content.end(), env_addrs_bytes.begin(),
+                             env_addrs_bytes.end());
+
+        // Prepare arg strings and env strings.
+        auto arg = fmt::format("{}", fmt::join(arg_strings, "\0"));
+        stack_content.insert(stack_content.end(), arg.begin(), arg.end());
+        auto env = fmt::format("{}", fmt::join(env_strings, "\0"));
+        stack_content.insert(stack_content.end(), env.begin(), env.end());
 
         return 0;
     }
