@@ -861,6 +861,15 @@ public:
             }
         }
 
+        // Set start_brk and brk. It is page-aligned as brk_expand() requires.
+        auto highest_page_it = task->address_space->vpages.rbegin();
+        if (highest_page_it == task->address_space->vpages.rend()) {
+            return -ENOEXEC;
+        }
+        task->address_space->start_brk =
+            (*highest_page_it)->start_addr + (*highest_page_it)->len;
+        task->address_space->brk = task->address_space->start_brk;
+
         return 0;
     }
 };
