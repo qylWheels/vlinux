@@ -953,6 +953,11 @@ public:
         if (!get_result) return -EIO;
         task->cwd = cwd_file;
 
+        // Set rip.
+        std::uint64_t rip = reader.get_entry();
+        err = ::uc_context_reg_write(task->ctx, UC_X86_REG_RIP, &rip);
+        if (err != UC_ERR_OK) std::abort();  // Should not happen.
+
         return 0;
     }
 };
