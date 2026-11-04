@@ -931,6 +931,11 @@ public:
         auto env = fmt::format("{}", fmt::join(env_strings, "\0"));
         stack_content.insert(stack_content.end(), env.begin(), env.end());
 
+        // Write stack content to memory.
+        auto write_result = task->virtual_memory->write(
+            task->stack_bottom - stack_content.size(), stack_content);
+        if (!write_result) return -ENOEXEC;
+
         return 0;
     }
 };
