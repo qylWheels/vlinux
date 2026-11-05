@@ -67,6 +67,8 @@ public:
     virtual outcome::result<void> inc_mem_refcount() override;
     virtual outcome::result<void> dec_mem_refcount() override;
     virtual std::uint64_t mem_refcount() const override;
+    virtual outcome::result<void> inc_disk_refcount() override;
+    virtual outcome::result<void> dec_disk_refcount() override;
     virtual std::uint64_t disk_refcount() const override;
 
     // Super block.

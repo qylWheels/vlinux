@@ -96,6 +96,19 @@ outcome::result<void> INode::dec_mem_refcount() {
 
 std::uint64_t INode::mem_refcount() const { return this->impl_->mem_refcount_; }
 
+outcome::result<void> INode::inc_disk_refcount() {
+    this->impl_->disk_refcount_++;
+    return outcome::success();
+}
+
+outcome::result<void> INode::dec_disk_refcount() {
+    if (this->impl_->disk_refcount_ == 0) {
+        return std::errc::no_such_file_or_directory;
+    }
+    this->impl_->disk_refcount_--;
+    return outcome::success();
+}
+
 std::uint64_t INode::disk_refcount() const {
     return this->impl_->disk_refcount_;
 }
