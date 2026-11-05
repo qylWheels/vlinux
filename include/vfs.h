@@ -73,6 +73,8 @@ public:
     virtual outcome::result<void> inc_mem_refcount() = 0;
     virtual outcome::result<void> dec_mem_refcount() = 0;
     virtual std::uint64_t mem_refcount() const = 0;
+    virtual outcome::result<void> inc_disk_refcount() = 0;
+    virtual outcome::result<void> dec_disk_refcount() = 0;
     virtual std::uint64_t disk_refcount() const = 0;
 
     // Super block.
