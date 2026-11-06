@@ -1743,7 +1743,7 @@ public:
         auto pathname = pathname_result.value();
 
         // Check fd.
-        if (!pathname.empty() && pathname[0] != '/' &&
+        if (!pathname.empty() && pathname[0] != '/' && dirfd != AT_FDCWD &&
             task->files[dirfd].value()->inode()->type() !=
                 IINode::Type::Directory) {
             return -ENOTDIR;
