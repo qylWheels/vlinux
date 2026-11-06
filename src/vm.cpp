@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <elfio/elfio.hpp>
+#include <filesystem>
 #include <format>
 #include <fstream>
 #include <functional>
@@ -16,6 +17,8 @@
 #include <map>
 #include <memory>
 #include <outcome.hpp>
+#include <queue>
+#include <ranges>
 #include <set>
 #include <system_error>
 #include <vector>
@@ -552,6 +555,50 @@ outcome::result<std::shared_ptr<Task>> VM::load(
     this->impl_->curr_task_ = task;
 
     return outcome::success(task);
+}
+
+outcome::result<void> VM::load(const Config& config) {
+    // TODO: Add id to super block to identify which filesystem to use.
+    auto sb = *this->impl_->super_blocks_.begin();
+
+    // Build directory structure from config.
+    auto curr_dir_inode = this->impl_->mount_info_.curr_mount_of("/").value();
+    std::queue<std::filesystem::path> path_queue;
+    path_queue.push(config.rootdir);
+    while (!path_queue.empty()) {
+        auto path = path_queue.front();
+        path_queue.pop();
+        for (auto entry : std::filesystem::directory_iterator(path)) {
+            // Create and write data to inode.
+            std::shared_ptr<IINode> inode;
+            if (entry.is_directory()) {
+                OUTCOME_TRY(auto dir_inode,
+                            sb->alloc_inode(sb, IINode::Type::Directory));
+                OUTCOME_TRY(dir_inode->inc_disk_refcount());
+                // Add to queue for BFS.
+                path_queue.push(entry.path());
+            } else if (entry.is_regular_file()) {
+                OUTCOME_TRY(auto file_inode,
+                            sb->alloc_inode(sb, IINode::Type::File));
+                OUTCOME_TRY(file_inode->inc_disk_refcount());
+            }
+
+            // Write inode info into curr_dir_inode.
+            OUTCOME_TRY(auto curr_dir_inode_data, curr_dir_inode->data());
+            auto curr_inode_data =
+                std::get<IINode::DirectoryFileContent>(*curr_dir_inode_data);
+            auto dir_item_name =
+                (entry.path() | std::views::filter([](const auto& component) {
+                     return !component.string().empty();
+                 }) |
+                 std::views::reverse)
+                    .begin()
+                    ->string();
+            curr_inode_data.push_back({dir_item_name, inode});
+        }
+    }
+
+    return outcome::success();
 }
 
 outcome::result<VM::Result> VM::run(std::chrono::milliseconds timeout,
