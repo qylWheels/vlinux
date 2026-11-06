@@ -1742,6 +1742,13 @@ public:
         }
         auto pathname = pathname_result.value();
 
+        // Check fd.
+        if (!pathname.empty() && pathname[0] != '/' &&
+            task->files[dirfd].value()->inode()->type() !=
+                IINode::Type::Directory) {
+            return -ENOTDIR;
+        }
+
         // Find parent inode of the pathname.
         auto parent_inode_result = helpers::retrieve_parent_of_path(
             *task, *context.mount_info, dirfd, pathname);
