@@ -297,6 +297,14 @@ TEST_CASE("Test VM", "[vm]") {
             vm.load(build_path / "tests/syscall_tests/test_brk").has_value());
     }
 
+    SECTION("Test load(config)") {
+        REQUIRE(vm.load(vlinux::VM::Config{
+                            .rootdir = build_path / "tests/syscall_tests/",
+                            .prog = build_path / "tests/syscall_tests/test_brk",
+                            .prog_guest_path = "/test_brk"})
+                    .has_value());
+    }
+
     SECTION("Test brk()") {
         auto task =
             vm.load(build_path / "tests/syscall_tests/test_brk").value();
