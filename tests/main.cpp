@@ -292,7 +292,7 @@ TEST_CASE("Test VM", "[vm]") {
                static_cast<std::int64_t>(vlinux::mm::PAGE_SIZE);
     };
 
-    SECTION("Test load()") {
+    SECTION("Test load(path)") {
         REQUIRE(
             vm.load(build_path / "tests/syscall_tests/test_brk").has_value());
     }
