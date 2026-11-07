@@ -86,8 +86,6 @@ public:
         std::filesystem::path rootdir;
         // Host program to execute.
         std::filesystem::path prog;
-        // Where should prog be mapped to guest filesystem.
-        std::filesystem::path prog_guest_path;
         // Arguments to prog.
         std::vector<std::string> args;
         // Environment variables to pass to prog.
