@@ -13,6 +13,7 @@
 #include <format>
 #include <fstream>
 #include <functional>
+#include <ios>
 #include <limits>
 #include <map>
 #include <memory>
@@ -581,6 +582,16 @@ outcome::result<void> VM::load(const Config& config) {
                 OUTCOME_TRY(auto file_inode,
                             sb->alloc_inode(sb, IINode::Type::File));
                 OUTCOME_TRY(file_inode->inc_disk_refcount());
+                // Write data to file inode.
+                std::ifstream ifs(entry.path(), std::ios::binary);
+                if (!ifs) return std::errc::io_error;
+                auto fsize = std::filesystem::file_size(entry.path());
+                auto file_data = std::get_if<IINode::NormalFileContent>(
+                    file_inode->data().value());
+                file_data->resize(fsize);
+                if (!ifs.read(reinterpret_cast<char*>(file_data->data()),
+                              fsize))
+                    return std::errc::io_error;
             }
 
             // Write inode info into curr_dir_inode.
