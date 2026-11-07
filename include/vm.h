@@ -84,7 +84,7 @@ public:
     struct Config {
         // Host directory assigning to guest root directory.
         std::filesystem::path rootdir;
-        // Host program to execute.
+        // Program to execute, represented by path relative to rootdir.
         std::filesystem::path prog;
         // Arguments to prog.
         std::vector<std::string> args;
